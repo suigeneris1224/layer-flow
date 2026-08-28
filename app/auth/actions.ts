@@ -1,0 +1,192 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import type { Route } from "next";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { publicEnv } from "@/lib/config/env";
+import { describeAuthError, describeUnknownError, failure, type ActionFailure } from "@/lib/errors";
+import { logger } from "@/lib/observability/logger";
+
+/** Shape returned to every auth form. `undefined` means "not submitted yet". */
+export type AuthState = ActionFailure | { ok: true; message?: string } | undefined;
+
+const emailField = z.string().trim().min(1, "Enter your email").email("Enter a valid email");
+
+// 8 chars is the floor Supabase enforces; we state it up front rather than
+// letting the farmer discover it from a server round trip.
+const passwordField = z.string().min(8, "Use at least 8 characters");
+
+const signupSchema = z.object({
+  fullName: z.string().trim().min(1, "Enter your name").max(120),
+  email: emailField,
+  password: passwordField,
+});
+
+const loginSchema = z.object({
+  email: emailField,
+  password: z.string().min(1, "Enter your password"),
+});
+
+function fieldErrorsFrom(error: z.ZodError): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = String(issue.path[0] ?? "form");
+    errors[key] ??= issue.message;
+  }
+  return errors;
+}
+
+export async function signUpAction(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const parsed = signupSchema.safeParse({
+    fullName: formData.get("fullName"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!parsed.success) {
+    return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.signUp({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      options: {
+        data: { full_name: parsed.data.fullName },
+        emailRedirectTo: `${publicEnv.appUrl}/auth/callback`,
+      },
+    });
+
+    if (error) return describeAuthError(error.message);
+  } catch (error) {
+    return describeUnknownError(error, "signUpAction");
+  }
+
+  // With local email confirmation off the user already has a session, so land
+  // them in onboarding. With confirmations on they are bounced to /login by
+  // middleware and see the "check your email" copy there.
+  redirect("/onboarding");
+}
+
+export async function signInAction(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const parsed = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!parsed.success) {
+    return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
+  }
+
+  const next = String(formData.get("next") ?? "/dashboard");
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: parsed.data.email,
+      password: parsed.data.password,
+    });
+
+    if (error) return describeAuthError(error.message);
+  } catch (error) {
+    return describeUnknownError(error, "signInAction");
+  }
+
+  // Only relative in-app paths, so a crafted ?next= cannot bounce someone to
+  // an attacker's site carrying a fresh session.
+  // Validated above, so the cast is safe. typedRoutes cannot know that a
+  // runtime-checked string is in-app.
+  const safeNext = (
+    next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"
+  ) as Route;
+  redirect(safeNext);
+}
+
+export async function signOutAction() {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login");
+}
+
+export async function requestPasswordResetAction(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const parsed = z.object({ email: emailField }).safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!parsed.success) {
+    return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+      redirectTo: `${publicEnv.appUrl}/auth/callback?next=/reset-password`,
+    });
+
+    // Logged, not shown. Telling the visitor whether an email exists would
+    // turn this form into an account-enumeration oracle.
+    if (error) logger.warn("password reset request failed", { reason: error.message });
+  } catch (error) {
+    logger.warn("password reset threw", { context: "requestPasswordResetAction" });
+  }
+
+  return {
+    ok: true,
+    message:
+      "If an account exists for that email, we've sent a link to reset the password.",
+  };
+}
+
+export async function updatePasswordAction(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const parsed = z
+    .object({
+      password: passwordField,
+      confirmPassword: z.string(),
+    })
+    .refine((value) => value.password === value.confirmPassword, {
+      message: "Both passwords must match",
+      path: ["confirmPassword"],
+    })
+    .safeParse({
+      password: formData.get("password"),
+      confirmPassword: formData.get("confirmPassword"),
+    });
+
+  if (!parsed.success) {
+    return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    // The recovery link established a session; without one this is an
+    // unauthenticated password change attempt.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return failure("Your reset link has expired. Please request a new one.");
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    if (error) return describeAuthError(error.message);
+  } catch (error) {
+    return describeUnknownError(error, "updatePasswordAction");
+  }
+
+  redirect("/dashboard");
+}

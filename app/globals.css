@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * LayerFlow design tokens.
+ *
+ * THE RULE: nothing in this codebase writes a colour that is not defined here.
+ * No raw hex, no Tailwind palette classes (`bg-green-500` is a bug). See
+ * docs/design-system.md for the full policy.
+ *
+ * Values are HSL triplets, not colour functions, so Tailwind can compose
+ * opacity on top of them (`bg-primary/10`).
+ */
+@layer base {
+  :root {
+    /* Surfaces: panels are white and sit on a cool near-white page, which is
+       what gives the layout its separation without heavy borders. */
+    --background: 210 20% 98%;
+    --surface: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 45%;
+
+    /* `border` is decorative (panel edges, table rules) and stays subtle.
+       `input` is the ONLY thing identifying a field boundary -- surface and
+       background are near-identical whites -- so it must clear 3:1. */
+    --border: 214 20% 91%;
+    --input: 214 14% 58%;
+    --ring: 142 78% 30%;
+
+    /* Behind white text: saturated so it reads vivid, dark enough that white
+       clears 4.5:1. Measured with scripts/contrast.mjs, not eyeballed. */
+    --primary: 142 78% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    /* The bright emerald from the product design. Decoration only -- logo,
+       progress fills, chart marks -- never behind text, so contrast rules for
+       text do not apply to it. */
+    --brand: 142 71% 45%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 26 45% 14%;
+
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Status. Always paired with an icon and words -- never colour alone. */
+    --status-good: 142 76% 28%;
+    --status-warn: 32 88% 33%;
+    --status-bad: 0 72% 46%;
+
+    /*
+     * Icon chips. Exactly five tints, matching the five KPI cards. A screen
+     * needing a sixth is a signal to reconsider the screen, not to add a
+     * colour.
+     */
+    --chip-green: 142 60% 94%;
+    --chip-green-fg: 142 69% 30%;
+    --chip-amber: 43 96% 92%;
+    --chip-amber-fg: 32 90% 31%;
+    --chip-teal: 172 60% 93%;
+    --chip-teal-fg: 174 72% 27%;
+    --chip-rose: 0 86% 95%;
+    --chip-rose-fg: 0 72% 44%;
+    --chip-violet: 258 90% 96%;
+    --chip-violet-fg: 262 62% 48%;
+
+    /* Charts. Fixed series order so the same measure keeps the same colour
+       across every chart in the product. */
+    --chart-1: 142 72% 36%;
+    --chart-2: 215 16% 50%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 262 62% 60%;
+    --chart-5: 174 62% 42%;
+    --chart-grid: 214 20% 93%;
+  }
+
+  .dark {
+    --background: 222 40% 8%;
+    --surface: 222 33% 11%;
+    --foreground: 210 20% 96%;
+
+    --muted: 222 25% 16%;
+    --muted-foreground: 215 16% 68%;
+
+    --border: 222 20% 20%;
+    --input: 222 14% 42%;
+    --ring: 142 62% 52%;
+
+    --primary: 142 62% 52%;
+    --primary-foreground: 222 40% 8%;
+
+    --brand: 142 66% 58%;
+
+    --accent: 38 90% 56%;
+    --accent-foreground: 26 45% 12%;
+
+    --destructive: 0 66% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --status-good: 142 58% 58%;
+    --status-warn: 38 90% 62%;
+    --status-bad: 0 72% 68%;
+
+    --chip-green: 142 40% 18%;
+    --chip-green-fg: 142 55% 62%;
+    --chip-amber: 32 45% 18%;
+    --chip-amber-fg: 38 88% 62%;
+    --chip-teal: 174 40% 16%;
+    --chip-teal-fg: 172 55% 58%;
+    --chip-rose: 0 40% 18%;
+    --chip-rose-fg: 0 70% 68%;
+    --chip-violet: 262 35% 20%;
+    --chip-violet-fg: 262 70% 76%;
+
+    --chart-1: 142 62% 56%;
+    --chart-2: 215 16% 62%;
+    --chart-3: 38 88% 60%;
+    --chart-4: 262 62% 68%;
+    --chart-5: 174 58% 50%;
+    --chart-grid: 222 20% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Numbers change constantly on this product. Tabular figures stop the
+     layout twitching every time one does. Required on every figure. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visible focus everywhere, not only where we remembered to add it. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Respect a farmer who has asked their phone to calm down. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Keeps the mobile tab bar clear of the iOS home indicator. */
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* The headline figure on a stat card. */
+  .stat-figure {
+    @apply tabular text-2xl font-bold leading-none tracking-tight;
+  }
+
+  /* Wide content (tables, charts) scrolls inside its own box so the page
+     itself never scrolls sideways on a phone. */
+  .scroll-x {
+    @apply -mx-4 overflow-x-auto px-4;
+  }
+}

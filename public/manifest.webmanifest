@@ -1,0 +1,34 @@
+{
+  "name": "LayerFlow — Know your flock. Know your numbers.",
+  "short_name": "LayerFlow",
+  "description": "Egg farm management for Philippine layer farmers.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf8f3",
+  "theme_color": "#1e5c47",
+  "lang": "en-PH",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Record production",
+      "short_name": "Record",
+      "url": "/production/new"
+    }
+  ]
+}

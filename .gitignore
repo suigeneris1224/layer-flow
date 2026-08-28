@@ -1,0 +1,22 @@
+.next
+node_modules
+# Secrets. Note `.env` matches ONLY a file named exactly .env -- it does not
+# cover .env.example, which is why that is listed explicitly.
+.env
+.env.*
+!.env.sample
+coverage
+dist
+*.tsbuildinfo
+supabase/.branches
+supabase/.temp
+
+# Database dumps contain real farm data
+backups
+
+# Verification builds (kept separate so they never clobber a running dev server)
+.next-verify
+
+# Claude Code machine-local settings (permissions, per-machine config).
+# launch.json is intentionally shared; settings.local.json is not.
+.claude/settings.local.json

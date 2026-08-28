@@ -1,0 +1,206 @@
+import { z } from "zod";
+
+/**
+ * Shared input schemas.
+ *
+ * Every server action parses its input through one of these. Client-side
+ * validation uses the same schema, so the farmer sees the same rule twice
+ * rather than two subtly different ones.
+ */
+
+/** Form fields arrive as strings; coerce and reject the junk. */
+const intFromForm = (label: string, { min = 0, max = 10_000_000 } = {}) =>
+  z.coerce
+    .number({ invalid_type_error: `${label} must be a number` })
+    .int(`${label} must be a whole number`)
+    .min(min, `${label} cannot be less than ${min}`)
+    .max(max, `${label} looks too large — please check`);
+
+const decimalFromForm = (label: string, { min = 0, max = 10_000_000 } = {}) =>
+  z.coerce
+    .number({ invalid_type_error: `${label} must be a number` })
+    .min(min, `${label} cannot be less than ${min}`)
+    .max(max, `${label} looks too large — please check`);
+
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date");
+
+export const uuid = z.string().uuid("That item is no longer available");
+
+// ---------------------------------------------------------------------------
+// Onboarding
+// ---------------------------------------------------------------------------
+
+export const createFarmSchema = z.object({
+  name: z.string().trim().min(1, "Enter your farm name").max(120),
+  barangay: z.string().trim().max(120).optional().default(""),
+  municipality: z.string().trim().min(1, "Enter your municipality or city").max(120),
+  province: z.string().trim().min(1, "Enter your province").max(120),
+});
+
+export const createHouseSchema = z.object({
+  name: z.string().trim().min(1, "Give the house a name").max(120),
+  capacity: intFromForm("Capacity", { min: 1, max: 1_000_000 }),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export const createFlockSchema = z
+  .object({
+    name: z.string().trim().min(1, "Give the flock a name").max(120),
+    breed: z.string().trim().max(120).optional().default(""),
+    houseId: uuid,
+    initialHens: intFromForm("Number of hens", { min: 1, max: 1_000_000 }),
+    placementDate: isoDate,
+    startLayingDate: z.union([isoDate, z.literal("")]).optional().default(""),
+    notes: z.string().trim().max(500).optional().default(""),
+  })
+  .refine(
+    (value) =>
+      value.startLayingDate === "" || value.startLayingDate >= value.placementDate,
+    { message: "Laying cannot start before the hens arrived", path: ["startLayingDate"] }
+  );
+
+// ---------------------------------------------------------------------------
+// Egg sizes and pricing
+// ---------------------------------------------------------------------------
+
+export const eggPriceRowSchema = z.object({
+  eggSizeId: uuid,
+  pricePerEgg: decimalFromForm("Price per egg", { max: 10_000 }),
+  pricePerTray: decimalFromForm("Price per tray", { max: 100_000 }),
+});
+
+export const updatePricesSchema = z.object({
+  effectiveFrom: isoDate,
+  prices: z.array(eggPriceRowSchema).min(1, "Set at least one price"),
+});
+
+// ---------------------------------------------------------------------------
+// Inventory adjustments
+// ---------------------------------------------------------------------------
+
+/**
+ * The farmer picks a direction and a positive quantity; the action turns that
+ * into the signed value the table stores. Asking someone to type "-20" to
+ * record breakage is a needless way to invite a sign error.
+ */
+export const inventoryAdjustmentSchema = z.object({
+  eggSizeId: uuid,
+  direction: z.enum(["ADD", "REMOVE"], {
+    errorMap: () => ({ message: "Choose whether to add or remove eggs" }),
+  }),
+  quantity: intFromForm("Quantity", { min: 1, max: 1_000_000 }),
+  reason: z
+    .string()
+    .trim()
+    .regex(/^[A-Z_]+$/, "Choose a reason")
+    .max(40),
+  note: z.string().trim().max(200).optional().default(""),
+  adjustmentDate: isoDate,
+});
+
+export type InventoryAdjustmentInput = z.infer<typeof inventoryAdjustmentSchema>;
+
+// ---------------------------------------------------------------------------
+// Egg sales
+// ---------------------------------------------------------------------------
+
+/**
+ * One line of a sale.
+ *
+ * Trays and loose eggs are priced separately, so both quantities and both
+ * prices travel together -- a blended unit price would lose the distinction
+ * the farmer actually sells on. The price is a field rather than a lookup
+ * because a negotiated price is real, and whatever was used is copied onto the
+ * line so re-pricing the farm never restates history.
+ */
+export const saleLineSchema = z.object({
+  eggSizeId: uuid,
+  quantityTrays: intFromForm("Trays", { max: 100_000 }).default(0),
+  quantityEggs: intFromForm("Eggs", { max: 1_000_000 }).default(0),
+  pricePerTray: decimalFromForm("Price per tray", { max: 100_000 }).default(0),
+  pricePerEgg: decimalFromForm("Price per egg", { max: 10_000 }).default(0),
+});
+
+/**
+ * Note what is NOT here: `paymentStatus`. The farmer enters an amount and the
+ * status is derived from it, in the app and again in the database. Accepting
+ * both invites a sale marked PAID with nothing against it.
+ */
+export const recordSaleSchema = z
+  .object({
+    saleDate: isoDate,
+    // Walk-in cash sales are the common case, so both of these are optional.
+    customerId: z.union([uuid, z.literal("")]).optional().default(""),
+    flockId: z.union([uuid, z.literal("")]).optional().default(""),
+    amountPaid: decimalFromForm("Amount paid", { max: 100_000_000 }).default(0),
+    notes: z.string().trim().max(500).optional().default(""),
+    lines: z.array(saleLineSchema).min(1, "Add at least one egg size"),
+  })
+  .refine(
+    (v) => v.lines.some((line) => line.quantityTrays > 0 || line.quantityEggs > 0),
+    { message: "Enter how many trays or eggs you sold", path: ["lines"] }
+  );
+
+export const createCustomerSchema = z.object({
+  name: z.string().trim().min(1, "Enter the customer's name").max(120),
+  phone: z.string().trim().max(40).optional().default(""),
+  address: z.string().trim().max(200).optional().default(""),
+});
+
+export type RecordSaleInput = z.infer<typeof recordSaleSchema>;
+export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
+
+// ---------------------------------------------------------------------------
+// Daily production
+// ---------------------------------------------------------------------------
+
+export const eggSizeQuantitySchema = z.object({
+  eggSizeId: uuid,
+  quantity: intFromForm("Egg size quantity", { max: 1_000_000 }),
+});
+
+export const dailyProductionSchema = z
+  .object({
+    flockId: uuid,
+    productionDate: isoDate,
+    hensPresent: intFromForm("Hens present", { max: 1_000_000 }),
+    eggsCollected: intFromForm("Eggs collected", { max: 1_000_000 }),
+    brokenEggs: intFromForm("Broken eggs", { max: 1_000_000 }).default(0),
+    dirtyEggs: intFromForm("Dirty eggs", { max: 1_000_000 }).default(0),
+    mortality: intFromForm("Mortality", { max: 1_000_000 }).default(0),
+    averageEggWeight: z
+      .union([decimalFromForm("Average egg weight", { max: 500 }), z.literal("")])
+      .optional(),
+    feedKg: decimalFromForm("Feed used", { max: 100_000 }).default(0),
+    feedCostPerKg: decimalFromForm("Feed cost per kg", { max: 10_000 }).default(0),
+    sizes: z.array(eggSizeQuantitySchema).default([]),
+    notes: z.string().trim().max(500).optional().default(""),
+  })
+  .refine((v) => v.brokenEggs + v.dirtyEggs <= v.eggsCollected, {
+    message: "Broken and dirty eggs cannot exceed the eggs you collected",
+    path: ["brokenEggs"],
+  })
+  .refine(
+    (v) => v.sizes.reduce((sum, s) => sum + s.quantity, 0) <= v.eggsCollected,
+    {
+      message: "The egg sizes add up to more than the eggs you collected",
+      path: ["sizes"],
+    }
+  );
+
+export type DailyProductionInput = z.infer<typeof dailyProductionSchema>;
+export type CreateFarmInput = z.infer<typeof createFarmSchema>;
+export type CreateHouseInput = z.infer<typeof createHouseSchema>;
+export type CreateFlockInput = z.infer<typeof createFlockSchema>;
+
+/** Flatten Zod issues into the `{ field: message }` shape forms expect. */
+export function toFieldErrors(error: z.ZodError): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = issue.path.length > 0 ? issue.path.join(".") : "form";
+    errors[key] ??= issue.message;
+  }
+  return errors;
+}

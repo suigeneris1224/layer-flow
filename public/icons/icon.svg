@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="LayerFlow">
+  <rect width="512" height="512" rx="112" fill="#1e5c47"/>
+  <ellipse cx="256" cy="268" rx="118" ry="150" fill="#faf8f3"/>
+  <path d="M256 148c-38 40-58 78-58 112a58 58 0 0 0 116 0c0-34-20-72-58-112z" fill="#f5a11a"/>
+</svg>

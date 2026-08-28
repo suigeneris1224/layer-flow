@@ -46,6 +46,10 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   mortality_records_daily_production_id_key:
     "This production record already has a mortality entry.",
   egg_sale_items_nonempty: "Each sale line needs at least one tray or one egg.",
+  // Safety net for a race between the app's own precheck and the delete --
+  // the precheck (houseHasFlocks) already blocks this in the normal case.
+  flocks_house_id_fkey:
+    "This house has a flock recorded against it, including past ones. Houses with any flock history cannot be deleted.",
 };
 
 const CODE_MESSAGES: Record<string, string> = {

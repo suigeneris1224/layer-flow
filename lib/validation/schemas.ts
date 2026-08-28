@@ -62,6 +62,53 @@ export const createFlockSchema = z
   );
 
 // ---------------------------------------------------------------------------
+// Farm / house / flock management
+// ---------------------------------------------------------------------------
+
+/** Same fields as onboarding collects; identical rules apply to an edit. */
+export const updateFarmSchema = createFarmSchema;
+export const updateHouseSchema = createHouseSchema;
+
+/**
+ * Editing a flock, deliberately narrower than creating one: `initialHens` is
+ * excluded because it anchors the `current_hens <= initial_hens` check and
+ * the mortality history already recorded against it -- changing it after the
+ * fact would distort mortality-rate math for records that already exist.
+ * `current_hens` itself is never a field at all; it is recalculated by a
+ * database trigger whenever `mortality_records` changes.
+ */
+export const updateFlockSchema = z
+  .object({
+    name: z.string().trim().min(1, "Give the flock a name").max(120),
+    breed: z.string().trim().max(120).optional().default(""),
+    houseId: uuid,
+    placementDate: isoDate,
+    startLayingDate: z.union([isoDate, z.literal("")]).optional().default(""),
+    notes: z.string().trim().max(500).optional().default(""),
+  })
+  .refine(
+    (value) =>
+      value.startLayingDate === "" || value.startLayingDate >= value.placementDate,
+    { message: "Laying cannot start before the hens arrived", path: ["startLayingDate"] }
+  );
+
+/**
+ * Retiring a flock is a distinct action from editing one -- a one-way status
+ * change with its own audit trail, not a field on the general edit form.
+ */
+export const retireFlockSchema = z.object({
+  status: z.enum(["SOLD", "CLOSED"], {
+    errorMap: () => ({ message: "Choose whether the flock was sold or closed" }),
+  }),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export type UpdateFarmInput = z.infer<typeof updateFarmSchema>;
+export type UpdateHouseInput = z.infer<typeof updateHouseSchema>;
+export type UpdateFlockInput = z.infer<typeof updateFlockSchema>;
+export type RetireFlockInput = z.infer<typeof retireFlockSchema>;
+
+// ---------------------------------------------------------------------------
 // Egg sizes and pricing
 // ---------------------------------------------------------------------------
 

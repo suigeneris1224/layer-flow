@@ -48,9 +48,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Farm management",
     items: [
-      { key: "farms", label: "Farms", icon: Warehouse, comingSoon: true },
-      { key: "houses", label: "Houses", icon: Home, comingSoon: true },
-      { key: "flocks", label: "Flocks", icon: Layers, comingSoon: true },
+      { key: "farms", href: "/farms", label: "Farms", icon: Warehouse },
+      { key: "houses", href: "/houses", label: "Houses", icon: Home },
+      { key: "flocks", href: "/flocks", label: "Flocks", icon: Layers },
       { key: "inventory", href: "/inventory", label: "Egg Inventory", icon: Boxes },
     ],
   },

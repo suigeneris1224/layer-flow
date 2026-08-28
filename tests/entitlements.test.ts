@@ -12,6 +12,9 @@ import {
 import { PLANS, nextPlanForLimit, requiredPlanFor } from "@/lib/subscriptions/plans";
 import {
   canManageBilling,
+  canManageFarmSettings,
+  canManageFlock,
+  canManageHouse,
   canManageSales,
   canManageUsers,
   canRecordProduction,
@@ -32,6 +35,18 @@ describe("plan limits", () => {
   it("caps Starter at five active flocks", () => {
     expect(canCreate(starter, "active_flocks", 4)).toBe(true);
     expect(canCreate(starter, "active_flocks", 5)).toBe(false);
+  });
+
+  it("caps Starter at three houses", () => {
+    expect(canCreate(starter, "houses", 2)).toBe(true);
+    expect(canCreate(starter, "houses", 3)).toBe(false);
+  });
+
+  it("caps Free and Starter at one farm each, Pro at three", () => {
+    expect(canCreate(free, "farms", 1)).toBe(false);
+    expect(canCreate(starter, "farms", 1)).toBe(false);
+    expect(canCreate(pro, "farms", 2)).toBe(true);
+    expect(canCreate(pro, "farms", 3)).toBe(false);
   });
 
   it("treats null as unlimited", () => {
@@ -154,5 +169,17 @@ describe("role permissions", () => {
     expect(canRecordProduction(null)).toBe(false);
     expect(canManageSales(null)).toBe(false);
     expect(canManageUsers(null)).toBe(false);
+  });
+
+  it("keeps houses and flocks away from workers, same as pricing", () => {
+    expect(canManageFlock(as("WORKER"))).toBe(false);
+    expect(canManageHouse(as("WORKER"))).toBe(false);
+    expect(canManageFlock(as("MANAGER"))).toBe(true);
+    expect(canManageHouse(as("MANAGER"))).toBe(true);
+  });
+
+  it("reserves farm settings for the owner", () => {
+    expect(canManageFarmSettings(as("MANAGER"))).toBe(false);
+    expect(canManageFarmSettings(as("OWNER"))).toBe(true);
   });
 });

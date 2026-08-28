@@ -37,6 +37,7 @@ suite("RLS tenant isolation", () => {
   let alice: TestUser;
   let bob: TestUser;
   let worker: TestUser;
+  let manager: TestUser;
   let farmA: FarmFixture;
   let farmB: FarmFixture;
 
@@ -44,15 +45,17 @@ suite("RLS tenant isolation", () => {
     alice = await createTestUser("alice");
     bob = await createTestUser("bob");
     worker = await createTestUser("worker");
+    manager = await createTestUser("manager");
 
     farmA = await createFarmFixture(alice.id, "Alice Farm");
     farmB = await createFarmFixture(bob.id, "Bob Farm");
 
     await addMember(farmA.farmId, worker.id, "WORKER");
+    await addMember(farmA.farmId, manager.id, "MANAGER");
   }, 60_000);
 
   afterAll(async () => {
-    await cleanup([alice.id, bob.id, worker.id]);
+    await cleanup([alice.id, bob.id, worker.id, manager.id]);
   }, 60_000);
 
   // Every farm-scoped table. If a table is added to the schema and not to this
@@ -179,6 +182,41 @@ suite("RLS tenant isolation", () => {
       const { error } = await bob.client
         .from("houses")
         .insert({ farm_id: farmA.farmId, name: "Trojan House", capacity: 100 });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("bob cannot update farm A's house", async () => {
+      const { data } = await bob.client
+        .from("houses")
+        .update({ capacity: 999_999 })
+        .eq("id", farmA.houseId)
+        .select("id");
+
+      expect(data ?? []).toEqual([]);
+
+      const admin = adminClient();
+      const { data: actual } = await admin
+        .from("houses")
+        .select("capacity")
+        .eq("id", farmA.houseId)
+        .single();
+
+      expect(actual?.capacity).toBe(1000);
+    });
+
+    it("a flock cannot be assigned a house from a different farm", async () => {
+      // RLS on the insert only checks the flock's own farm_id, which is
+      // farm B and bob owns it -- the trigger flocks_house_farm_guard is what
+      // has to catch a house borrowed from farm A.
+      const { error } = await bob.client.from("flocks").insert({
+        farm_id: farmB.farmId,
+        house_id: farmA.houseId,
+        name: "Borrowed House Flock",
+        initial_hens: 100,
+        current_hens: 100,
+        placement_date: new Date().toISOString().slice(0, 10),
+      });
 
       expect(error).not.toBeNull();
     });
@@ -339,6 +377,69 @@ suite("RLS tenant isolation", () => {
         .select("id");
 
       expect(data ?? []).toEqual([]);
+    });
+
+    it("a worker cannot create a house", async () => {
+      const { error } = await worker.client.from("houses").insert({
+        farm_id: farmA.farmId,
+        name: "Worker's House",
+        capacity: 200,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a worker cannot create a flock", async () => {
+      const { error } = await worker.client.from("flocks").insert({
+        farm_id: farmA.farmId,
+        house_id: farmA.houseId,
+        name: "Worker's Flock",
+        initial_hens: 100,
+        current_hens: 100,
+        placement_date: new Date().toISOString().slice(0, 10),
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a manager cannot update the farm's own settings", async () => {
+      // houses/flocks are MANAGER+; farms is OWNER-only. A manager who can
+      // write houses and flocks must still be refused here.
+      const { data } = await manager.client
+        .from("farms")
+        .update({ name: "Renamed by manager" })
+        .eq("id", farmA.farmId)
+        .select("id");
+
+      expect(data ?? []).toEqual([]);
+
+      const admin = adminClient();
+      const { data: actual } = await admin
+        .from("farms")
+        .select("name")
+        .eq("id", farmA.farmId)
+        .single();
+
+      expect(actual?.name).toBe("Alice Farm");
+    });
+
+    it("a manager can create a house and a flock", async () => {
+      const { error: houseError } = await manager.client.from("houses").insert({
+        farm_id: farmA.farmId,
+        name: "Manager's House",
+        capacity: 300,
+      });
+      expect(houseError).toBeNull();
+
+      const { error: flockError } = await manager.client.from("flocks").insert({
+        farm_id: farmA.farmId,
+        house_id: farmA.houseId,
+        name: "Manager's Flock",
+        initial_hens: 50,
+        current_hens: 50,
+        placement_date: new Date().toISOString().slice(0, 10),
+      });
+      expect(flockError).toBeNull();
     });
 
     it("a worker cannot adjust stock", async () => {

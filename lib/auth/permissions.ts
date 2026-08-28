@@ -45,6 +45,9 @@ export function canManageFlock(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");
 }
 
+/** Houses share the flock write policy exactly (`houses_write` == `flocks_write`). */
+export const canManageHouse = canManageFlock;
+
 export function canManageEggSizes(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");
 }

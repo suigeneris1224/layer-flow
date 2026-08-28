@@ -48,9 +48,13 @@ export async function recordAuditLog(params: {
 /** Actions worth an audit entry. Keeps strings consistent across the app. */
 export const AUDIT_ACTIONS = {
   FARM_CREATED: "farm.created",
+  FARM_UPDATED: "farm.updated",
   HOUSE_CREATED: "house.created",
+  HOUSE_UPDATED: "house.updated",
+  HOUSE_DELETED: "house.deleted",
   FLOCK_CREATED: "flock.created",
   FLOCK_UPDATED: "flock.updated",
+  FLOCK_RETIRED: "flock.retired",
   EGG_SIZES_CONFIGURED: "egg_sizes.configured",
   PRICES_UPDATED: "egg_prices.updated",
   PRODUCTION_RECORDED: "production.recorded",

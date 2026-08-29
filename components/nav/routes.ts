@@ -77,14 +77,14 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Expenses",
     items: [
       { key: "expenses", href: "/expenses", label: "Expenses", icon: Receipt },
-      { key: "categories", label: "Categories", icon: FolderTree, comingSoon: true },
+      { key: "categories", href: "/expenses/categories", label: "Categories", icon: FolderTree },
     ],
   },
   {
     label: "Reports",
     items: [
-      { key: "analytics", label: "Analytics", icon: LineChart, comingSoon: true },
-      { key: "reports", label: "Reports", icon: BarChart3, comingSoon: true },
+      { key: "analytics", href: "/analytics", label: "Analytics", icon: LineChart },
+      { key: "reports", href: "/reports", label: "Reports", icon: BarChart3 },
     ],
   },
 ];

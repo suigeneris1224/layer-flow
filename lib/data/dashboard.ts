@@ -8,6 +8,7 @@ import { canAccess } from "@/lib/subscriptions/entitlements";
 import {
   feedPerHen,
   layingRate,
+  operatingCostsFromExpenses,
   operatingProfit,
   percentChange,
   roundMoney,
@@ -252,11 +253,11 @@ export const getDashboardData = cache(async function getDashboardData(
     sum(salesRows.filter((row) => row.sale_date === yesterday), (row) => Number(row.total_amount))
   );
 
-  const operatingCosts = calculateOperatingCosts(
+  const operatingCosts = operatingCostsFromExpenses(
     feedCostToday,
     expenseRows.filter((row) => row.expense_date === today)
   );
-  const costsYesterday = calculateOperatingCosts(
+  const costsYesterday = operatingCostsFromExpenses(
     sum(feedRows.filter((row) => row.usage_date === yesterday), (row) => Number(row.total_cost)),
     expenseRows.filter((row) => row.expense_date === yesterday)
   );
@@ -318,22 +319,6 @@ function logFailures(results: Record<string, { error?: { message: string } | nul
 
 function sum<T>(rows: readonly T[], pick: (row: T) => number): number {
   return rows.reduce((total, row) => total + (Number(pick(row)) || 0), 0);
-}
-
-/**
- * Feed is costed through feed_usage, so FEED-category expenses are excluded
- * here. Counting both would charge the farm twice for the same sacks. The
- * expenses screen still lists them; only the profit maths skips them.
- */
-function calculateOperatingCosts(
-  feedCost: number,
-  expenses: readonly { amount: number; category: string }[]
-): number {
-  const nonFeed = expenses
-    .filter((row) => row.category !== "FEED")
-    .reduce((total, row) => total + Number(row.amount), 0);
-
-  return roundMoney(feedCost + nonFeed);
 }
 
 /**

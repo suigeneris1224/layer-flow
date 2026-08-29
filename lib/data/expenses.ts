@@ -3,7 +3,11 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ExpenseCategory } from "@/lib/types/database";
 import { getFlocks, type FlockEntry } from "@/lib/data/flocks";
+import { EXPENSE_CATEGORY_LABELS } from "@/lib/domain/expenses";
+import { roundMoney } from "@/lib/domain/calculations";
 import { logger } from "@/lib/observability/logger";
+import type { FarmContext } from "@/lib/auth/session";
+import type { ResolvedRange } from "@/lib/domain/reports";
 
 /**
  * Reading expenses.
@@ -111,4 +115,54 @@ export interface ExpenseFormData {
 export async function getExpenseFormData(farmId: string): Promise<ExpenseFormData> {
   const flocks = await getFlocks(farmId);
   return { flocks: flocks.map((flock) => ({ id: flock.id, name: flock.name })) };
+}
+
+export interface CategoryBreakdownRow {
+  category: ExpenseCategory;
+  label: string;
+  total: number;
+  count: number;
+  percentage: number;
+}
+
+/** Spend grouped by the fixed expense_category enum, over a date range. */
+export async function getExpensesByCategory(
+  context: FarmContext,
+  range: ResolvedRange
+): Promise<CategoryBreakdownRow[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("category, amount")
+    .eq("farm_id", context.farmId)
+    .gte("expense_date", range.from)
+    .lte("expense_date", range.to);
+
+  if (error) {
+    logger.error("expense category breakdown failed", { reason: error.message });
+    return [];
+  }
+
+  const rows = (data ?? []) as { category: ExpenseCategory; amount: number }[];
+  const byCategory = new Map<ExpenseCategory, { total: number; count: number }>();
+
+  for (const row of rows) {
+    const entry = byCategory.get(row.category) ?? { total: 0, count: 0 };
+    entry.total += Number(row.amount ?? 0);
+    entry.count += 1;
+    byCategory.set(row.category, entry);
+  }
+
+  const grandTotal = [...byCategory.values()].reduce((sum, entry) => sum + entry.total, 0);
+
+  return [...byCategory.entries()]
+    .map(([category, entry]) => ({
+      category,
+      label: EXPENSE_CATEGORY_LABELS[category],
+      total: roundMoney(entry.total),
+      count: entry.count,
+      percentage: grandTotal > 0 ? Math.round((entry.total / grandTotal) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
 }

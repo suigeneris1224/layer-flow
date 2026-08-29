@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { requireFarmContext, getUserFarms } from "@/lib/auth/session";
-import { canManageFarmSettings } from "@/lib/auth/permissions";
+import { canManageBilling, canManageFarmSettings } from "@/lib/auth/permissions";
 import { canCreate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
+import { isProduction } from "@/lib/config/env";
 import { getFarmDetail } from "@/lib/data/farms";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
+import { DevPlanSwitcher } from "./dev-plan-switcher";
 import { FarmForm } from "./farm-form";
 import { FarmSwitcher } from "./farm-switcher";
 
@@ -69,6 +71,10 @@ export default async function FarmsPage() {
         <FarmForm mode="create" />
       ) : (
         limitPrompt && <UpgradePanel prompt={limitPrompt} />
+      )}
+
+      {!isProduction && canManageBilling(context) && (
+        <DevPlanSwitcher currentPlan={context.plan} currentStatus={context.subscriptionStatus} />
       )}
     </PageShell>
   );

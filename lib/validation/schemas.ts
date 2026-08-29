@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
-import type { ExpenseCategory } from "@/lib/types/database";
+import { PLAN_ORDER } from "@/lib/subscriptions/plans";
+import type { ExpenseCategory, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+
+const SUBSCRIPTION_STATUSES: SubscriptionStatus[] = [
+  "ACTIVE",
+  "TRIALING",
+  "PAST_DUE",
+  "CANCELED",
+  "EXPIRED",
+];
 
 /**
  * Shared input schemas.
@@ -216,6 +225,16 @@ export const createExpenseSchema = z.object({
 });
 
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+
+/** Development-only: set a farm's plan/status directly, bypassing billing. */
+export const devSetSubscriptionSchema = z.object({
+  plan: z.enum(PLAN_ORDER as [SubscriptionPlan, ...SubscriptionPlan[]], {
+    errorMap: () => ({ message: "Choose a plan" }),
+  }),
+  status: z.enum(SUBSCRIPTION_STATUSES as [SubscriptionStatus, ...SubscriptionStatus[]], {
+    errorMap: () => ({ message: "Choose a status" }),
+  }),
+});
 
 export type RecordSaleInput = z.infer<typeof recordSaleSchema>;
 export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;

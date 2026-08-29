@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Receipt } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderTree, Receipt } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageExpenses } from "@/lib/auth/permissions";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
@@ -57,12 +57,21 @@ export default async function ExpensesPage({
         title="Expenses"
         description="What it costs to run the farm."
         action={
-          canManage ? (
-            <Link href="/expenses/new" className={cn(buttonVariants({ size: "md" }))}>
-              <Receipt className="size-4" aria-hidden />
-              Record an expense
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/expenses/categories"
+              className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+            >
+              <FolderTree className="size-4" aria-hidden />
+              Categories
             </Link>
-          ) : undefined
+            {canManage && (
+              <Link href="/expenses/new" className={cn(buttonVariants({ size: "md" }))}>
+                <Receipt className="size-4" aria-hidden />
+                Record an expense
+              </Link>
+            )}
+          </div>
         }
       />
 

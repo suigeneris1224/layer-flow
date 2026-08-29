@@ -3,12 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ACTIVE_FARM_COOKIE, getFarmContext, getUserFarms, requireUser } from "@/lib/auth/session";
-import { canManageFarmSettings } from "@/lib/auth/permissions";
+import { canManageBilling, canManageFarmSettings } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
+import { isProduction } from "@/lib/config/env";
 import { getFarmCountForUser } from "@/lib/data/farms";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
-import { createFarmSchema, toFieldErrors, updateFarmSchema } from "@/lib/validation/schemas";
+import {
+  createFarmSchema,
+  devSetSubscriptionSchema,
+  toFieldErrors,
+  updateFarmSchema,
+} from "@/lib/validation/schemas";
 import {
   describeDatabaseError,
   describeUnknownError,
@@ -166,4 +173,55 @@ export async function switchFarmAction(farmId: string): Promise<ActionResult> {
   revalidatePath("/", "layout");
 
   return { ok: true };
+}
+
+/**
+ * Development-only: set the active farm's plan/status directly.
+ *
+ * `subscriptions` has no write policy for `authenticated` -- only a
+ * service-role client (billing webhooks, normally) can write it -- so this is
+ * the one place in the app that reaches for `createSupabaseAdminClient()`.
+ * Gated twice: the UI that calls this never renders in production, and this
+ * refuses independently too, since a hidden button is not a security boundary.
+ */
+export async function devSetSubscriptionAction(input: unknown): Promise<ActionResult> {
+  if (isProduction) return failure("Not available.");
+
+  const user = await requireUser();
+  const context = await getFarmContext();
+
+  if (!context) return failure("Set up your farm first.");
+  if (!canManageBilling(context)) {
+    return failure("Only the farm owner can change the plan.");
+  }
+
+  const parsed = devSetSubscriptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form below.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+    const { error } = await admin
+      .from("subscriptions")
+      .update({ plan: parsed.data.plan, status: parsed.data.status })
+      .eq("farm_id", context.farmId);
+
+    if (error) return describeDatabaseError(error, "devSetSubscriptionAction");
+
+    await recordAuditLog({
+      farmId: context.farmId,
+      userId: user.id,
+      action: AUDIT_ACTIONS.PLAN_CHANGED,
+      entityType: "subscription",
+      entityId: context.farmId,
+      metadata: { plan: parsed.data.plan, status: parsed.data.status },
+    });
+
+    revalidatePath("/", "layout");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "devSetSubscriptionAction");
+  }
 }

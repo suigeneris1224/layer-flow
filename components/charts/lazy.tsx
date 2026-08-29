@@ -35,3 +35,18 @@ export const SalesChart = dynamic(() => import("./sales-chart").then((mod) => mo
   ssr: false,
   loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[210px]" />,
 });
+
+export const LayingRateChart = dynamic(
+  () => import("./laying-rate-chart").then((mod) => mod.LayingRateChart),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
+
+export const ProfitChart = dynamic(() => import("./profit-chart").then((mod) => mod.ProfitChart), {
+  ssr: false,
+  loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[210px]" />,
+});
+
+export const ExpenseCategoryChart = dynamic(
+  () => import("./expense-category-chart").then((mod) => mod.ExpenseCategoryChart),
+  { ssr: false, loading: () => <ChartSkeleton className="h-[220px] w-full" /> }
+);

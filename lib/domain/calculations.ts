@@ -235,6 +235,23 @@ export function percentChange(current: number, previous: number): number | null 
   return roundPercent(((current - previous) / Math.abs(previous)) * 100);
 }
 
+/**
+ * Feed is costed through `feed_usage`, so FEED-category expense rows are
+ * excluded here -- counting both would charge the farm twice for the same
+ * sacks. The expenses screen still lists them; only cost/profit maths skips
+ * them. Shared by the dashboard and by Reports so the two can never disagree.
+ */
+export function operatingCostsFromExpenses(
+  feedCost: number,
+  expenses: readonly { amount: number; category: string }[]
+): number {
+  const nonFeed = expenses
+    .filter((row) => row.category !== "FEED")
+    .reduce((total, row) => total + Number(row.amount), 0);
+
+  return roundMoney(feedCost + nonFeed);
+}
+
 // ---------------------------------------------------------------------------
 // Inventory
 // ---------------------------------------------------------------------------

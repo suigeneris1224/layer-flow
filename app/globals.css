@@ -169,9 +169,29 @@
     @apply tabular text-2xl font-bold leading-none tracking-tight;
   }
 
-  /* Wide content (tables, charts) scrolls inside its own box so the page
-     itself never scrolls sideways on a phone. */
+  /*
+   * Wide content (tables, charts) scrolls inside its own box so the page
+   * itself never scrolls sideways on a phone.
+   *
+   * The edge fades are the only signal a farmer gets that there's more to
+   * see -- native scrollbars are invisible on touch until you swipe, and a
+   * table cut off flush at a card's edge reads as clipped or broken, not
+   * "scroll me". Standard four-layer "scroll shadow" trick: a solid-to-
+   * transparent "cover" scrolls WITH the content (`local`) over a matching
+   * "shadow" pinned to the viewport (`scroll`) -- so each side's shadow
+   * self-cancels exactly when there's nothing left to scroll that way,
+   * with no JS or scroll-position tracking needed.
+   */
   .scroll-x {
     @apply -mx-4 overflow-x-auto px-4;
+    background-repeat: no-repeat;
+    background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+    background-position: left center, right center, left center, right center;
+    background-attachment: local, local, scroll, scroll;
+    background-image:
+      linear-gradient(to right, hsl(var(--surface)), hsl(var(--surface) / 0)),
+      linear-gradient(to left, hsl(var(--surface)), hsl(var(--surface) / 0)),
+      linear-gradient(to right, hsl(var(--foreground) / 0.16), hsl(var(--foreground) / 0)),
+      linear-gradient(to left, hsl(var(--foreground) / 0.16), hsl(var(--foreground) / 0));
   }
 }

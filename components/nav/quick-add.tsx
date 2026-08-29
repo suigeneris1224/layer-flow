@@ -96,11 +96,24 @@ export function QuickAdd({ canManageMoney }: { canManageMoney: boolean }) {
                   available={false}
                 />
               )}
-              <QuickAddSecondary
-                label="Record expense"
-                icon={Receipt}
-                available={canManageMoney}
-              />
+              {canManageMoney ? (
+                <li>
+                  <Link
+                    href="/expenses/new"
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-14 items-center gap-3 rounded-lg border border-border px-4 font-medium"
+                  >
+                    <Receipt className="size-5" aria-hidden />
+                    Record expense
+                  </Link>
+                </li>
+              ) : (
+                <QuickAddSecondary
+                  label="Record expense"
+                  icon={Receipt}
+                  available={false}
+                />
+              )}
             </ul>
           </div>
         </div>

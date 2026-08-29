@@ -5,7 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageCustomers, canManageSales } from "@/lib/auth/permissions";
 import { assertCanAccess, assertCanCreate } from "@/lib/subscriptions/entitlements";
-import { getCustomerCount, getStockForWarning } from "@/lib/data/sales";
+import { getSale, getStockForWarning } from "@/lib/data/sales";
+import { getCustomerCount } from "@/lib/data/customers";
 import {
   checkSaleAgainstStock,
   derivePaymentStatus,
@@ -15,6 +16,7 @@ import {
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import {
   createCustomerSchema,
+  recordPaymentSchema,
   recordSaleSchema,
   toFieldErrors,
 } from "@/lib/validation/schemas";
@@ -134,6 +136,62 @@ export async function recordSaleAction(
     return { ok: true, data: { saleId, warnings } };
   } catch (error) {
     return describeUnknownError(error, "recordSaleAction");
+  }
+}
+
+/**
+ * Record a payment against an existing sale.
+ *
+ * Sales are recorded once with whatever was paid that day; credit sales get
+ * settled later, sometimes in installments. This adds to `amount_paid` and
+ * re-derives `payment_status` via the `record_sale_payment` RPC, which mirrors
+ * the same capping and status rules `record_egg_sale` used at creation time.
+ */
+export async function recordSalePaymentAction(
+  saleId: string,
+  input: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const user = await requireUser();
+  const context = await getFarmContext();
+
+  if (!context) return failure("Set up your farm first.");
+  if (!canManageSales(context)) {
+    return failure("Your role doesn't allow recording payments.");
+  }
+
+  const parsed = recordPaymentSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the amount below.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const sale = await getSale(context, saleId);
+    if (!sale) return failure("That sale no longer exists.");
+    if (sale.outstanding <= 0) return failure("This sale is already fully paid.");
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.rpc("record_sale_payment", {
+      p_sale_id: saleId,
+      p_amount: parsed.data.amount,
+    });
+
+    if (error) return describeDatabaseError(error, "recordSalePaymentAction");
+
+    await recordAuditLog({
+      farmId: context.farmId,
+      userId: user.id,
+      action: AUDIT_ACTIONS.SALE_PAYMENT_RECORDED,
+      entityType: "egg_sale",
+      entityId: saleId,
+      metadata: { amount: parsed.data.amount },
+    });
+
+    revalidatePath("/sales");
+    revalidatePath("/dashboard");
+
+    return { ok: true, data: { id: saleId } };
+  } catch (error) {
+    return describeUnknownError(error, "recordSalePaymentAction");
   }
 }
 

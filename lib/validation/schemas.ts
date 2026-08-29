@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
+import type { ExpenseCategory } from "@/lib/types/database";
 
 /**
  * Shared input schemas.
@@ -190,13 +192,33 @@ export const recordSaleSchema = z
     { message: "Enter how many trays or eggs you sold", path: ["lines"] }
   );
 
+export const recordPaymentSchema = z.object({
+  amount: decimalFromForm("Amount", { min: 0.01, max: 100_000_000 }),
+});
+
 export const createCustomerSchema = z.object({
   name: z.string().trim().min(1, "Enter the customer's name").max(120),
   phone: z.string().trim().max(40).optional().default(""),
   address: z.string().trim().max(200).optional().default(""),
+  notes: z.string().trim().max(500).optional().default(""),
 });
 
+export const updateCustomerSchema = createCustomerSchema;
+
+export const createExpenseSchema = z.object({
+  category: z.enum(EXPENSE_CATEGORIES as [ExpenseCategory, ...ExpenseCategory[]], {
+    errorMap: () => ({ message: "Choose a category" }),
+  }),
+  description: z.string().trim().max(200).optional().default(""),
+  amount: decimalFromForm("Amount", { min: 0.01, max: 100_000_000 }),
+  expenseDate: isoDate,
+  flockId: z.union([uuid, z.literal("")]).optional().default(""),
+});
+
+export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+
 export type RecordSaleInput = z.infer<typeof recordSaleSchema>;
+export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
 // ---------------------------------------------------------------------------

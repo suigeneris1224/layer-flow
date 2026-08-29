@@ -274,7 +274,11 @@ export function ProductionForm({
 
       {/* Two columns from lg: entry on the left, the optional extras beside it.
           Stacks on mobile, where the order is the order you fill it in. */}
-      <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+      {/* pb-24 clears the sticky submit button below -- it floats persistently
+          near the bottom of the viewport while scrolling (not just once you
+          reach the true end), so without this the last field (Notes) scrolls
+          in right underneath it. */}
+      <div className="grid gap-4 pb-24 lg:grid-cols-3 lg:items-start lg:pb-0">
         <div className="flex flex-col gap-4 lg:col-span-2">
           <Panel title="Today's collection" bodyClassName="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
@@ -391,7 +395,7 @@ export function ProductionForm({
 
         <div>
           <Panel title="Losses, feed and notes" bodyClassName="flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Field label="Broken" htmlFor="brokenEggs" error={errors.brokenEggs?.message}>
                 <NumberInput id="brokenEggs" min={0} {...register("brokenEggs")} />
               </Field>

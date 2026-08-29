@@ -75,7 +75,7 @@ export default async function PricesPage() {
                           <td className="py-2.5 text-right font-semibold tabular">
                             {formatCurrency(size.currentPrice.pricePerTray, context.currency)}
                           </td>
-                          <td className="py-2.5 text-right tabular">
+                          <td className="whitespace-nowrap py-2.5 text-right tabular">
                             {formatCurrency(size.currentPrice.pricePerEgg, context.currency)}
                             <span className="ml-1 text-xs text-muted-foreground">
                               (tray ≈{" "}

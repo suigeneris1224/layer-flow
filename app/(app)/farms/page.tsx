@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { requireFarmContext, getUserFarms } from "@/lib/auth/session";
 import { canManageFarmSettings } from "@/lib/auth/permissions";
-import { canCreate } from "@/lib/subscriptions/entitlements";
+import { canCreate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
 import { getFarmDetail } from "@/lib/data/farms";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
+import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { FarmForm } from "./farm-form";
 import { FarmSwitcher } from "./farm-switcher";
 
@@ -26,9 +27,10 @@ export default async function FarmsPage() {
   // Any signed-in member of a farm may create a brand new farm they'd own --
   // same as onboarding's createFarmAction, which has no role check either.
   const canAddFarm = canCreate(entitlement, "farms", farms.length);
+  const limitPrompt = !canAddFarm ? limitReachedPrompt(entitlement, "farms", farms.length) : null;
 
   return (
-    <PageShell width="reading">
+    <PageShell>
       <PageHeader title="Farm settings" description="Your farm's name and location." />
 
       {!detail ? (
@@ -63,7 +65,11 @@ export default async function FarmsPage() {
         </Panel>
       )}
 
-      {canAddFarm && <FarmForm mode="create" />}
+      {canAddFarm ? (
+        <FarmForm mode="create" />
+      ) : (
+        limitPrompt && <UpgradePanel prompt={limitPrompt} />
+      )}
     </PageShell>
   );
 }

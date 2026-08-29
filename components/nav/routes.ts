@@ -70,13 +70,13 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Sales",
     items: [
       { key: "sales", href: "/sales", label: "Sales History", icon: ShoppingCart },
-      { key: "customers", label: "Customers", icon: Users, comingSoon: true },
+      { key: "customers", href: "/customers", label: "Customers", icon: Users },
     ],
   },
   {
     label: "Expenses",
     items: [
-      { key: "expenses", label: "Expenses", icon: Receipt, comingSoon: true },
+      { key: "expenses", href: "/expenses", label: "Expenses", icon: Receipt },
       { key: "categories", label: "Categories", icon: FolderTree, comingSoon: true },
     ],
   },

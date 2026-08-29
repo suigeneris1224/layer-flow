@@ -46,6 +46,8 @@ export interface SalesRange {
   from?: string;
   to?: string;
   limit?: number;
+  /** Rows to skip, for paging. Requires `limit`. */
+  offset?: number;
 }
 
 type SaleJoin = {
@@ -69,6 +71,42 @@ function one<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+const SALE_SELECT =
+  "id, sale_date, total_amount, amount_paid, payment_status, " +
+  "customers(name), " +
+  "egg_sale_items(quantity_eggs, quantity_trays, subtotal, egg_sizes(name))";
+
+function toSaleEntry(row: SaleJoin): SaleEntry {
+  const items = row.egg_sale_items ?? [];
+  const totalAmount = Number(row.total_amount ?? 0);
+  const amountPaid = Number(row.amount_paid ?? 0);
+
+  return {
+    id: row.id,
+    saleDate: row.sale_date,
+    customerName: one(row.customers)?.name ?? null,
+    totalAmount,
+    amountPaid,
+    outstanding: outstandingBalance(totalAmount, amountPaid),
+    paymentStatus: row.payment_status,
+    totalEggs: items.reduce(
+      (sum, item) =>
+        sum +
+        saleItemEggCount({
+          quantityEggs: item.quantity_eggs,
+          quantityTrays: item.quantity_trays,
+        }),
+      0
+    ),
+    lines: items.map((item) => ({
+      sizeName: one(item.egg_sizes)?.name ?? "Unknown",
+      quantityTrays: item.quantity_trays,
+      quantityEggs: item.quantity_eggs,
+      subtotal: Number(item.subtotal ?? 0),
+    })),
+  };
+}
+
 /** Sales newest first, with the customer and what is still owed. */
 export async function getSales(
   context: FarmContext,
@@ -78,15 +116,16 @@ export async function getSales(
 
   let query = supabase
     .from("egg_sales")
-    .select(
-      "id, sale_date, total_amount, amount_paid, payment_status, " +
-        "customers(name), " +
-        "egg_sale_items(quantity_eggs, quantity_trays, subtotal, egg_sizes(name))"
-    )
+    .select(SALE_SELECT)
     .eq("farm_id", context.farmId)
     .order("sale_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(range.limit ?? SALE_PAGE_LIMIT);
+    .order("created_at", { ascending: false });
+
+  const limit = range.limit ?? SALE_PAGE_LIMIT;
+  query =
+    range.offset !== undefined
+      ? query.range(range.offset, range.offset + limit - 1)
+      : query.limit(limit);
 
   if (range.from) query = query.gte("sale_date", range.from);
   if (range.to) query = query.lte("sale_date", range.to);
@@ -98,36 +137,45 @@ export async function getSales(
     return [];
   }
 
-  return ((data ?? []) as unknown as SaleJoin[]).map((row) => {
-    const items = row.egg_sale_items ?? [];
-    const totalAmount = Number(row.total_amount ?? 0);
-    const amountPaid = Number(row.amount_paid ?? 0);
+  return ((data ?? []) as unknown as SaleJoin[]).map(toSaleEntry);
+}
 
-    return {
-      id: row.id,
-      saleDate: row.sale_date,
-      customerName: one(row.customers)?.name ?? null,
-      totalAmount,
-      amountPaid,
-      outstanding: outstandingBalance(totalAmount, amountPaid),
-      paymentStatus: row.payment_status,
-      totalEggs: items.reduce(
-        (sum, item) =>
-          sum +
-          saleItemEggCount({
-            quantityEggs: item.quantity_eggs,
-            quantityTrays: item.quantity_trays,
-          }),
-        0
-      ),
-      lines: items.map((item) => ({
-        sizeName: one(item.egg_sizes)?.name ?? "Unknown",
-        quantityTrays: item.quantity_trays,
-        quantityEggs: item.quantity_eggs,
-        subtotal: Number(item.subtotal ?? 0),
-      })),
-    };
-  });
+/** One sale, for the payment page. Null if it doesn't exist or belongs to another farm. */
+export async function getSale(context: FarmContext, saleId: string): Promise<SaleEntry | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("egg_sales")
+    .select(SALE_SELECT)
+    .eq("farm_id", context.farmId)
+    .eq("id", saleId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("sale lookup failed", { reason: error.message });
+    return null;
+  }
+
+  if (!data) return null;
+
+  return toSaleEntry(data as unknown as SaleJoin);
+}
+
+/** How many sales the farm has on record, for pagination. */
+export async function getSalesCount(context: FarmContext): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+
+  const { count, error } = await supabase
+    .from("egg_sales")
+    .select("id", { count: "exact", head: true })
+    .eq("farm_id", context.farmId);
+
+  if (error) {
+    logger.error("sales count failed", { reason: error.message });
+    return 0;
+  }
+
+  return count ?? 0;
 }
 
 /**
@@ -256,25 +304,3 @@ export async function getStockForWarning(farmId: string): Promise<{
   };
 }
 
-/**
- * How many customers the farm has, for the plan limit.
- *
- * `head: true` asks Postgrest for the count without the rows; RLS still scopes
- * it to this farm, so the number cannot be inflated by another tenant's.
- */
-export async function getCustomerCount(farmId: string): Promise<number> {
-  const supabase = await createSupabaseServerClient();
-
-  const { count, error } = await supabase
-    .from("customers")
-    .select("id", { count: "exact", head: true })
-    .eq("farm_id", farmId);
-
-  if (error) {
-    logger.error("customer count failed", { reason: error.message });
-    // Fail closed: an unknown count must not read as "room for more".
-    return Number.MAX_SAFE_INTEGER;
-  }
-
-  return count ?? 0;
-}

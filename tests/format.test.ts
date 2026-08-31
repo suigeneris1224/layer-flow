@@ -3,6 +3,8 @@ import {
   farmToday,
   formatCurrency,
   formatCurrencyShort,
+  formatDate,
+  formatDateShort,
   formatNumber,
   formatPercent,
   formatRelativeDay,
@@ -89,5 +91,38 @@ describe("number formatting", () => {
 
   it("formats a percentage to one decimal", () => {
     expect(formatPercent(87)).toBe("87.0%");
+  });
+});
+
+/**
+ * `formatDate` used to append "T00:00:00" to whatever string it was handed.
+ * That is right for a `date` column and produces "2026-09-07ZT00:00:00" -- an
+ * invalid date, rendered as an empty string -- for a `timestamptz` one. It went
+ * unnoticed until farm_invitations.expires_at became the first timestamp to
+ * reach it, and the expiry silently vanished from the invitation list.
+ */
+describe("formatDate with a full timestamp", () => {
+  it("formats a timestamptz rather than returning empty", () => {
+    expect(formatDate("2026-09-07T03:29:16.497Z", "Asia/Manila")).not.toBe("");
+    expect(formatDate("2026-09-07T03:29:16.497Z", "Asia/Manila")).toContain("2026");
+  });
+
+  it("still reads a bare date as that calendar day", () => {
+    // Manila is UTC+8; parsing this as UTC midnight would render Sep 6.
+    expect(formatDate("2026-09-07", "Asia/Manila")).toContain("7");
+  });
+
+  it("applies the farm timezone to an instant", () => {
+    // 20:00 UTC is already the next day in Manila.
+    expect(formatDate("2026-09-07T20:00:00Z", "Asia/Manila")).toContain("8");
+  });
+
+  it("formatDateShort handles both shapes too", () => {
+    expect(formatDateShort("2026-09-07T03:29:16.497Z", "Asia/Manila")).not.toBe("");
+    expect(formatDateShort("2026-09-07", "Asia/Manila")).not.toBe("");
+  });
+
+  it("still returns empty for something that is not a date", () => {
+    expect(formatDate("not-a-date")).toBe("");
   });
 });

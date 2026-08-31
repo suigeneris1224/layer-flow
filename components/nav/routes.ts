@@ -53,6 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "houses", href: "/houses", label: "Houses", icon: Home },
       { key: "flocks", href: "/flocks", label: "Flocks", icon: Layers },
       { key: "inventory", href: "/inventory", label: "Egg Inventory", icon: Boxes },
+      { key: "team", href: "/team", label: "Team", icon: Users },
     ],
   },
   {

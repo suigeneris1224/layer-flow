@@ -150,6 +150,13 @@ export const getDashboardData = cache(async function getDashboardData(
 
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
   const hasSales = canAccess(entitlement, "egg_sales");
+  /*
+   * Alerts are a Starter feature on the pricing table and were shipping to
+   * Free farms because nothing ever asked. An empty list is the right shape for
+   * "not on this plan": TodayStatus renders nothing rather than an upsell
+   * shouting at somebody every morning, and the topbar badge falls to zero.
+   */
+  const hasAlerts = canAccess(entitlement, "alerts");
 
   const [production, feed, inventory, sales, expenses, flocks, grading, sizesToday, activity] =
     await Promise.all([
@@ -305,7 +312,9 @@ export const getDashboardData = cache(async function getDashboardData(
     flocks: buildFlockSummaries(flockRows, todayProduction),
     flockStatus: flockStatusLine(deathsThisWeek, hensOnFarm),
     activity: buildActivity(activity.data ?? []),
-    alerts: buildAlerts(productionRows, feedRows, today, mortality, hensOnFarm),
+    alerts: hasAlerts
+      ? buildAlerts(productionRows, feedRows, today, mortality, hensOnFarm)
+      : [],
   };
 });
 

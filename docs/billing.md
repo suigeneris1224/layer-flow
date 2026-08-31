@@ -88,8 +88,10 @@ Everything else talks to the `subscriptions` table and the entitlement functions
 `BILLING_PROVIDER=mock`. **The provider implementation is not written yet** — this slice ships
 plan definitions, entitlement enforcement and the pricing page, but no checkout.
 
-A development-only plan switcher is still to be built, and must be gated on
-`process.env.NODE_ENV !== "production"` so it can never appear on a live site.
+A development-only plan switcher **is built**: `app/(app)/farms/dev-plan-switcher.tsx` with
+`devSetSubscriptionAction` in `app/(app)/farms/actions.ts`. It renders on `/farms` only when
+`!isProduction()` and the user can manage billing, so it can never appear on a live site, and it
+writes through the service-role client because `subscriptions` has no client write policy.
 
 ### When real billing lands
 

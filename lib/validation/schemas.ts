@@ -319,6 +319,45 @@ export type FeedUsageInput = z.infer<typeof feedUsageSchema>;
 export type VaccinationInput = z.infer<typeof vaccinationSchema>;
 
 // ---------------------------------------------------------------------------
+// Team
+// ---------------------------------------------------------------------------
+
+/**
+ * OWNER is deliberately not an option.
+ *
+ * A farm has exactly one owner, established by app.claim_farm_ownership() when
+ * the farm is created, and the database backs that up with a CHECK on
+ * farm_invitations.role. Offering it here would only produce a constraint
+ * violation the farmer cannot act on.
+ */
+export const invitableRoles = ["MANAGER", "WORKER"] as const;
+
+export const inviteMemberSchema = z.object({
+  // Lower-cased to match the partial unique index on (farm_id, lower(email)),
+  // so "Ana@" and "ana@" cannot both sit pending.
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, "Enter an email address")
+    .max(255)
+    .email("That doesn't look like an email address"),
+  role: z.enum(invitableRoles, {
+    errorMap: () => ({ message: "Choose manager or worker" }),
+  }),
+});
+
+export const updateMemberRoleSchema = z.object({
+  memberId: uuid,
+  role: z.enum(invitableRoles, {
+    errorMap: () => ({ message: "Choose manager or worker" }),
+  }),
+});
+
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+
+// ---------------------------------------------------------------------------
 // Profile
 // ---------------------------------------------------------------------------
 

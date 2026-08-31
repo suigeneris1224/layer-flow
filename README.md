@@ -64,14 +64,15 @@ trigger and are never written by hand.
 **Flock detail** (at `/flocks/[id]`): lifetime eggs, feed and losses, age and survival, plus
 recent production, mortality, feed and vaccination records.
 
+**Team** (at `/team`, Pro): invite people to a farm with a shareable link, set and change their
+role, and remove them. Invitations are links rather than emails — the owner sends them by
+Messenger, SMS or in person — and a `farm_invitations` row becomes a `farm_members` row only when
+the invitee opens the link and signs in. Pending invitations count against the plan's user cap.
+
 **Settings** (at `/settings`): name, phone and avatar for the signed-in user, with links out to
 farm settings and plans.
 
 ### What is not built yet
-
-**Team management** — `farm_members`, the RLS policies and `canManageUsers` all exist, and
-`team_management` is sold as a Pro feature, but there is no `/team` route and no invite flow.
-This is the largest fully-modelled-but-unbuilt gap.
 
 **Real billing** — `BILLING_PROVIDER=mock`. Plan changes go through the dev-only plan switcher on
 `/farms`. No checkout, no webhook handler. See [docs/billing.md](docs/billing.md).

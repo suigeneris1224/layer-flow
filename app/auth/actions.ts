@@ -38,6 +38,18 @@ function fieldErrorsFrom(error: z.ZodError): Record<string, string> {
   return errors;
 }
 
+/**
+ * Keep a `?next=` inside the app.
+ *
+ * A crafted value must never bounce somebody to another origin carrying a
+ * freshly minted session, so anything that is not a plain relative path falls
+ * back to the dashboard. The cast is safe because of that check; typedRoutes
+ * cannot know a runtime-validated string is in-app.
+ */
+function safeRedirect(next: string): Route {
+  return (next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard") as Route;
+}
+
 export async function signUpAction(
   _prev: AuthState,
   formData: FormData
@@ -51,6 +63,8 @@ export async function signUpAction(
   if (!parsed.success) {
     return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
   }
+
+  const next = String(formData.get("next") ?? "");
 
   try {
     const supabase = await createSupabaseServerClient();
@@ -68,10 +82,13 @@ export async function signUpAction(
     return describeUnknownError(error, "signUpAction");
   }
 
-  // With local email confirmation off the user already has a session, so land
-  // them in onboarding. With confirmations on they are bounced to /login by
-  // middleware and see the "check your email" copy there.
-  redirect("/onboarding");
+  /*
+   * With local email confirmation off the user already has a session. Where
+   * they land depends on why they signed up: somebody following an invitation
+   * is joining an existing farm and must NOT be sent to onboarding, which
+   * would have them create a second one. Everyone else starts onboarding.
+   */
+  redirect(next ? safeRedirect(next) : "/onboarding");
 }
 
 export async function signInAction(
@@ -101,14 +118,7 @@ export async function signInAction(
     return describeUnknownError(error, "signInAction");
   }
 
-  // Only relative in-app paths, so a crafted ?next= cannot bounce someone to
-  // an attacker's site carrying a fresh session.
-  // Validated above, so the cast is safe. typedRoutes cannot know that a
-  // runtime-checked string is in-app.
-  const safeNext = (
-    next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"
-  ) as Route;
-  redirect(safeNext);
+  redirect(safeRedirect(next));
 }
 
 export async function signOutAction() {

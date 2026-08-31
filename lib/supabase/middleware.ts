@@ -13,6 +13,9 @@ const PUBLIC_PATHS = [
   "/pricing",
   "/auth/callback",
   "/auth/confirm",
+  // An invitee may have no account yet, so the landing page has to be
+  // reachable signed out. It exposes only farm name, role and expiry.
+  "/invite",
 ];
 
 function isPublicPath(pathname: string): boolean {

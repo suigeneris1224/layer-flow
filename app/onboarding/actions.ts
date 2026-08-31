@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -63,21 +64,32 @@ export async function createFarmAction(
       );
     }
 
-    const { data, error } = await supabase
-      .from("farms")
-      .insert({
-        name: parsed.data.name,
-        barangay: parsed.data.barangay || null,
-        municipality: parsed.data.municipality,
-        province: parsed.data.province,
-        // owner_id must match auth.uid() or the RLS check rejects the insert.
-        owner_id: user.id,
-      })
-      .select("id")
-      .single();
+    /*
+     * The id is generated here rather than read back, and that is load-bearing.
+     *
+     * `.select()` makes PostgREST issue INSERT ... RETURNING, and the returned
+     * row must satisfy the SELECT policy `farms_select_member(id)` inside the
+     * same statement. That calls app.is_farm_member, which is STABLE and so
+     * sees the snapshot from the start of the statement -- before the
+     * farms_claim_ownership AFTER INSERT trigger has added the membership. The
+     * row is written and then rejected on the way out, surfacing as "new row
+     * violates row-level security policy" and leaving onboarding unable to
+     * finish. Supplying the id means we never have to read it back.
+     */
+    const newFarmId = randomUUID();
+
+    const { error } = await supabase.from("farms").insert({
+      id: newFarmId,
+      name: parsed.data.name,
+      barangay: parsed.data.barangay || null,
+      municipality: parsed.data.municipality,
+      province: parsed.data.province,
+      // owner_id must match auth.uid() or the RLS check rejects the insert.
+      owner_id: user.id,
+    });
 
     if (error) return describeDatabaseError(error, "createFarmAction");
-    farmId = data.id;
+    farmId = newFarmId;
 
     // Triggers have already added the OWNER membership, a FREE subscription
     // and nothing else; egg sizes are ours to seed.

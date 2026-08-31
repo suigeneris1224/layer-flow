@@ -37,6 +37,7 @@ export type SubscriptionStatus = Public["Enums"]["subscription_status"];
 export type ProfileRow = TableRow<"profiles">;
 export type FarmRow = TableRow<"farms">;
 export type FarmMemberRow = TableRow<"farm_members">;
+export type FarmInvitationRow = TableRow<"farm_invitations">;
 export type HouseRow = TableRow<"houses">;
 export type FlockRow = TableRow<"flocks">;
 export type EggSizeRow = TableRow<"egg_sizes">;

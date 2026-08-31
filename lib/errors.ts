@@ -39,6 +39,8 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   egg_prices_no_overlap:
     "A price for this egg size already covers these dates. Close the old price first.",
   farm_members_farm_id_user_id_key: "This person is already a member of the farm.",
+  farm_invitations_pending_key:
+    "You already have an open invitation for this email. Cancel it first, or send them the existing link.",
   daily_production_damaged_within_collected:
     "Broken and dirty eggs cannot add up to more than the eggs you collected.",
   flocks_current_hens_within_initial:
@@ -101,6 +103,22 @@ export function describeDatabaseError(
   }
   if (haystack.includes("does not belong to farm")) {
     return failure("That house belongs to a different farm.");
+  }
+
+  /*
+   * accept_farm_invitation raises with generic errcodes, which the table below
+   * would turn into nonsense -- an expired invitation is a check_violation, and
+   * "Some of those numbers don't add up" is not what happened. Match the
+   * message instead, and say the one thing the person can act on.
+   */
+  if (haystack.includes("Invitation expired")) {
+    return failure("That invitation has expired. Ask the farm owner for a new link.");
+  }
+  if (haystack.includes("Invitation already used")) {
+    return failure("That invitation has already been used.");
+  }
+  if (haystack.includes("Invitation not found")) {
+    return failure("That invitation link is not valid.");
   }
 
   const byCode = error.code ? CODE_MESSAGES[error.code] : undefined;

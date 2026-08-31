@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -96,18 +97,21 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
     );
 
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("farms")
-      .insert({
-        name: parsed.data.name,
-        barangay: parsed.data.barangay || null,
-        municipality: parsed.data.municipality,
-        province: parsed.data.province,
-        // owner_id must match auth.uid() or the RLS check rejects the insert.
-        owner_id: user.id,
-      })
-      .select("id")
-      .single();
+
+    // Generated here, not read back -- see the note in app/onboarding/actions.ts.
+    // INSERT ... RETURNING applies the SELECT policy in the same statement, and
+    // the OWNER membership does not exist in that snapshot yet.
+    const newFarmId = randomUUID();
+
+    const { error } = await supabase.from("farms").insert({
+      id: newFarmId,
+      name: parsed.data.name,
+      barangay: parsed.data.barangay || null,
+      municipality: parsed.data.municipality,
+      province: parsed.data.province,
+      // owner_id must match auth.uid() or the RLS check rejects the insert.
+      owner_id: user.id,
+    });
 
     if (error) return describeDatabaseError(error, "createFarmAction");
 
@@ -115,31 +119,31 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
     // subscription; egg sizes are ours to seed, same as onboarding.
     const { error: sizesError } = await supabase.rpc(
       "seed_default_egg_sizes" as never,
-      { farm: data.id } as never
+      { farm: newFarmId } as never
     );
 
     if (sizesError) {
       await supabase.from("egg_sizes").insert([
-        { farm_id: data.id, name: "Small", code: "SMALL", sort_order: 1 },
-        { farm_id: data.id, name: "Medium", code: "MEDIUM", sort_order: 2 },
-        { farm_id: data.id, name: "Large", code: "LARGE", sort_order: 3 },
-        { farm_id: data.id, name: "Extra Large", code: "EXTRA_LARGE", sort_order: 4 },
-        { farm_id: data.id, name: "Jumbo", code: "JUMBO", sort_order: 5 },
+        { farm_id: newFarmId, name: "Small", code: "SMALL", sort_order: 1 },
+        { farm_id: newFarmId, name: "Medium", code: "MEDIUM", sort_order: 2 },
+        { farm_id: newFarmId, name: "Large", code: "LARGE", sort_order: 3 },
+        { farm_id: newFarmId, name: "Extra Large", code: "EXTRA_LARGE", sort_order: 4 },
+        { farm_id: newFarmId, name: "Jumbo", code: "JUMBO", sort_order: 5 },
       ]);
     }
 
     await recordAuditLog({
-      farmId: data.id,
+      farmId: newFarmId,
       userId: user.id,
       action: AUDIT_ACTIONS.FARM_CREATED,
       entityType: "farm",
-      entityId: data.id,
+      entityId: newFarmId,
       metadata: { name: parsed.data.name },
     });
 
     revalidatePath("/farms");
 
-    return { ok: true, data: { id: data.id } };
+    return { ok: true, data: { id: newFarmId } };
   } catch (error) {
     return describeUnknownError(error, "createFarmAction");
   }

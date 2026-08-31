@@ -79,8 +79,26 @@ export function farmHour(timezone = "Asia/Manila", now: Date = new Date()): numb
   return Number.isFinite(parsed) ? parsed % 24 : 0;
 }
 
+/** A bare YYYY-MM-DD, as opposed to a full timestamp. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Parse either shape a date reaches us in.
+ *
+ * Most columns on this product are `date`, and a bare "2026-09-07" must be read
+ * as that calendar day rather than as UTC midnight, or every farm ahead of UTC
+ * sees the day before. But `timestamptz` columns -- farm_invitations.expires_at
+ * is the first -- arrive as a full instant, and appending "T00:00:00" to one of
+ * those produces "…ZT00:00:00", which is not a date at all. That silently
+ * rendered as an empty string.
+ */
+function parseDateish(date: string | Date): Date {
+  if (typeof date !== "string") return date;
+  return new Date(DATE_ONLY.test(date) ? `${date}T00:00:00` : date);
+}
+
 export function formatDate(date: string | Date, timezone = "Asia/Manila"): string {
-  const value = typeof date === "string" ? new Date(`${date}T00:00:00`) : date;
+  const value = parseDateish(date);
   if (Number.isNaN(value.getTime())) return "";
   return new Intl.DateTimeFormat(PH_LOCALE, {
     timeZone: timezone,
@@ -91,7 +109,7 @@ export function formatDate(date: string | Date, timezone = "Asia/Manila"): strin
 }
 
 export function formatDateShort(date: string | Date, timezone = "Asia/Manila"): string {
-  const value = typeof date === "string" ? new Date(`${date}T00:00:00`) : date;
+  const value = parseDateish(date);
   if (Number.isNaN(value.getTime())) return "";
   return new Intl.DateTimeFormat(PH_LOCALE, {
     timeZone: timezone,

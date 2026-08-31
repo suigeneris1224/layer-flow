@@ -536,6 +536,56 @@ export type Database = {
           },
         ]
       }
+      farm_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          farm_id: string
+          id: string
+          invited_by: string | null
+          role: Database["public"]["Enums"]["farm_role"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          farm_id: string
+          id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["farm_role"]
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          farm_id?: string
+          id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["farm_role"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_invitations_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farm_members: {
         Row: {
           created_at: string
@@ -1013,6 +1063,15 @@ export type Database = {
       }
     }
     Functions: {
+      accept_farm_invitation: { Args: { p_token: string }; Returns: string }
+      invitation_preview: {
+        Args: { p_token: string }
+        Returns: {
+          expires_at: string
+          farm_name: string
+          role: Database["public"]["Enums"]["farm_role"]
+        }[]
+      }
       record_daily_production: {
         Args: {
           p_average_egg_weight?: number

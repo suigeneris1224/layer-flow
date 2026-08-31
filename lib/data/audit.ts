@@ -77,6 +77,7 @@ export const AUDIT_ACTIONS = {
   VACCINATION_DELETED: "vaccination.deleted",
   PROFILE_UPDATED: "profile.updated",
   MEMBER_ADDED: "member.added",
+  MEMBER_UPDATED: "member.updated",
   MEMBER_REMOVED: "member.removed",
   PLAN_CHANGED: "subscription.plan_changed",
 } as const;

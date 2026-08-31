@@ -7,7 +7,7 @@ import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { signUpAction, type AuthState } from "@/app/auth/actions";
 
-export function SignupForm() {
+export function SignupForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     signUpAction,
     undefined
@@ -17,6 +17,7 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
+      <input type="hidden" name="next" value={next} />
       {state && !state.ok && <StatusNote tone="bad">{state.error}</StatusNote>}
 
       <Field label="Your name" htmlFor="fullName" error={fieldErrors?.fullName}>

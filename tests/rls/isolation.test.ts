@@ -74,6 +74,7 @@ suite("RLS tenant isolation", () => {
     "expenses",
     "egg_inventory_adjustments",
     "subscriptions",
+    "farm_invitations",
   ] as const;
 
   describe("reads", () => {
@@ -1004,6 +1005,171 @@ suite("RLS tenant isolation", () => {
         .single();
 
       expect(restored?.current_hens).toBe(before?.current_hens);
+    });
+  });
+
+  /*
+   * Team management.
+   *
+   * farm_invitations is the one table an outsider is *meant* to act on: the
+   * whole point of an invitation is that the recipient is not a member yet. So
+   * the protection cannot be "members only" -- it is that the table itself is
+   * owner-only, and the token is the sole key, honoured exclusively by the two
+   * SECURITY DEFINER functions.
+   */
+  describe("team management", () => {
+    const future = () => new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const past = () => new Date(Date.now() - 86_400_000).toISOString();
+
+    async function seedInvite(
+      farmId: string,
+      token: string,
+      overrides: Record<string, unknown> = {}
+    ) {
+      const admin = adminClient();
+      const { error } = await admin.from("farm_invitations").insert({
+        farm_id: farmId,
+        email: `${token}@example.com`,
+        role: "WORKER",
+        token,
+        expires_at: future(),
+        ...overrides,
+      });
+      if (error) throw new Error(`seed invite: ${error.message}`);
+    }
+
+    it("a worker cannot invite anyone", async () => {
+      const { error } = await worker.client.from("farm_invitations").insert({
+        farm_id: farmA.farmId,
+        email: "sneaky@example.com",
+        role: "WORKER",
+        token: `worker-attempt-${Date.now()}`,
+        expires_at: future(),
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a manager cannot invite anyone either -- invites are owner-only", async () => {
+      const { error } = await manager.client.from("farm_invitations").insert({
+        farm_id: farmA.farmId,
+        email: "manager-attempt@example.com",
+        role: "WORKER",
+        token: `manager-attempt-${Date.now()}`,
+        expires_at: future(),
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("an outsider holding a token still cannot read the invitations table", async () => {
+      const token = `hidden-${Date.now()}`;
+      await seedInvite(farmA.farmId, token);
+
+      // Bob is not a member of farm A. Even knowing the token exactly, the
+      // table must stay closed -- otherwise the row leaks the invitee's email.
+      const { data, error } = await bob.client
+        .from("farm_invitations")
+        .select("id, email")
+        .eq("token", token);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("the preview exposes the farm name and nothing more", async () => {
+      const token = `preview-${Date.now()}`;
+      await seedInvite(farmA.farmId, token);
+
+      const { data, error } = await bob.client.rpc("invitation_preview", {
+        p_token: token,
+      });
+
+      expect(error).toBeNull();
+      const row = (data ?? [])[0];
+      expect(row?.role).toBe("WORKER");
+      expect(row).not.toHaveProperty("email");
+      expect(row).not.toHaveProperty("token");
+    });
+
+    it("the preview returns nothing for an expired token", async () => {
+      const token = `expired-${Date.now()}`;
+      await seedInvite(farmA.farmId, token, { expires_at: past() });
+
+      const { data } = await bob.client.rpc("invitation_preview", { p_token: token });
+      expect(data ?? []).toEqual([]);
+    });
+
+    it("accepting an expired invitation is refused", async () => {
+      const token = `accept-expired-${Date.now()}`;
+      await seedInvite(farmA.farmId, token, { expires_at: past() });
+
+      const { error } = await bob.client.rpc("accept_farm_invitation", {
+        p_token: token,
+      });
+
+      expect(error).not.toBeNull();
+      expect(error?.message).toContain("expired");
+    });
+
+    it("accepting an unknown token is refused", async () => {
+      const { error } = await bob.client.rpc("accept_farm_invitation", {
+        p_token: `does-not-exist-${Date.now()}`,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a valid token grants membership, and re-accepting is a no-op", async () => {
+      const token = `accept-ok-${Date.now()}`;
+      await seedInvite(farmA.farmId, token);
+
+      const first = await bob.client.rpc("accept_farm_invitation", { p_token: token });
+      expect(first.error).toBeNull();
+      expect(first.data).toBe(farmA.farmId);
+
+      // Idempotent: a double tap or a retry must not raise.
+      const second = await bob.client.rpc("accept_farm_invitation", { p_token: token });
+      expect(second.error).toBeNull();
+      expect(second.data).toBe(farmA.farmId);
+
+      const admin = adminClient();
+      const { data: rows } = await admin
+        .from("farm_members")
+        .select("role")
+        .eq("farm_id", farmA.farmId)
+        .eq("user_id", bob.id);
+
+      expect(rows).toHaveLength(1);
+      expect(rows?.[0].role).toBe("WORKER");
+
+      // Leave the fixture as we found it, since later tests assume bob is an
+      // outsider to farm A.
+      await admin
+        .from("farm_members")
+        .delete()
+        .eq("farm_id", farmA.farmId)
+        .eq("user_id", bob.id);
+      await admin.from("farm_invitations").delete().eq("token", token);
+    });
+
+    it("an owner cannot remove themselves and strand the farm", async () => {
+      const { data: before } = await alice.client
+        .from("farm_members")
+        .select("id")
+        .eq("farm_id", farmA.farmId)
+        .eq("user_id", alice.id)
+        .single();
+
+      await alice.client.from("farm_members").delete().eq("id", before!.id);
+
+      const admin = adminClient();
+      const { data: after } = await admin
+        .from("farm_members")
+        .select("id")
+        .eq("id", before!.id);
+
+      expect(after).toHaveLength(1);
     });
   });
 });

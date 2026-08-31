@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ShoppingCart, Trash2, UserPlus } from "lucide-react";
+import { PhilippinePeso, Plus, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, NumberInput, Select } from "@/components/ui/field";
+import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import {
   checkSaleAgainstStock,
@@ -215,12 +216,13 @@ export function SaleForm({
           <Panel title="Sale details" bodyClassName="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Date" htmlFor="saleDate" error={fieldErrors.saleDate}>
-                <Input
+                <DateField
                   id="saleDate"
-                  type="date"
                   max={today}
+                  today={today}
                   value={saleDate}
-                  onChange={(event) => setSaleDate(event.target.value)}
+                  onChange={setSaleDate}
+                  invalid={!!fieldErrors.saleDate}
                 />
               </Field>
 
@@ -472,7 +474,7 @@ export function SaleForm({
         disabled={sizes.length === 0}
         className="sticky bottom-20 lg:bottom-4"
       >
-        <ShoppingCart className="size-4" aria-hidden />
+        <PhilippinePeso className="size-4" aria-hidden />
         {pending ? "Saving…" : "Record sale"}
       </Button>
     </form>

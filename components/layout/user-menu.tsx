@@ -1,11 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LogOut } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { ChevronDown, LogOut, Settings } from "lucide-react";
 import { signOutAction } from "@/app/auth/actions";
 
-/** Avatar, name and role, with sign-out behind a small menu. */
-export function UserMenu({ userName, role }: { userName: string; role: string }) {
+/** Avatar, name and role, with settings and sign-out behind a small menu. */
+export function UserMenu({
+  userName,
+  role,
+  avatarUrl,
+}: {
+  userName: string;
+  role: string;
+  avatarUrl?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
 
@@ -46,9 +56,20 @@ export function UserMenu({ userName, role }: { userName: string; role: string })
         aria-haspopup="menu"
         className="flex min-h-11 items-center gap-2 rounded-md px-1.5 hover:bg-muted"
       >
-        <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-          {initials}
-        </span>
+        {avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt=""
+            width={32}
+            height={32}
+            unoptimized
+            className="size-8 rounded-full object-cover"
+          />
+        ) : (
+          <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+            {initials}
+          </span>
+        )}
         <span className="hidden flex-col items-start leading-tight sm:flex">
           <span className="max-w-[9rem] truncate text-sm font-medium">{userName}</span>
           <span className="text-[11px] text-muted-foreground">{role}</span>
@@ -65,6 +86,16 @@ export function UserMenu({ userName, role }: { userName: string; role: string })
             <p className="truncate text-sm font-medium">{userName}</p>
             <p className="text-xs text-muted-foreground">{role}</p>
           </div>
+
+          <Link
+            href="/settings"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+          >
+            <Settings className="size-4" aria-hidden />
+            Settings
+          </Link>
 
           <form action={signOutAction}>
             <button

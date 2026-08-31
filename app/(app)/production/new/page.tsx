@@ -5,17 +5,20 @@ import { canRecordProduction } from "@/lib/auth/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EmptyState, StatusNote } from "@/components/ui/states";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
-import { farmToday, shiftDate } from "@/lib/format";
+import { farmToday } from "@/lib/format";
 import { ProductionForm } from "./production-form";
 
 export const metadata: Metadata = { title: "Record production" };
 
 export const dynamic = "force-dynamic";
 
-/** How far back the duplicate-date warning can see. */
-const RECORDED_HISTORY_DAYS = 45;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export default async function NewProductionPage() {
+export default async function NewProductionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ flock?: string; date?: string }>;
+}) {
   const context = await requireFarmContext();
 
   if (!canRecordProduction(context)) {
@@ -31,7 +34,7 @@ export default async function NewProductionPage() {
   const supabase = await createSupabaseServerClient();
   const today = farmToday(context.timezone);
 
-  const [flocksResult, sizesResult, recordedResult, lastFeedResult] = await Promise.all([
+  const [flocksResult, sizesResult, lastFeedResult] = await Promise.all([
     supabase
       .from("flocks")
       .select("id, name, breed, current_hens")
@@ -44,11 +47,6 @@ export default async function NewProductionPage() {
       .eq("farm_id", context.farmId)
       .eq("is_active", true)
       .order("sort_order"),
-    supabase
-      .from("daily_production")
-      .select("flock_id, production_date")
-      .eq("farm_id", context.farmId)
-      .gte("production_date", shiftDate(today, -RECORDED_HISTORY_DAYS)),
     // Pre-fill the feed price with whatever they paid last, so the common case
     // is one number instead of two.
     supabase
@@ -76,10 +74,14 @@ export default async function NewProductionPage() {
     );
   }
 
-  const recordedDates: Record<string, string[]> = {};
-  for (const row of recordedResult.data ?? []) {
-    (recordedDates[row.flock_id] ??= []).push(row.production_date);
-  }
+  // "Edit this day" on /production/[id] links here with the flock and date it
+  // wants. Both are validated against what this farm actually has -- a stray
+  // query string should land on today's blank form, not on someone else's.
+  const { flock: flockParam, date: dateParam } = await searchParams;
+  const initialFlockId = flocks.some((f) => f.id === flockParam)
+    ? flockParam
+    : undefined;
+  const initialDate = dateParam && ISO_DATE.test(dateParam) ? dateParam : undefined;
 
   return (
     <PageShell>
@@ -91,8 +93,9 @@ export default async function NewProductionPage() {
       <ProductionForm
         flocks={flocks}
         eggSizes={sizesResult.data ?? []}
-        recordedDates={recordedDates}
         today={today}
+        initialFlockId={initialFlockId}
+        initialDate={initialDate}
         lastFeedCostPerKg={Number(lastFeedResult.data?.cost_per_kg ?? 0)}
         currency={context.currency}
       />

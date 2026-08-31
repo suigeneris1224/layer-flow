@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronLeft, ChevronRight, PhilippinePeso } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageSales } from "@/lib/auth/permissions";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
@@ -76,7 +76,7 @@ export default async function SalesPage({
         action={
           canSell ? (
             <Link href="/sales/new" className={cn(buttonVariants({ size: "md" }))}>
-              <ShoppingCart className="size-4" aria-hidden />
+              <PhilippinePeso className="size-4" aria-hidden />
               Record a sale
             </Link>
           ) : undefined
@@ -91,7 +91,7 @@ export default async function SalesPage({
 
       {salesCount === 0 ? (
         <EmptyState
-          icon={ShoppingCart}
+          icon={PhilippinePeso}
           title="No sales yet"
           message="Record your first sale and your revenue starts showing on the dashboard."
           actionLabel={canSell ? "Record a sale" : undefined}

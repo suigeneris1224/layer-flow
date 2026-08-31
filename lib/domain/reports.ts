@@ -113,6 +113,29 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((b - a) / 86_400_000) + 1;
 }
 
+/**
+ * The same window one calendar year earlier.
+ *
+ * Egg production is seasonal and feed prices move in cycles, so "August against
+ * last August" says something the equal-length shift-back comparison cannot:
+ * that one only ever answers "against the weeks immediately before".
+ *
+ * Shifting the calendar year rather than subtracting 365 days keeps the window
+ * aligned to the same dates -- a leap year would otherwise slide it by a day.
+ * A 29 February start or end clamps to the 28th, the only day that has no
+ * counterpart in a common year.
+ */
+export function sameRangeLastYear(from: string, to: string): { from: string; to: string } {
+  return { from: shiftYear(from), to: shiftYear(to) };
+}
+
+function shiftYear(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const previous = year - 1;
+  const clamped = Math.min(day, daysInMonth(previous, month));
+  return `${previous}-${String(month).padStart(2, "0")}-${String(clamped).padStart(2, "0")}`;
+}
+
 /** Every date from `from` to `to`, inclusive, for building a daily series over any resolved range. */
 export function eachDate(from: string, to: string): string[] {
   const dates: string[] = [];

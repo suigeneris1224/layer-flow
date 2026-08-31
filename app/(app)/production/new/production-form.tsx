@@ -7,6 +7,7 @@ import { Egg, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, Label, NumberInput, Select, Textarea } from "@/components/ui/field";
+import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { loadProductionAction, recordProductionAction } from "@/app/(app)/production/actions";
@@ -57,15 +58,18 @@ function toNumber(value: string): number {
 export function ProductionForm({
   flocks,
   eggSizes,
-  recordedDates,
   today,
+  initialFlockId,
+  initialDate,
   lastFeedCostPerKg,
   currency,
 }: {
   flocks: FlockOption[];
   eggSizes: SizeOption[];
-  recordedDates: Record<string, string[]>;
   today: string;
+  /** Preselection from an "Edit this day" link; both already validated. */
+  initialFlockId?: string;
+  initialDate?: string;
   lastFeedCostPerKg: number;
   currency: string;
 }) {
@@ -74,13 +78,33 @@ export function ProductionForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   const [loadingExisting, setLoadingExisting] = useState(false);
+  /*
+   * Whether the selected flock/date already has a record.
+   *
+   * This used to be decided from a 45-day map of recorded dates shipped with
+   * the page, which meant an older date opened blank and saving it silently
+   * overwrote a real day. The server is asked instead, so the window is gone
+   * and there is no date the form can be wrong about.
+   */
+  const [alreadyRecorded, setAlreadyRecorded] = useState(false);
+  /*
+   * A load that failed is not the same as a day with no record.
+   *
+   * If we cannot tell which it is, blanking the form would recreate exactly
+   * the hazard this screen exists to avoid: type a number over a day whose
+   * real total we never saw, and saving replaces it. So on failure the fields
+   * are left untouched and saving is blocked until a reload settles it.
+   */
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const { register, handleSubmit, watch, setError, reset, formState } = useForm<FormValues>({
+  const { register, handleSubmit, watch, setValue, setError, reset, formState } = useForm<FormValues>({
     defaultValues: {
-      flockId: flocks[0]?.id ?? "",
-      productionDate: today,
+      flockId: initialFlockId ?? flocks[0]?.id ?? "",
+      productionDate: initialDate ?? today,
       // Pre-filled from the flock roster so the common case is "looks right, next".
-      hensPresent: String(flocks[0]?.current_hens ?? 0),
+      hensPresent: String(
+        flocks.find((f) => f.id === (initialFlockId ?? flocks[0]?.id))?.current_hens ?? 0
+      ),
       eggsCollected: "",
       brokenEggs: "0",
       dirtyEggs: "0",
@@ -96,8 +120,6 @@ export function ProductionForm({
 
   const selectedFlockId = values.flockId;
   const selectedDate = values.productionDate;
-
-  const alreadyRecorded = Boolean(recordedDates[selectedFlockId]?.includes(selectedDate));
 
   /** Blank slate for a day that has no record yet. */
   const emptyDay = useCallback(
@@ -133,43 +155,54 @@ export function ProductionForm({
 
     if (!selectedFlockId || !selectedDate) return;
 
-    if (!alreadyRecorded) {
-      setLoadingExisting(false);
-      reset(emptyDay(selectedFlockId, selectedDate));
-      return;
-    }
-
     let cancelled = false;
     setLoadingExisting(true);
+    setLoadFailed(false);
 
     loadProductionAction(selectedFlockId, selectedDate)
       .then((result) => {
         if (cancelled || requestKey.current !== key) return;
 
-        if (result.ok && result.data) {
-          const existing = result.data;
-          reset({
-            flockId: selectedFlockId,
-            productionDate: selectedDate,
-            hensPresent: String(existing.hensPresent),
-            eggsCollected: String(existing.eggsCollected),
-            brokenEggs: String(existing.brokenEggs),
-            dirtyEggs: String(existing.dirtyEggs),
-            mortality: String(existing.mortality),
-            feedKg: existing.feedKg > 0 ? String(existing.feedKg) : "",
-            feedCostPerKg:
-              existing.feedCostPerKg > 0
-                ? String(existing.feedCostPerKg)
-                : lastFeedCostPerKg > 0
-                  ? String(lastFeedCostPerKg)
-                  : "",
-            notes: existing.notes,
-            sizes: eggSizes.map((size) => ({
-              eggSizeId: size.id,
-              quantity: existing.sizes[size.id] ? String(existing.sizes[size.id]) : "",
-            })),
-          });
+        if (!result.ok) {
+          setLoadFailed(true);
+          return;
         }
+
+        if (!result.data) {
+          setAlreadyRecorded(false);
+          reset(emptyDay(selectedFlockId, selectedDate));
+          return;
+        }
+
+        setAlreadyRecorded(true);
+        const existing = result.data;
+        reset({
+          flockId: selectedFlockId,
+          productionDate: selectedDate,
+          hensPresent: String(existing.hensPresent),
+          eggsCollected: String(existing.eggsCollected),
+          brokenEggs: String(existing.brokenEggs),
+          dirtyEggs: String(existing.dirtyEggs),
+          mortality: String(existing.mortality),
+          feedKg: existing.feedKg > 0 ? String(existing.feedKg) : "",
+          feedCostPerKg:
+            existing.feedCostPerKg > 0
+              ? String(existing.feedCostPerKg)
+              : lastFeedCostPerKg > 0
+                ? String(lastFeedCostPerKg)
+                : "",
+          notes: existing.notes,
+          sizes: eggSizes.map((size) => ({
+            eggSizeId: size.id,
+            quantity: existing.sizes[size.id] ? String(existing.sizes[size.id]) : "",
+          })),
+        });
+      })
+      .catch(() => {
+        // A server action that throws rejects here rather than returning a
+        // failure, so this branch matters as much as the one above: without
+        // it a network drop would leave the form looking like a blank day.
+        if (!cancelled && requestKey.current === key) setLoadFailed(true);
       })
       .finally(() => {
         if (!cancelled && requestKey.current === key) setLoadingExisting(false);
@@ -181,7 +214,7 @@ export function ProductionForm({
     // `reset` and `emptyDay` are stable; re-running on every render would
     // fight the farmer for control of the inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFlockId, selectedDate, alreadyRecorded]);
+  }, [selectedFlockId, selectedDate]);
 
   const derived = useMemo(() => {
     const eggs = toNumber(values.eggsCollected);
@@ -256,6 +289,13 @@ export function ProductionForm({
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {formError && <StatusNote tone="bad">{formError}</StatusNote>}
 
+      {loadFailed && (
+        <StatusNote tone="bad" title="We couldn't check this day">
+          Reload the page before saving. Until then we cannot tell whether this day
+          already has a record, and saving would replace it.
+        </StatusNote>
+      )}
+
       {alreadyRecorded && (
         <StatusNote tone="warn" title="Editing an existing record">
           {loadingExisting ? (
@@ -293,7 +333,18 @@ export function ProductionForm({
               </Field>
 
               <Field label="Date" htmlFor="productionDate" error={errors.productionDate?.message}>
-                <Input id="productionDate" type="date" max={today} {...register("productionDate")} />
+                <DateField
+                  id="productionDate"
+                  max={today}
+                  today={today}
+                  value={selectedDate}
+                  // setValue rather than Controller: this form already drives
+                  // everything else off watch(), and one registered field
+                  // wrapped in a Controller would be the odd one out.
+                  onChange={(next) =>
+                    setValue("productionDate", next, { shouldDirty: true })
+                  }
+                />
               </Field>
             </div>
 
@@ -453,7 +504,7 @@ export function ProductionForm({
         block
         loading={pending}
         // Saving mid-load would write the blank form over a real day.
-        disabled={!derived.check.ok || loadingExisting}
+        disabled={!derived.check.ok || loadingExisting || loadFailed}
         className="sticky bottom-20 lg:bottom-4"
       >
         <Egg className="size-4" aria-hidden />

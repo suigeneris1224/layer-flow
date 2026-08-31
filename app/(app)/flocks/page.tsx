@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
+import Link from "next/link";
 import { Layers } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageFlock } from "@/lib/auth/permissions";
@@ -78,7 +79,12 @@ export default async function FlocksPage() {
                 {flocks.map((flock) => (
                   <tr key={flock.id} className="border-b border-border last:border-0">
                     <th scope="row" className="py-2.5 text-left font-normal">
-                      {flock.name}
+                      <Link
+                        href={`/flocks/${flock.id}` as Route}
+                        className="font-medium underline-offset-4 hover:underline"
+                      >
+                        {flock.name}
+                      </Link>
                       {flock.breed && (
                         <span className="block text-xs text-muted-foreground">{flock.breed}</span>
                       )}

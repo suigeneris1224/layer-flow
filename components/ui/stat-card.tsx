@@ -37,7 +37,13 @@ export function StatCard({
         className
       )}
     >
-      <div className="flex items-start gap-3">
+      {/*
+        The chip sits above the figure on a phone rather than beside it: in a
+        2-up grid it was eating 52px of a 123px content box, leaving the
+        headline number nowhere to go. Side by side again from `sm`, where
+        there is room for both.
+      */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
         <IconChip icon={icon} tint={tint} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>

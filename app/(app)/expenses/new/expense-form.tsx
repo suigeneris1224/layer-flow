@@ -6,6 +6,7 @@ import { Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, NumberInput, Select, Textarea } from "@/components/ui/field";
+import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from "@/lib/domain/expenses";
 import { currencySymbol } from "@/lib/format";
@@ -97,12 +98,11 @@ export function ExpenseForm({
         </Field>
 
         <Field label="Date" htmlFor="expense-date" error={fieldErrors.expenseDate}>
-          <Input
+          <DateField
             id="expense-date"
-            type="date"
             value={expenseDate}
-            onChange={(event) => setExpenseDate(event.target.value)}
-            aria-invalid={!!fieldErrors.expenseDate}
+            onChange={setExpenseDate}
+            invalid={!!fieldErrors.expenseDate}
           />
         </Field>
 

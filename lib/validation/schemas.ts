@@ -278,6 +278,62 @@ export const dailyProductionSchema = z
     }
   );
 
+// ---------------------------------------------------------------------------
+// Flock operations: standalone mortality, feed and vaccinations
+// ---------------------------------------------------------------------------
+
+/**
+ * These cover the ad-hoc entries that do not belong to a collection day --
+ * a mid-week cull, a feed delivery, a vaccination round. Rows written through
+ * these schemas always leave `daily_production_id` null; the linked rows stay
+ * the exclusive property of the record_daily_production RPC, which deletes and
+ * re-inserts whatever it finds attached to the day it is saving.
+ */
+
+export const mortalityRecordSchema = z.object({
+  flockId: uuid,
+  recordDate: isoDate,
+  quantity: intFromForm("Birds lost", { min: 1, max: 1_000_000 }),
+  reason: z.string().trim().max(120).optional().default(""),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export const feedUsageSchema = z.object({
+  flockId: uuid,
+  usageDate: isoDate,
+  quantityKg: decimalFromForm("Feed used", { min: 0, max: 100_000 }),
+  costPerKg: decimalFromForm("Feed cost per kg", { max: 10_000 }).default(0),
+  feedType: z.string().trim().max(120).optional().default(""),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export const vaccinationSchema = z.object({
+  flockId: uuid,
+  vaccinationDate: isoDate,
+  vaccineName: z.string().trim().min(1, "Enter the vaccine name").max(120),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export type MortalityRecordInput = z.infer<typeof mortalityRecordSchema>;
+export type FeedUsageInput = z.infer<typeof feedUsageSchema>;
+export type VaccinationInput = z.infer<typeof vaccinationSchema>;
+
+// ---------------------------------------------------------------------------
+// Profile
+// ---------------------------------------------------------------------------
+
+/**
+ * A farmer edits only their own row; `id` is never accepted from the client,
+ * it comes from the verified session. Phone stays loose on purpose -- PH
+ * numbers get written every which way and rejecting them helps nobody.
+ */
+export const updateProfileSchema = z.object({
+  fullName: z.string().trim().min(1, "Enter your name").max(120),
+  phone: z.string().trim().max(40).optional().default(""),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
 export type DailyProductionInput = z.infer<typeof dailyProductionSchema>;
 export type CreateFarmInput = z.infer<typeof createFarmSchema>;
 export type CreateHouseInput = z.infer<typeof createHouseSchema>;

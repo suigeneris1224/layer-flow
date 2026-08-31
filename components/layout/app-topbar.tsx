@@ -16,6 +16,7 @@ export function AppTopbar({
   farmName,
   userName,
   role,
+  avatarUrl,
   plan,
   alertCount,
   dateLabel,
@@ -24,6 +25,7 @@ export function AppTopbar({
   farmName: string;
   userName: string;
   role: string;
+  avatarUrl?: string | null;
   plan: SubscriptionPlan;
   alertCount: number;
   dateLabel: string;
@@ -62,7 +64,7 @@ export function AppTopbar({
         </span>
       </a>
 
-      <UserMenu userName={userName} role={role} />
+      <UserMenu userName={userName} role={role} avatarUrl={avatarUrl} />
     </header>
   );
 }

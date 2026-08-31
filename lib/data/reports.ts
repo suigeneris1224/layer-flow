@@ -13,7 +13,12 @@ import {
 } from "@/lib/domain/calculations";
 import { shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
-import { daysBetween, eachDate, type ResolvedRange } from "@/lib/domain/reports";
+import {
+  daysBetween,
+  eachDate,
+  sameRangeLastYear,
+  type ResolvedRange,
+} from "@/lib/domain/reports";
 
 /**
  * Money-side insights: revenue/cost/profit trend, and (Pro) per-flock
@@ -48,6 +53,19 @@ export interface ReportsData {
     cost: number | null;
     profit: number | null;
   };
+  /**
+   * The same window a year earlier. Null when there is nothing recorded then,
+   * which is most farms -- showing a panel of zeros and "-100%" would read as
+   * a collapse rather than as an absence of history.
+   */
+  lastYear: {
+    from: string;
+    to: string;
+    revenue: number;
+    cost: number;
+    profit: number;
+    deltas: { revenue: number | null; cost: number | null; profit: number | null };
+  } | null;
   chart: DailyMoneyPoint[];
   /** Only populated when the farm's plan includes advanced_reports. */
   flockProfitability: FlockProfitRow[] | null;
@@ -112,14 +130,16 @@ export const getReportsData = cache(async function getReportsData(
   const rangeDays = daysBetween(range.from, range.to);
   const previousEnd = shiftDate(range.from, -1);
   const previousStart = shiftDate(previousEnd, -(rangeDays - 1));
+  const yearAgo = sameRangeLastYear(range.from, range.to);
 
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
   const hasSales = canAccess(entitlement, "egg_sales");
   const hasAdvanced = canAccess(entitlement, "advanced_reports");
 
-  const [current, previous, flocks] = await Promise.all([
+  const [current, previous, lastYearPeriod, flocks] = await Promise.all([
     fetchPeriod(supabase, context.farmId, range.from, range.to, hasSales),
     fetchPeriod(supabase, context.farmId, previousStart, previousEnd, hasSales),
+    fetchPeriod(supabase, context.farmId, yearAgo.from, yearAgo.to, hasSales),
     hasAdvanced ? getFlocks(context.farmId) : Promise.resolve([]),
   ]);
 
@@ -132,6 +152,15 @@ export const getReportsData = cache(async function getReportsData(
   const feedCostPrev = sum(previous.feed, (row) => Number(row.total_cost));
   const costPrev = operatingCostsFromExpenses(feedCostPrev, previous.expenses);
   const profitPrev = operatingProfit(revenuePrev, costPrev);
+
+  const revenueYoY = roundMoney(sum(lastYearPeriod.sales, (row) => Number(row.total_amount)));
+  const feedCostYoY = sum(lastYearPeriod.feed, (row) => Number(row.total_cost));
+  const costYoY = operatingCostsFromExpenses(feedCostYoY, lastYearPeriod.expenses);
+  const profitYoY = operatingProfit(revenueYoY, costYoY);
+  const hadLastYear =
+    lastYearPeriod.sales.length > 0 ||
+    lastYearPeriod.feed.length > 0 ||
+    lastYearPeriod.expenses.length > 0;
 
   return {
     range,
@@ -146,6 +175,20 @@ export const getReportsData = cache(async function getReportsData(
       cost: percentChange(cost, costPrev),
       profit: percentChange(profit, profitPrev),
     },
+    lastYear: hadLastYear
+      ? {
+          from: yearAgo.from,
+          to: yearAgo.to,
+          revenue: revenueYoY,
+          cost: costYoY,
+          profit: profitYoY,
+          deltas: {
+            revenue: percentChange(revenue, revenueYoY),
+            cost: percentChange(cost, costYoY),
+            profit: percentChange(profit, profitYoY),
+          },
+        }
+      : null,
     chart: buildDailySeries(current.sales, current.feed, current.expenses, range),
     flockProfitability: hasAdvanced
       ? buildFlockProfitability(flocks, current.sales, current.expenses, current.feed)

@@ -1,6 +1,7 @@
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
 import { getAlertCount } from "@/lib/data/dashboard";
+import { getProfile } from "@/lib/data/profile";
 import { greetingFor } from "@/lib/domain/presentation";
 import { farmHour, formatDate } from "@/lib/format";
 import { DesktopSidebar } from "@/components/nav/desktop-sidebar";
@@ -16,7 +17,10 @@ import { AppTopbar } from "@/components/layout/app-topbar";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const context = await requireFarmContext();
   const user = await requireUser();
-  const alertCount = await getAlertCount(context);
+  const [alertCount, profile] = await Promise.all([
+    getAlertCount(context),
+    getProfile(user.id),
+  ]);
 
   // Greeting follows the farm's clock, not the server's: a Manila farmer at
   // 7am should not be told "good evening" because Vercel is on UTC.
@@ -30,8 +34,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppTopbar
           greeting={greeting}
           farmName={context.farmName}
-          userName={user.fullName || user.email}
+          userName={profile?.fullName || user.fullName || user.email}
           role={ROLE_LABELS[context.role]}
+          avatarUrl={profile?.avatarUrl}
           plan={context.plan}
           alertCount={alertCount}
           dateLabel={formatDate(new Date(), context.timezone)}

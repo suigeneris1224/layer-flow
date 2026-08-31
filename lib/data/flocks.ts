@@ -2,6 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { FlockStatus } from "@/lib/types/database";
+import { roundMoney } from "@/lib/domain/calculations";
 import { logger } from "@/lib/observability/logger";
 
 /**
@@ -145,4 +146,93 @@ export async function getHouseOptions(farmId: string): Promise<HouseOption[]> {
   }
 
   return data ?? [];
+}
+
+export interface FlockSummary {
+  lifetimeEggs: number;
+  lifetimeMortality: number;
+  lifetimeFeedKg: number;
+  lifetimeFeedCost: number;
+  daysRecorded: number;
+  lastProductionDate: string | null;
+  lastVaccinationDate: string | null;
+}
+
+/**
+ * Lifetime totals for one flock, for the detail page header.
+ *
+ * Mortality is summed from mortality_records rather than daily_production.mortality
+ * for the same reason reports do: the ledger is the single source, and it
+ * includes the ad-hoc incidents that never belonged to a collection day.
+ *
+ * Feed sums every row for the flock, linked and ad-hoc alike -- here we want
+ * what the birds actually ate, not just what a collection day recorded.
+ */
+export async function getFlockSummary(
+  farmId: string,
+  flockId: string
+): Promise<FlockSummary> {
+  const supabase = await createSupabaseServerClient();
+
+  const [production, mortality, feed, vaccination] = await Promise.all([
+    supabase
+      .from("daily_production")
+      .select("eggs_collected, production_date")
+      .eq("farm_id", farmId)
+      .eq("flock_id", flockId),
+    supabase
+      .from("mortality_records")
+      .select("quantity")
+      .eq("farm_id", farmId)
+      .eq("flock_id", flockId),
+    supabase
+      .from("feed_usage")
+      .select("quantity_kg, total_cost")
+      .eq("farm_id", farmId)
+      .eq("flock_id", flockId),
+    supabase
+      .from("vaccinations")
+      .select("vaccination_date")
+      .eq("farm_id", farmId)
+      .eq("flock_id", flockId)
+      .order("vaccination_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  for (const result of [production, mortality, feed, vaccination]) {
+    if (result.error) {
+      logger.error("flock summary lookup failed", { reason: result.error.message });
+    }
+  }
+
+  const days = (production.data ?? []) as {
+    eggs_collected: number;
+    production_date: string;
+  }[];
+
+  const lastProductionDate = days.reduce<string | null>(
+    (latest, day) =>
+      latest === null || day.production_date > latest ? day.production_date : latest,
+    null
+  );
+
+  const feedRows = (feed.data ?? []) as { quantity_kg: number; total_cost: number }[];
+
+  return {
+    lifetimeEggs: days.reduce((sum, day) => sum + (day.eggs_collected ?? 0), 0),
+    lifetimeMortality: ((mortality.data ?? []) as { quantity: number }[]).reduce(
+      (sum, row) => sum + (row.quantity ?? 0),
+      0
+    ),
+    lifetimeFeedKg: roundMoney(
+      feedRows.reduce((sum, row) => sum + Number(row.quantity_kg ?? 0), 0)
+    ),
+    lifetimeFeedCost: roundMoney(
+      feedRows.reduce((sum, row) => sum + Number(row.total_cost ?? 0), 0)
+    ),
+    daysRecorded: days.length,
+    lastProductionDate,
+    lastVaccinationDate: vaccination.data?.vaccination_date ?? null,
+  };
 }

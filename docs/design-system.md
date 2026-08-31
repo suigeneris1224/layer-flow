@@ -83,6 +83,22 @@ Every control comes from `components/ui/field.tsx`. Do not style a bare `<input>
   keyboard plus screen-reader behaviour comes free. Reach for a custom listbox only when a screen
   genuinely needs search or multi-select.
 - **`Input` takes an `adornment`** for a leading `₱` or icon. Money fields should use it.
+- **Dates use `DateField`** (`components/ui/date-field.tsx`), never a bare `<input type="date">`.
+  It renders both a native date input and a calendar popover and lets a `pointer:` media query
+  pick: the OS picker on touch, the calendar on a mouse. Same reasoning as `Select` — the native
+  picker wins one-handed and in gloves, and a 7x6 grid of day cells is the worst possible phone
+  target — but the native date input is genuinely poor with a mouse, so a pointer device gets the
+  calendar. Rendering both avoids a hydration flash and user-agent sniffing, and the hidden half is
+  `display:none` so it is not a second tab stop. It keeps its `name`, so it still posts in a
+  FormData submission.
+
+  It also offers **Today / Yesterday** chips. Nearly every date on this product is one of those
+  two, and one tap beats opening a calendar and hunting for the day.
+
+  All its arithmetic goes through `shiftDate`, which anchors to UTC midnight — a date built from a
+  local-midnight string lands on the previous day for any timezone ahead of UTC, which is every
+  farm we serve.
+
 - The input border is the only thing marking a field boundary — surface and background are
   near-identical whites — so it is held to 3:1 and is deliberately stronger than a panel border.
 
@@ -137,6 +153,35 @@ used. Always icon **and** words.
 <Delta value={-4.7} label="vs yesterday" />   // arrow glyph + colour + caption
 <StatusNote tone="bad" title="A size has gone below zero">…</StatusNote>
 ```
+
+### The status band is not a `StatusNote`
+
+`StatusNote` is a remark beside a field: flat, bordered, inline. The dashboard's `TodayStatus`
+band is the headline of the farmer's morning, so it is allowed more weight — a tinted wash across
+the whole band, a 44px tone chip, and a live dot on `warn`/`bad`.
+
+They are deliberately two components. Do not promote `StatusNote` to look like the band, and do
+not use the band for form notes: if everything shouts, nothing does.
+
+The band still obeys section 4. The dot and the tint are reinforcement; the icon and the words
+carry the meaning on their own, and the pulse never runs on `good` — an animation playing when
+nothing is wrong is just noise. `prefers-reduced-motion` stills it globally (`app/globals.css`).
+
+### The brand mark and the dark theme
+
+`components/nav/brand.tsx` renders `public/icons/layerflow-logo.png` with no tile behind it — the
+PNG is genuinely transparent and sits directly on the surface.
+
+Be aware of what that costs on the dark theme. The artwork is line work with a knocked-out
+interior (only ~8% of its pixels are opaque) and its dominant strokes are dark green, which
+measure **1.5–2.3:1** against the dark sidebar — below the 3:1 that non-text graphics want, so the
+mark reads as faint.
+
+This is not an accessibility defect: the image is decorative (`alt=""`) and the "LayerFlow"
+wordmark sits beside it at full contrast, so nothing is lost to anyone. It is a cosmetic
+limitation of a light-ground logo on a dark ground. The real fix is a second artwork with light
+strokes, swapped on the dark theme — not a white tile behind the current one, which reads as a
+white box.
 
 ---
 

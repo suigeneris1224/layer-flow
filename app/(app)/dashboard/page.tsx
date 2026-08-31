@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bird, Egg, Plus, Receipt, ShoppingCart, TrendingUp } from "lucide-react";
+import { Bird, Egg, PhilippinePeso, Plus, Receipt, TrendingUp } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/data/dashboard";
+import { getFarmOverview } from "@/lib/data/farms";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
@@ -13,6 +14,8 @@ import { EggSizeDonut, ProductionChart, SalesChart } from "@/components/charts/l
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { FlockStatusPanel } from "@/components/dashboard/flock-status-panel";
+import { FarmsOverviewPanel } from "@/components/dashboard/farms-overview-panel";
+import { TodayStatus } from "@/components/dashboard/today-status";
 import { formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -23,10 +26,20 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const context = await requireFarmContext();
-  const data = await getDashboardData(context);
+  const [data, farmOverview] = await Promise.all([
+    getDashboardData(context),
+    getFarmOverview(context.farmId),
+  ]);
 
   return (
     <PageShell>
+      {/*
+        Status first: this is what the farmer needs to act on, so it sits
+        above the figures rather than below them. The topbar bell links to
+        #todays-status, which TodayStatus owns.
+      */}
+      <TodayStatus alerts={data.alerts} hasRecord={data.today.hasRecord} />
+
       {/* KPI row: two-up on a phone, five across on a wide screen. */}
       <section aria-label="Today at a glance" className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <StatCard
@@ -46,7 +59,7 @@ export default async function DashboardPage() {
           deltaLabel="vs yesterday"
         />
         <StatCard
-          icon={ShoppingCart}
+          icon={PhilippinePeso}
           tint="teal"
           label="Sales today"
           value={formatCurrencyShort(data.money.revenue, context.currency)}
@@ -76,12 +89,6 @@ export default async function DashboardPage() {
           className="col-span-2 xl:col-span-1"
         />
       </section>
-
-      {!data.today.hasRecord && (
-        <StatusNote tone="warn" title="Today isn't recorded yet">
-          Take 30 seconds to log this morning&apos;s collection.
-        </StatusNote>
-      )}
 
       {/* Production · sizes · activity */}
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
@@ -147,13 +154,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <section id="todays-status" aria-label="Today's status" className="flex flex-col gap-2">
-        {data.alerts.map((alert, index) => (
-          <StatusNote key={`${alert.level}-${index}`} tone={alert.level}>
-            {alert.message}
-          </StatusNote>
-        ))}
-      </section>
+      <FarmsOverviewPanel farmName={context.farmName} overview={farmOverview} />
 
       <Link
         href="/production/new"

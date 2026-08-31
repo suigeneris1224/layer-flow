@@ -6,11 +6,35 @@ import { cn } from "@/lib/utils";
 import { NAV_GROUPS, type NavItem } from "@/components/nav/routes";
 
 /**
+ * The href of the one nav item that should light up, or null.
+ *
+ * Longest match wins. A plain prefix test lit up two rows at once on nested
+ * routes -- /expenses/categories matched both "Expenses" (/expenses) and
+ * "Categories" -- which made the sidebar look like the farmer was in two
+ * places. Only the most specific match is the page they are on.
+ */
+function activeHref(pathname: string): string | null {
+  let best: string | null = null;
+
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      if (item.comingSoon) continue;
+      const href = item.href;
+      const matches = pathname === href || pathname.startsWith(`${href}/`);
+      if (matches && (best === null || href.length > best.length)) best = href;
+    }
+  }
+
+  return best;
+}
+
+/**
  * The grouped navigation list, shared by the desktop sidebar and the mobile
  * drawer so the two can never drift apart.
  */
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const current = activeHref(pathname);
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-5 px-3">
@@ -25,7 +49,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           <ul className="flex flex-col gap-0.5">
             {group.items.map((item) => (
               <li key={item.key}>
-                <NavRow item={item} pathname={pathname} onNavigate={onNavigate} />
+                <NavRow item={item} current={current} onNavigate={onNavigate} />
               </li>
             ))}
           </ul>
@@ -37,11 +61,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
 function NavRow({
   item,
-  pathname,
+  current,
   onNavigate,
 }: {
   item: NavItem;
-  pathname: string;
+  /** The single active href for this pathname, from `activeHref`. */
+  current: string | null;
   onNavigate?: () => void;
 }) {
   if (item.comingSoon) {
@@ -57,7 +82,7 @@ function NavRow({
     );
   }
 
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const active = current === item.href;
 
   return (
     <Link

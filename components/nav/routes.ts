@@ -4,12 +4,13 @@ import {
   Boxes,
   ClipboardList,
   FolderTree,
+  HeartPulse,
   Home,
   Layers,
   LineChart,
+  PhilippinePeso,
   Receipt,
   Settings,
-  ShoppingCart,
   Tags,
   Users,
   Warehouse,
@@ -59,17 +60,18 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         key: "production",
-        href: "/production/new",
+        href: "/production",
         label: "Daily Production",
         icon: ClipboardList,
       },
+      { key: "health", href: "/health", label: "Flock Health", icon: HeartPulse },
       { key: "pricing", href: "/prices", label: "Egg Sizes & Pricing", icon: Tags },
     ],
   },
   {
     label: "Sales",
     items: [
-      { key: "sales", href: "/sales", label: "Sales History", icon: ShoppingCart },
+      { key: "sales", href: "/sales", label: "Sales History", icon: PhilippinePeso },
       { key: "customers", href: "/customers", label: "Customers", icon: Users },
     ],
   },
@@ -98,6 +100,6 @@ export const NAV_GROUPS: NavGroup[] = [
 export const TAB_ITEMS: NavItem[] = [
   { key: "home", href: "/dashboard", label: "Home", icon: Home },
   { key: "inventory", href: "/inventory", label: "Stock", icon: Boxes },
-  { key: "money", href: "/sales", label: "Money", icon: ShoppingCart },
-  { key: "more", label: "More", icon: Settings, comingSoon: true },
+  { key: "money", href: "/sales", label: "Money", icon: PhilippinePeso },
+  { key: "more", href: "/settings", label: "More", icon: Settings },
 ];

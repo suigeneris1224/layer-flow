@@ -97,14 +97,26 @@ NumberInput.displayName = "NumberInput";
  */
 export const Select = React.forwardRef<
   HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement>
->(({ className, children, ...props }, ref) => (
-  <span className="relative flex w-full items-center">
+  React.SelectHTMLAttributes<HTMLSelectElement> & {
+    /**
+     * Shrink to the width of the chosen option instead of filling the row.
+     *
+     * The chevron is positioned against the wrapper, so a caller that narrowed
+     * only the `<select>` used to leave it stranded at the far right of a
+     * full-width span. Narrowing both together is the supported way to do it.
+     */
+    fit?: boolean;
+  }
+>(({ className, children, fit, ...props }, ref) => (
+  <span
+    className={cn("relative items-center", fit ? "inline-flex w-auto" : "flex w-full")}
+  >
     <select
       ref={ref}
       className={cn(
         CONTROL,
         "cursor-pointer appearance-none bg-none pr-10",
+        fit && "w-auto",
         className
       )}
       {...props}

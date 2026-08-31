@@ -1042,10 +1042,7 @@ export type Database = {
         Returns: string
       }
       record_sale_payment: {
-        Args: {
-          p_amount: number
-          p_sale_id: string
-        }
+        Args: { p_amount: number; p_sale_id: string }
         Returns: undefined
       }
       set_egg_price: {

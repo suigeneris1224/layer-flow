@@ -72,3 +72,57 @@ export async function getFarmCountForUser(userId: string): Promise<number> {
 
   return count ?? 0;
 }
+
+export interface FarmOverview {
+  houseCount: number;
+  /** Combined capacity of every house, in birds. */
+  totalCapacity: number;
+  activeFlockCount: number;
+  /** Live birds across active flocks, trigger-derived from the mortality ledger. */
+  totalBirds: number;
+  /** Birds as a share of capacity, 0-100. Null when no capacity is recorded. */
+  capacityUsed: number | null;
+}
+
+/**
+ * The structural picture of a farm: how many houses, how many flocks, how
+ * full it is.
+ *
+ * Deliberately separate from getDashboardData, which is about *today*. This
+ * is about the setup, changes rarely, and reads two small tables -- folding
+ * it into that function would have meant threading it through 500 lines for
+ * no gain, since the page issues both in parallel anyway.
+ */
+export async function getFarmOverview(farmId: string): Promise<FarmOverview> {
+  const supabase = await createSupabaseServerClient();
+
+  const [housesResult, flocksResult] = await Promise.all([
+    supabase.from("houses").select("capacity").eq("farm_id", farmId),
+    supabase
+      .from("flocks")
+      .select("current_hens")
+      .eq("farm_id", farmId)
+      .in("status", ["GROWING", "PRODUCING"]),
+  ]);
+
+  for (const result of [housesResult, flocksResult]) {
+    if (result.error) {
+      logger.error("farm overview lookup failed", { reason: result.error.message });
+    }
+  }
+
+  const houses = (housesResult.data ?? []) as { capacity: number }[];
+  const flocks = (flocksResult.data ?? []) as { current_hens: number }[];
+
+  const totalCapacity = houses.reduce((sum, house) => sum + (house.capacity ?? 0), 0);
+  const totalBirds = flocks.reduce((sum, flock) => sum + (flock.current_hens ?? 0), 0);
+
+  return {
+    houseCount: houses.length,
+    totalCapacity,
+    activeFlockCount: flocks.length,
+    totalBirds,
+    capacityUsed:
+      totalCapacity > 0 ? Math.round((totalBirds / totalCapacity) * 1000) / 10 : null,
+  };
+}

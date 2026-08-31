@@ -6,6 +6,7 @@ import { Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, NumberInput, Select } from "@/components/ui/field";
+import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import {
   describePriceChange,
@@ -180,13 +181,13 @@ export function PriceForm({
             hint="Today, or a future date to schedule the change."
             error={!datePlan.ok ? datePlan.message : undefined}
           >
-            <Input
+            <DateField
               id="price-from"
-              type="date"
               min={today}
+              today={today}
               value={effectiveFrom}
-              onChange={(event) => setEffectiveFrom(event.target.value)}
-              aria-invalid={!datePlan.ok}
+              onChange={setEffectiveFrom}
+              invalid={!datePlan.ok}
             />
           </Field>
 

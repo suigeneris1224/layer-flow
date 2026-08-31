@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 import { TAB_ITEMS, type NavItem } from "@/components/nav/routes";
 import { QuickAdd } from "@/components/nav/quick-add";
 
-/** Home, Flocks, +, Money, More (spec section 46). */
+/** Home, Stock, +, Money, More (spec section 46). */
 export function MobileTabBar({ canManageMoney }: { canManageMoney: boolean }) {
   const pathname = usePathname();
-  const [home, flocks, money, more] = TAB_ITEMS;
+  const [home, stock, money, more] = TAB_ITEMS;
 
   return (
     <nav
@@ -18,7 +18,7 @@ export function MobileTabBar({ canManageMoney }: { canManageMoney: boolean }) {
     >
       <ul className="mx-auto flex max-w-md items-center justify-around px-2">
         <Tab item={home} pathname={pathname} />
-        <Tab item={flocks} pathname={pathname} />
+        <Tab item={stock} pathname={pathname} />
         <li>
           <QuickAdd canManageMoney={canManageMoney} />
         </li>

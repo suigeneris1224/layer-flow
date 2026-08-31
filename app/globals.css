@@ -165,8 +165,13 @@
   }
 
   /* The headline figure on a stat card. */
+  /*
+   * Steps down on a phone. The KPI grid is 2-up there, so a card is ~155px
+   * wide; at a fixed 24px a figure like PHP 151,147 is wider than the space
+   * it has and spills over the card edge into its neighbour.
+   */
   .stat-figure {
-    @apply tabular text-2xl font-bold leading-none tracking-tight;
+    @apply tabular text-xl font-bold leading-none tracking-tight sm:text-2xl;
   }
 
   /*

@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canRecordProduction } from "@/lib/auth/permissions";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
+import { productionExists } from "@/lib/data/production";
 import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
 import {
   describeDatabaseError,
@@ -123,6 +124,15 @@ export async function recordProductionAction(
   try {
     const supabase = await createSupabaseServerClient();
 
+    // Asked before the upsert, because afterwards the row always exists.
+    // The RPC is a single upsert either way; this only decides which audit
+    // action describes what happened.
+    const wasRecorded = await productionExists(
+      context.farmId,
+      values.flockId,
+      values.productionDate
+    );
+
     // One transaction across daily_production, the size breakdown, feed and
     // mortality. The function runs SECURITY INVOKER, so RLS still applies and
     // farm_id is derived from the flock rather than trusted from here.
@@ -152,7 +162,9 @@ export async function recordProductionAction(
     await recordAuditLog({
       farmId: context.farmId,
       userId: user.id,
-      action: AUDIT_ACTIONS.PRODUCTION_RECORDED,
+      action: wasRecorded
+        ? AUDIT_ACTIONS.PRODUCTION_UPDATED
+        : AUDIT_ACTIONS.PRODUCTION_RECORDED,
       entityType: "daily_production",
       entityId: productionId,
       metadata: {
@@ -164,6 +176,8 @@ export async function recordProductionAction(
 
     revalidatePath("/dashboard");
     revalidatePath("/production");
+    revalidatePath(`/production/${productionId}`);
+    revalidatePath(`/flocks/${values.flockId}`);
 
     return { ok: true, data: { productionId } };
   } catch (error) {

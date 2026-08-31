@@ -43,13 +43,46 @@ bar. Design rules live in [docs/design-system.md](docs/design-system.md) and app
 effective-dated changes applied atomically, scheduled changes, and price history. Past sales keep
 the price used on the day.
 
+**Sales and customers**: sales history with pagination, new sale with stock warnings, inline
+customer creation, part-payments and outstanding totals, plus full customer CRUD.
+
+**Expenses**: paginated list, new expense against an optional flock, and a category breakdown
+with a chart.
+
+**Analytics and reports** (at `/analytics` and `/reports`): laying rate, egg-size distribution,
+mortality and feed statistics, and revenue / cost / profit over a selectable range.
+
+**Production history** (at `/production`): every recorded day, filterable by flock, with a
+per-day detail view at `/production/[id]` and editing through the same form that created it.
+The FREE plan's 30-day `history_days` limit is enforced here.
+
+**Flock health** (at `/health`): mortality, feed and vaccinations recorded outside a collection
+day. These are the ad-hoc rows — the ones a daily production entry owns are edited on that day,
+because saving a day rewrites them. Flock hen counts are derived from the mortality ledger by a
+trigger and are never written by hand.
+
+**Flock detail** (at `/flocks/[id]`): lifetime eggs, feed and losses, age and survival, plus
+recent production, mortality, feed and vaccination records.
+
+**Settings** (at `/settings`): name, phone and avatar for the signed-in user, with links out to
+farm settings and plans.
+
 ### What is not built yet
 
-Egg sales, expenses UI, customers, reports, charts, flock detail, team management, real
-billing, and **offline sync** (there is deliberately no service worker yet —
-see [docs/offline-sync.md](docs/offline-sync.md)).
+**Team management** — `farm_members`, the RLS policies and `canManageUsers` all exist, and
+`team_management` is sold as a Pro feature, but there is no `/team` route and no invite flow.
+This is the largest fully-modelled-but-unbuilt gap.
 
-Navigation shows these as "Soon" rather than linking to pages that do not exist.
+**Real billing** — `BILLING_PROVIDER=mock`. Plan changes go through the dev-only plan switcher on
+`/farms`. No checkout, no webhook handler. See [docs/billing.md](docs/billing.md).
+
+**Offline sync** — deliberately no service worker and no sync queue yet. See
+[docs/offline-sync.md](docs/offline-sync.md).
+
+**Data export**, **flock comparison** and **advanced alerts / reports** — declared in
+`lib/subscriptions/plans.ts` as Pro features with no implementing code behind them yet.
+
+Every route in the sidebar now points at a real page; nothing is shown as "Soon".
 
 ---
 

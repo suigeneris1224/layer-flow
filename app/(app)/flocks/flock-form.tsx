@@ -6,6 +6,7 @@ import { Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, NumberInput, Select, Textarea } from "@/components/ui/field";
+import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import type { FlockStatus } from "@/lib/types/database";
 import { createFlockAction, retireFlockAction, updateFlockAction } from "./actions";
@@ -221,12 +222,11 @@ export function FlockForm({
               htmlFor="flock-placement"
               error={fieldErrors.placementDate}
             >
-              <Input
+              <DateField
                 id="flock-placement"
-                type="date"
                 value={placementDate}
-                onChange={(event) => setPlacementDate(event.target.value)}
-                aria-invalid={!!fieldErrors.placementDate}
+                onChange={setPlacementDate}
+                invalid={!!fieldErrors.placementDate}
               />
             </Field>
 
@@ -236,12 +236,11 @@ export function FlockForm({
               hint="Leave blank if not laying yet."
               error={fieldErrors.startLayingDate}
             >
-              <Input
+              <DateField
                 id="flock-laying"
-                type="date"
                 value={startLayingDate}
-                onChange={(event) => setStartLayingDate(event.target.value)}
-                aria-invalid={!!fieldErrors.startLayingDate}
+                onChange={setStartLayingDate}
+                invalid={!!fieldErrors.startLayingDate}
               />
             </Field>
           </div>

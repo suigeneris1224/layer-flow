@@ -30,6 +30,8 @@ export const THRESHOLDS = {
   dailyMortalityRate: 0.005,
   /** Shift in one egg size's share, in percentage points. */
   eggSizeShift: 10,
+  /** Days since the last vaccination before we mention it. */
+  vaccinationGapDays: 120,
 } as const;
 
 const RECENT_DAYS = 3;
@@ -117,6 +119,59 @@ export function eggSizeAlert(
       shift < 0
         ? `${sizeName} egg production is lower than your recent average.`
         : `${sizeName} eggs are a bigger share of your collection than usual.`,
+  };
+}
+
+/** A flock, for the vaccination rule. */
+export interface VaccinationStatus {
+  flockName: string;
+  /** ISO date of the most recent vaccination, or null if there is none. */
+  lastVaccinationDate: string | null;
+  /** ISO date the flock was placed. */
+  placementDate: string;
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Whole days between two ISO dates, floored at zero. */
+function daysBetween(from: string, to: Date): number {
+  const start = new Date(`${from}T00:00:00Z`).getTime();
+  if (Number.isNaN(start)) return 0;
+  return Math.max(0, Math.floor((to.getTime() - start) / MS_PER_DAY));
+}
+
+/**
+ * A flock that has gone a long time without a vaccination on record.
+ *
+ * This is a record-keeping reminder, not veterinary advice: it reports the gap
+ * in the farmer's own log and names no vaccine and no schedule. Programmes vary
+ * by region, hatchery and disease pressure, and choosing one is the vet's job.
+ *
+ * A flock younger than the threshold is skipped -- there is nothing to be late
+ * for yet, and warning a farmer about a two-week-old flock trains them to
+ * ignore the panel.
+ */
+export function vaccinationAlert(
+  flock: VaccinationStatus,
+  asOf: Date = new Date()
+): Alert | null {
+  if (daysBetween(flock.placementDate, asOf) < THRESHOLDS.vaccinationGapDays) {
+    return null;
+  }
+
+  if (flock.lastVaccinationDate === null) {
+    return {
+      level: "warn",
+      message: `${flock.flockName} has no vaccination recorded.`,
+    };
+  }
+
+  const gap = daysBetween(flock.lastVaccinationDate, asOf);
+  if (gap <= THRESHOLDS.vaccinationGapDays) return null;
+
+  return {
+    level: "warn",
+    message: `${flock.flockName} has had no vaccination recorded in ${gap} days.`,
   };
 }
 

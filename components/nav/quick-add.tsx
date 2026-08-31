@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Plus, Receipt, ShoppingCart, X } from "lucide-react";
+import { ClipboardList, PhilippinePeso, Plus, Receipt, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -85,14 +85,14 @@ export function QuickAdd({ canManageMoney }: { canManageMoney: boolean }) {
                     onClick={() => setOpen(false)}
                     className="flex min-h-14 items-center gap-3 rounded-lg border border-border px-4 font-medium"
                   >
-                    <ShoppingCart className="size-5" aria-hidden />
+                    <PhilippinePeso className="size-5" aria-hidden />
                     Record sale
                   </Link>
                 </li>
               ) : (
                 <QuickAddSecondary
                   label="Record sale"
-                  icon={ShoppingCart}
+                  icon={PhilippinePeso}
                   available={false}
                 />
               )}
@@ -128,7 +128,7 @@ function QuickAddSecondary({
   available,
 }: {
   label: string;
-  icon: typeof ShoppingCart;
+  icon: typeof PhilippinePeso;
   available: boolean;
 }) {
   return (

@@ -8,7 +8,7 @@ import { Panel } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { ExpenseCategoryChart } from "@/components/charts/lazy";
-import { RangeSelect } from "@/components/reports/range-select";
+import { RangePicker } from "@/components/reports/range-picker";
 import { listRecentMonths, listRecentYears, resolveReportRange } from "@/lib/domain/reports";
 import { farmToday, formatCurrency, formatPercent } from "@/lib/format";
 
@@ -44,7 +44,7 @@ export default async function ExpenseCategoriesPage({
         title="Expense categories"
         description="Where your money goes, by category."
         action={
-          <RangeSelect
+          <RangePicker
             basePath="/expenses/categories"
             value={range.value}
             months={listRecentMonths(today)}

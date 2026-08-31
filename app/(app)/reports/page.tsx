@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BarChart3, Receipt, ShoppingCart, TrendingUp } from "lucide-react";
+import { BarChart3, PhilippinePeso, Receipt, TrendingUp } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getReportsData } from "@/lib/data/reports";
@@ -9,9 +9,16 @@ import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { ProfitChart } from "@/components/charts/lazy";
-import { RangeSelect } from "@/components/reports/range-select";
+import { RangePicker } from "@/components/reports/range-picker";
 import { listRecentMonths, listRecentYears, resolveReportRange } from "@/lib/domain/reports";
-import { farmToday, formatCurrency, formatCurrencyShort, formatPercent } from "@/lib/format";
+import {
+  farmToday,
+  formatCurrency,
+  formatCurrencyShort,
+  formatDateShort,
+  formatPercent,
+} from "@/lib/format";
+import { Delta } from "@/components/ui/delta";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -46,7 +53,7 @@ export default async function ReportsPage({
         title="Reports"
         description="Revenue, cost, and estimated profit over time."
         action={
-          <RangeSelect
+          <RangePicker
             basePath="/reports"
             value={range.value}
             months={listRecentMonths(today)}
@@ -65,7 +72,7 @@ export default async function ReportsPage({
         <>
           <section aria-label={`Summary: ${range.label}`} className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard
-              icon={ShoppingCart}
+              icon={PhilippinePeso}
               tint="teal"
               label="Revenue"
               value={formatCurrencyShort(data.totals.revenue, context.currency)}
@@ -104,6 +111,61 @@ export default async function ReportsPage({
           <Panel title="Revenue & cost">
             <ProfitChart data={data.chart} currency={context.currency} />
           </Panel>
+
+          {/*
+            Year-on-year, which the "vs previous period" deltas above cannot
+            express. Egg production is seasonal, so the same weeks last year is
+            often the only fair comparison. Absent entirely when the farm has
+            no records that far back, rather than showing a wall of -100%.
+          */}
+          {data.lastYear && (
+            <Panel
+              title="Same period last year"
+              action={
+                <span className="text-xs text-muted-foreground">
+                  {formatDateShort(data.lastYear.from, context.timezone)} –{" "}
+                  {formatDateShort(data.lastYear.to, context.timezone)}
+                </span>
+              }
+            >
+              <dl className="grid gap-4 sm:grid-cols-3">
+                {[
+                  {
+                    label: "Revenue",
+                    then: data.lastYear.revenue,
+                    delta: data.lastYear.deltas.revenue,
+                    goodWhenUp: true,
+                  },
+                  {
+                    label: "Cost",
+                    then: data.lastYear.cost,
+                    delta: data.lastYear.deltas.cost,
+                    goodWhenUp: false,
+                  },
+                  {
+                    label: "Est. profit",
+                    then: data.lastYear.profit,
+                    delta: data.lastYear.deltas.profit,
+                    goodWhenUp: true,
+                  },
+                ].map((row) => (
+                  <div key={row.label} className="flex flex-col gap-1">
+                    <dt className="text-xs text-muted-foreground">
+                      {row.label} last year
+                    </dt>
+                    <dd className="text-lg font-semibold tabular">
+                      {formatCurrencyShort(row.then, context.currency)}
+                    </dd>
+                    <Delta
+                      value={row.delta}
+                      label="this period vs last year"
+                      goodWhenUp={row.goodWhenUp}
+                    />
+                  </div>
+                ))}
+              </dl>
+            </Panel>
+          )}
 
           {data.flockProfitability ? (
             <Panel title="Profitability by flock">

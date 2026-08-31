@@ -53,6 +53,17 @@ Client form
 Every one of those gates runs on the server. Client-side checks exist so a farmer is not shown a
 button that will reject them — they are not the control.
 
+Two of these gates are not farm-scoped. The profile actions in `app/(app)/settings/actions.ts`
+skip `getFarmContext()` and the role check entirely: a profile belongs to a person, not a farm,
+and the id always comes from the verified session rather than the client. `profiles_update_self`
+enforces the same rule in the database.
+
+Plan limits apply to reads as well as writes. `historyCutoffDate()` in
+`lib/subscriptions/entitlements.ts` turns the `history_days` limit into a date, and `/production`
+passes it as the `since` bound on both the list and its count — the first place in the codebase
+that limit has ever been enforced. The upgrade prompt renders only when records actually exist
+before the cutoff, so a farm younger than the window is never told it is missing something.
+
 ## Server Components by default
 
 Components are server-rendered unless they need interactivity. `"use client"` appears only where

@@ -9,7 +9,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { EggSizeDonut, LayingRateChart } from "@/components/charts/lazy";
-import { RangeSelect } from "@/components/reports/range-select";
+import { RangePicker } from "@/components/reports/range-picker";
 import { listRecentMonths, listRecentYears, resolveReportRange } from "@/lib/domain/reports";
 import { farmToday, formatKg, formatNumber, formatPercent } from "@/lib/format";
 
@@ -49,7 +49,7 @@ export default async function AnalyticsPage({
         title="Analytics"
         description="Laying rate, egg sizes, and how your flocks compare."
         action={
-          <RangeSelect
+          <RangePicker
             basePath="/analytics"
             value={range.value}
             months={listRecentMonths(today)}

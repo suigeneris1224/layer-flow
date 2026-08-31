@@ -40,6 +40,18 @@ export function canRecordMortality(context: FarmContext | null): boolean {
   return context !== null;
 }
 
+/**
+ * Vaccinations follow the same rule as the rest of daily operations.
+ *
+ * `vaccinations_write` in 20250101000400_rls.sql uses app.is_farm_member, not
+ * app.can_manage_farm -- the worker holding the syringe is the one who knows
+ * it happened, so making them fetch a manager to log it would just mean it
+ * never gets logged.
+ */
+export function canRecordVaccination(context: FarmContext | null): boolean {
+  return context !== null;
+}
+
 /** Farm setup: houses, flocks, egg sizes, pricing. */
 export function canManageFlock(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");

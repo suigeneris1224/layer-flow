@@ -3,7 +3,7 @@
 PostgreSQL on Supabase. Migrations in `supabase/migrations/` are the **single source of truth** —
 never create a table through Studio. Studio is for inspection and administration.
 
-> **Status: verified.** All seven migrations apply cleanly to PostgreSQL 15 and the seed loads.
+> **Status: verified.** All twelve migrations apply cleanly to PostgreSQL 15 and the seed loads.
 
 ## Migrations
 
@@ -16,6 +16,11 @@ never create a table through Studio. Studio is for inspection and administration
 | `20250101000400_rls.sql` | Row Level Security for every table |
 | `20250101000500_production_rpc.sql` | Atomic daily production write |
 | `20250101000600_grants.sql` | Table privileges for the PostgREST roles |
+| `20250101000700_grading_summary.sql` | Grading summary helper |
+| `20250101000800_set_egg_price.sql` | Effective-dated price write |
+| `20250101000900_sale_payments.sql` | Sale payments |
+| `20250101001000_sale_payment_action.sql` | Record-a-payment RPC |
+| `20250101001100_flock_ops.sql` | Flock-farm guards, hen recalc fix, avatar bucket |
 
 ```bash
 npx supabase migration new <name>   # create
@@ -75,6 +80,23 @@ Reports sum `mortality_records` only, so nothing is double-counted.
 
 `feed_usage` follows the same pattern, for the same reason: without the link, re-saving a day
 would stack duplicate feed rows.
+
+**The rule this creates for application code:** `record_daily_production` *owns* every mortality
+and feed row whose `daily_production_id` is set. Each time a day is saved it deletes and re-inserts
+them — and a day saved with zero feed deletes the linked feed row outright. So the standalone
+screens under `/health` read and write only rows where that column is null, and every query and
+mutation there carries `.is("daily_production_id", null)`. Drop that filter and a farmer can edit a
+row the next save is about to overwrite.
+
+`20250101001100_flock_ops.sql` also fixed a bug in the recalc trigger: it took
+`coalesce(new.flock_id, old.flock_id)`, which picks NEW first, so moving a mortality record between
+flocks recalculated only the destination and left the source overstated. It now recalculates both
+sides of a move, and branches on `TG_OP` rather than reading a record that is unassigned.
+
+The same migration added `app.assert_flock_farm_matches()` to `mortality_records`, `feed_usage` and
+`vaccinations`. The RPC always derives `farm_id` from the flock so it could never disagree; the
+standalone insert paths can, and RLS alone would not catch it — a farm you own claiming a flock you
+do not passes the policy and fails the trigger.
 
 ### Egg size totals are checked at commit
 
@@ -170,6 +192,13 @@ npm run db:types
 
 > Row types **must** be `type` aliases, not `interface`. TypeScript interfaces have no implicit
 > index signature, so `postgrest-js` silently resolves every query result to `never`.
+
+## Storage
+
+One bucket, `avatars`, created in `20250101001100_flock_ops.sql`. Public-read so a plain `<img src>`
+works without signing every request; writes are fenced to `avatars/<user id>/…` by matching the
+first path segment against `auth.uid()`. `profiles.avatar_url` holds the public URL with a
+cache-busting query, since the object name is stable per user.
 
 ## Seed data
 

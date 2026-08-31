@@ -2,8 +2,8 @@ import {
   ClipboardList,
   Boxes,
   Egg,
+  PhilippinePeso,
   Receipt,
-  ShoppingCart,
   Tags,
   type LucideIcon,
 } from "lucide-react";
@@ -20,7 +20,7 @@ import type { ActivityEntry } from "@/lib/data/dashboard";
 
 const LOOKS: Record<string, { icon: LucideIcon; tint: ChipTint }> = {
   "Recorded production": { icon: ClipboardList, tint: "green" },
-  "Recorded a sale": { icon: ShoppingCart, tint: "teal" },
+  "Recorded a sale": { icon: PhilippinePeso, tint: "teal" },
   "Added an expense": { icon: Receipt, tint: "rose" },
   "Adjusted stock": { icon: Boxes, tint: "amber" },
   "Updated a price": { icon: Tags, tint: "violet" },

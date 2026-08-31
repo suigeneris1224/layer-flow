@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NumberInput, Select } from "@/components/ui/field";
+import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import { createFlockAction, type OnboardingActionState } from "@/app/onboarding/actions";
 
@@ -22,6 +23,10 @@ export function FlockStep({ houses, today }: { houses: HouseOption[]; today: str
   );
 
   const fieldErrors = state?.fieldErrors;
+
+  // DateField is controlled; the values still post through its native input.
+  const [placementDate, setPlacementDate] = useState(today);
+  const [startLayingDate, setStartLayingDate] = useState("");
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,14 +99,14 @@ export function FlockStep({ houses, today }: { houses: HouseOption[]; today: str
           hint="The day the hens arrived."
           error={fieldErrors?.placementDate}
         >
-          <Input
+          <DateField
             id="placementDate"
             name="placementDate"
-            type="date"
             max={today}
-            defaultValue={today}
-            required
-            aria-invalid={Boolean(fieldErrors?.placementDate)}
+            today={today}
+            value={placementDate}
+            onChange={setPlacementDate}
+            invalid={Boolean(fieldErrors?.placementDate)}
           />
         </Field>
 
@@ -111,12 +116,14 @@ export function FlockStep({ houses, today }: { houses: HouseOption[]; today: str
           hint="Leave blank if they haven't started yet."
           error={fieldErrors?.startLayingDate}
         >
-          <Input
+          <DateField
             id="startLayingDate"
             name="startLayingDate"
-            type="date"
             max={today}
-            aria-invalid={Boolean(fieldErrors?.startLayingDate)}
+            today={today}
+            value={startLayingDate}
+            onChange={setStartLayingDate}
+            invalid={Boolean(fieldErrors?.startLayingDate)}
           />
         </Field>
 

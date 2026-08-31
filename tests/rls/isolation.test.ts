@@ -866,4 +866,144 @@ suite("RLS tenant isolation", () => {
       expect(await availableFor(bob.client, farmB.farmId, farmB.eggSizeId)).toBeLessThan(0);
     });
   });
+
+  /*
+   * Flock operations: standalone mortality, feed and vaccination entry.
+   *
+   * The cross-farm read and write proofs above already cover these three
+   * tables generically. What is proved here is what the flock-ops migration
+   * added: that vaccinations really are worker-writable (matching
+   * canRecordVaccination), and that the farm-consistency triggers catch a row
+   * whose flock belongs to somebody else.
+   */
+  describe("flock operations", () => {
+    const today = () => new Date().toISOString().slice(0, 10);
+
+    it("a worker can record a vaccination", async () => {
+      const { error } = await worker.client.from("vaccinations").insert({
+        farm_id: farmA.farmId,
+        flock_id: farmA.flockId,
+        vaccination_date: today(),
+        vaccine_name: "Newcastle disease",
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it("a worker can record an ad-hoc loss", async () => {
+      const { error } = await worker.client.from("mortality_records").insert({
+        farm_id: farmA.farmId,
+        flock_id: farmA.flockId,
+        daily_production_id: null,
+        record_date: today(),
+        quantity: 2,
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it("a worker can record ad-hoc feed", async () => {
+      const { error } = await worker.client.from("feed_usage").insert({
+        farm_id: farmA.farmId,
+        flock_id: farmA.flockId,
+        daily_production_id: null,
+        usage_date: today(),
+        quantity_kg: 25,
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it("bob cannot record a vaccination against farm A's flock", async () => {
+      const { error } = await bob.client.from("vaccinations").insert({
+        farm_id: farmA.farmId,
+        flock_id: farmA.flockId,
+        vaccination_date: today(),
+        vaccine_name: "Trojan vaccine",
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a vaccination cannot borrow a flock from another farm", async () => {
+      // RLS passes -- farm_id is farm B and bob owns it. The trigger
+      // vaccinations_flock_farm_guard is what has to catch the borrowed flock.
+      const { error } = await bob.client.from("vaccinations").insert({
+        farm_id: farmB.farmId,
+        flock_id: farmA.flockId,
+        vaccination_date: today(),
+        vaccine_name: "Borrowed flock vaccine",
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a mortality record cannot borrow a flock from another farm", async () => {
+      const { error } = await bob.client.from("mortality_records").insert({
+        farm_id: farmB.farmId,
+        flock_id: farmA.flockId,
+        daily_production_id: null,
+        record_date: today(),
+        quantity: 1,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a feed record cannot borrow a flock from another farm", async () => {
+      const { error } = await bob.client.from("feed_usage").insert({
+        farm_id: farmB.farmId,
+        flock_id: farmA.flockId,
+        daily_production_id: null,
+        usage_date: today(),
+        quantity_kg: 10,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("recording a loss lowers the flock's derived hen count", async () => {
+      const admin = adminClient();
+
+      const { data: before } = await admin
+        .from("flocks")
+        .select("initial_hens, current_hens")
+        .eq("id", farmA.flockId)
+        .single();
+
+      const { data: inserted, error } = await worker.client
+        .from("mortality_records")
+        .insert({
+          farm_id: farmA.farmId,
+          flock_id: farmA.flockId,
+          daily_production_id: null,
+          record_date: today(),
+          quantity: 7,
+        })
+        .select("id")
+        .single();
+
+      expect(error).toBeNull();
+
+      const { data: after } = await admin
+        .from("flocks")
+        .select("current_hens")
+        .eq("id", farmA.flockId)
+        .single();
+
+      expect(after?.current_hens).toBe((before?.current_hens ?? 0) - 7);
+
+      // ...and deleting it puts them back. current_hens is derived from the
+      // ledger by the mortality_recalc_hens trigger, never written by hand.
+      await worker.client.from("mortality_records").delete().eq("id", inserted!.id);
+
+      const { data: restored } = await admin
+        .from("flocks")
+        .select("current_hens")
+        .eq("id", farmA.flockId)
+        .single();
+
+      expect(restored?.current_hens).toBe(before?.current_hens);
+    });
+  });
 });

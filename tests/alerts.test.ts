@@ -6,6 +6,7 @@ import {
   mortalityAlert,
   productionAlert,
   summariseAlerts,
+  vaccinationAlert,
   type ProductionPoint,
 } from "@/lib/domain/alerts";
 
@@ -157,5 +158,84 @@ describe("summariseAlerts", () => {
   it("drops the nulls", () => {
     const summary = summariseAlerts([null, { level: "warn", message: "warn" }, null]);
     expect(summary).toHaveLength(1);
+  });
+});
+
+describe("vaccinationAlert", () => {
+  const ASOF = new Date("2026-08-31T00:00:00Z");
+
+  it("stays quiet for a flock younger than the threshold", () => {
+    const alert = vaccinationAlert(
+      {
+        flockName: "House 1 layers",
+        lastVaccinationDate: null,
+        placementDate: "2026-08-01",
+      },
+      ASOF
+    );
+    expect(alert).toBeNull();
+  });
+
+  it("flags an established flock with nothing on record", () => {
+    const alert = vaccinationAlert(
+      {
+        flockName: "House 1 layers",
+        lastVaccinationDate: null,
+        placementDate: "2025-01-01",
+      },
+      ASOF
+    );
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("no vaccination recorded");
+  });
+
+  it("stays quiet when a vaccination is recent enough", () => {
+    const alert = vaccinationAlert(
+      {
+        flockName: "House 1 layers",
+        lastVaccinationDate: "2026-08-01",
+        placementDate: "2025-01-01",
+      },
+      ASOF
+    );
+    expect(alert).toBeNull();
+  });
+
+  it("flags a long gap and says how long", () => {
+    const alert = vaccinationAlert(
+      {
+        flockName: "House 1 layers",
+        lastVaccinationDate: "2026-01-01",
+        placementDate: "2025-01-01",
+      },
+      ASOF
+    );
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("242 days");
+  });
+
+  it("names no vaccine and prescribes no schedule", () => {
+    const alert = vaccinationAlert(
+      {
+        flockName: "House 1 layers",
+        lastVaccinationDate: null,
+        placementDate: "2025-01-01",
+      },
+      ASOF
+    );
+    expect(alert?.message).not.toMatch(/should|must|recommend|vaccinate now/i);
+  });
+
+  it("handles a malformed stored date without throwing", () => {
+    expect(() =>
+      vaccinationAlert(
+        {
+          flockName: "House 1 layers",
+          lastVaccinationDate: "not-a-date",
+          placementDate: "2025-01-01",
+        },
+        ASOF
+      )
+    ).not.toThrow();
   });
 });

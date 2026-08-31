@@ -163,6 +163,34 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+}
+
+@layer base {
+  /*
+   * iOS date inputs, straightened out.
+   *
+   * Two WebKit behaviours put the value outside the box we drew for it: the
+   * shadow element holding the date is centred with a margin of its own, and
+   * the control refuses to shrink below its intrinsic width, so in a grid
+   * column it overflows to the right instead of fitting. Both show up only on
+   * a real iPhone -- Blink does neither, so nothing in the emulator or on the
+   * desktop reproduces it.
+   *
+   * `-webkit-touch-callout` exists only on iOS, which is what keeps this off
+   * Android, where `appearance: none` would take the calendar icon with it.
+   */
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-width: 0;
+    }
+
+    input[type="date"]::-webkit-date-and-time-value {
+      margin: 0;
+      text-align: left;
+    }
+  }
 
   /* The headline figure on a stat card. */
   /*

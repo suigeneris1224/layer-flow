@@ -216,7 +216,13 @@ export function FlockForm({
             </Field>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          {/*
+            Stacked until sm. Two columns on a 375px phone leave each date
+            field 148px, and the OS date input needs about 180px for
+            dd/mm/yyyy plus its picker icon -- the icon is the part that gets
+            clipped, which is the part you tap.
+          */}
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="Placement date"
               htmlFor="flock-placement"

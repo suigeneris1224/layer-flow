@@ -26,8 +26,18 @@ import { farmToday, formatDate, shiftDate } from "@/lib/format";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
 
+/**
+ * The box both halves sit in: same border, height and padding either way, so
+ * the field does not change shape between a phone and a desk.
+ *
+ * Deliberately no `display` -- the two halves need different ones. The button
+ * is a flex row (label, then icon). The input must NOT be: `display:flex` on a
+ * replaced form control is meaningless, and where an engine honours it rather
+ * than ignoring it the way Blink does, it lays the value out as a flex item
+ * that spills over the field's own border.
+ */
 const CONTROL = cn(
-  "flex min-h-11 w-full items-center gap-2 rounded-md border border-input bg-surface shadow-sm",
+  "min-h-11 w-full rounded-md border border-input bg-surface shadow-sm",
   "px-3 py-2 text-base md:text-sm",
   "transition-colors hover:border-foreground/30",
   "disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60",
@@ -128,7 +138,7 @@ export function DateField({
         disabled={disabled}
         aria-invalid={invalid || undefined}
         onChange={(event) => onChange(event.target.value)}
-        className={cn(CONTROL, "[@media(pointer:fine)]:hidden")}
+        className={cn(CONTROL, "block", "[@media(pointer:fine)]:hidden")}
       />
 
       <CalendarField
@@ -358,7 +368,7 @@ function CalendarField({
         onClick={() => setOpen((value) => !value)}
         className={cn(
           CONTROL,
-          "justify-between text-left",
+          "flex items-center justify-between gap-2 text-left",
           invalid && "border-destructive"
         )}
       >

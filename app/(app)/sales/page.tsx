@@ -12,6 +12,8 @@ import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { buttonVariants } from "@/components/ui/button";
 import { formatCurrency, formatNumber, formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ExportMenu } from "@/components/export/export-menu";
+import { ExportNotice } from "@/lib/export/notices";
 import { PaymentBadge } from "./payment-badge";
 
 export const metadata: Metadata = { title: "Sales" };
@@ -39,7 +41,7 @@ function describeLines(sale: SaleEntry): string {
 export default async function SalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; export?: string }>;
 }) {
   const context = await requireFarmContext();
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
@@ -56,7 +58,7 @@ export default async function SalesPage({
     );
   }
 
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, export: exportReason } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
   const [sales, salesCount, outstanding] = await Promise.all([
@@ -75,13 +77,22 @@ export default async function SalesPage({
         description="What you sold, and what is still owed to you."
         action={
           canSell ? (
-            <Link href="/sales/new" className={cn(buttonVariants({ size: "md" }))}>
-              <PhilippinePeso className="size-4" aria-hidden />
-              Record a sale
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <ExportMenu
+                action="/api/export/sales"
+                label="Sales"
+                locked={!canAccess(entitlement, "data_export")}
+              />
+              <Link href="/sales/new" className={cn(buttonVariants({ size: "md" }))}>
+                <PhilippinePeso className="size-4" aria-hidden />
+                Record a sale
+              </Link>
+            </div>
           ) : undefined
         }
       />
+
+      <ExportNotice reason={exportReason} />
 
       {outstanding > 0 && (
         <StatusNote tone="warn" title={`${formatCurrency(outstanding, context.currency)} still owed`}>

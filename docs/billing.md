@@ -14,7 +14,7 @@
 
 Free covers daily production, egg sizes, basic inventory, mortality, feed and a basic dashboard.
 Starter adds sales, full expenses, profitability, charts, alerts, reports and offline mode. Pro
-adds multiple farms, advanced reports, flock comparison, exports and team management.
+adds multiple farms, advanced reports, flock comparison, CSV export and team management.
 
 Everything above is defined **once**, in `lib/subscriptions/plans.ts`. The pricing page renders
 from it. Nothing is hard-coded in JSX, and adding a plan is a one-file change.
@@ -43,6 +43,13 @@ carries a farmer-readable prompt rather than a bare string:
 > `[Upgrade to Starter]`
 
 Client-side checks exist only so a farmer is not shown a button that will reject them.
+
+The CSV export routes are the one place this happens outside a server action. They assert
+`data_export` before a single row is read, and because a route handler never runs
+`app/(app)/layout.tsx`, they do their own `getSessionUser()` and `getFarmContext()` rather than
+inheriting a farm the way every page does. They also carry the app's only role check that RLS
+does not mirror: a worker may read `egg_sales`, so the `canManageSales` gate there is the sole
+thing separating "see the summary" from "extract the whole customer list".
 
 Counts always come from the database — `flocks` where status is `GROWING` or `PRODUCING`, for
 instance. A sold or closed flock is history, not capacity in use, so it does not count against

@@ -80,8 +80,9 @@ farm settings and plans.
 **Offline sync** — deliberately no service worker and no sync queue yet. See
 [docs/offline-sync.md](docs/offline-sync.md).
 
-**Data export**, **flock comparison** and **advanced alerts / reports** — declared in
-`lib/subscriptions/plans.ts` as Pro features with no implementing code behind them yet.
+**Advanced alerts** — declared in `lib/subscriptions/plans.ts` as a Pro feature with no
+implementing code behind it yet. (Flock comparison and advanced reports were also listed here
+and are in fact built and gated, at `lib/data/analytics.ts` and `lib/data/reports.ts`.)
 
 Every route in the sidebar now points at a real page; nothing is shown as "Soon".
 

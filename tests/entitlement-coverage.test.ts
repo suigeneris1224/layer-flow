@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PLANS, type Feature, type LimitKey } from "@/lib/subscriptions/plans";
+import { FEATURE_LABELS, PLANS, type Feature, type LimitKey } from "@/lib/subscriptions/plans";
 
 /**
  * Every plan feature must be a deliberate decision.
@@ -25,6 +25,7 @@ const ENFORCED: Record<Feature, string> = {
   reports: "app/(app)/reports/page.tsx",
   advanced_reports: "lib/data/reports.ts — profitability by flock",
   alerts: "lib/data/dashboard.ts — getAlertCount and the dashboard feed",
+  data_export: "app/api/export/{sales,expenses}/route.ts — assertCanAccess before any row is read",
   team_management: "app/(app)/team/{page,actions}.ts",
   multi_farm: "enforced indirectly by the `farms` limit in farms/actions.ts",
 } as Record<Feature, string>;
@@ -39,7 +40,6 @@ const ENFORCED: Record<Feature, string> = {
  * made deliberately.
  */
 const NOT_YET_BUILT: Partial<Record<Feature, string>> = {
-  data_export: "No CSV/Excel/PDF generation exists anywhere.",
   advanced_alerts: "No threshold configuration and no notification delivery.",
   offline_mode: "No service worker and no sync queue — see docs/offline-sync.md.",
   cross_farm_reporting: "Every data function takes a single farmId.",
@@ -91,6 +91,20 @@ const ENFORCED_LIMITS: Record<LimitKey, string> = {
   users: "app/(app)/team/actions.ts — inviteMemberAction, incl. pending invites",
   history_days: "app/(app)/production/page.tsx — via historyCutoffDate",
 };
+
+/*
+ * The label is part of the promise.
+ *
+ * data_export shipped as "CSV, Excel and PDF export" while nothing generated
+ * anything at all. Now that CSV is real, this keeps the other two from
+ * drifting back into the pricing page ahead of the code.
+ */
+describe("feature labels", () => {
+  it("promises only the export format that exists", () => {
+    expect(FEATURE_LABELS.data_export).toMatch(/csv/i);
+    expect(FEATURE_LABELS.data_export).not.toMatch(/excel|pdf/i);
+  });
+});
 
 describe("limit coverage", () => {
   it("accounts for every limit key", () => {

@@ -27,6 +27,9 @@ export interface ExpenseEntry {
 }
 
 export interface ExpensesRange {
+  /** Inclusive YYYY-MM-DD bounds, matching SalesRange. Both optional. */
+  from?: string;
+  to?: string;
   limit?: number;
   offset?: number;
 }
@@ -68,6 +71,9 @@ export async function getExpenses(
       ? query.range(range.offset, range.offset + limit - 1)
       : query.limit(limit);
 
+  if (range.from) query = query.gte("expense_date", range.from);
+  if (range.to) query = query.lte("expense_date", range.to);
+
   const { data, error } = await query;
 
   if (error) {
@@ -85,14 +91,22 @@ export async function getExpenses(
   }));
 }
 
-/** How many expenses the farm has on record, for pagination. */
-export async function getExpensesCount(farmId: string): Promise<number> {
+/** How many expenses the farm has on record, for pagination and export reconciliation. */
+export async function getExpensesCount(
+  farmId: string,
+  range: ExpensesRange = {}
+): Promise<number> {
   const supabase = await createSupabaseServerClient();
 
-  const { count, error } = await supabase
+  let query = supabase
     .from("expenses")
     .select("id", { count: "exact", head: true })
     .eq("farm_id", farmId);
+
+  if (range.from) query = query.gte("expense_date", range.from);
+  if (range.to) query = query.lte("expense_date", range.to);
+
+  const { count, error } = await query;
 
   if (error) {
     logger.error("expenses count failed", { reason: error.message });

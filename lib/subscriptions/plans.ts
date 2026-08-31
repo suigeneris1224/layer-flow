@@ -179,7 +179,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   advanced_reports: "Advanced reports",
   flock_comparison: "Flock comparison",
   offline_mode: "Offline mode",
-  data_export: "CSV, Excel and PDF export",
+  data_export: "CSV export",
   team_management: "Team management",
   multi_farm: "Multiple farms",
   cross_farm_reporting: "Cross-farm reporting",

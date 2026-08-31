@@ -161,14 +161,28 @@ export async function getSale(context: FarmContext, saleId: string): Promise<Sal
   return toSaleEntry(data as unknown as SaleJoin);
 }
 
-/** How many sales the farm has on record, for pagination. */
-export async function getSalesCount(context: FarmContext): Promise<number> {
+/**
+ * How many sales the farm has on record, for pagination.
+ *
+ * Takes the same range as `getSales` so the export can ask "how many rows
+ * should I have got?" and refuse to serve a file when the answer disagrees
+ * with what it actually assembled.
+ */
+export async function getSalesCount(
+  context: FarmContext,
+  range: SalesRange = {}
+): Promise<number> {
   const supabase = await createSupabaseServerClient();
 
-  const { count, error } = await supabase
+  let query = supabase
     .from("egg_sales")
     .select("id", { count: "exact", head: true })
     .eq("farm_id", context.farmId);
+
+  if (range.from) query = query.gte("sale_date", range.from);
+  if (range.to) query = query.lte("sale_date", range.to);
+
+  const { count, error } = await query;
 
   if (error) {
     logger.error("sales count failed", { reason: error.message });

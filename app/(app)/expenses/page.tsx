@@ -13,6 +13,8 @@ import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { buttonVariants } from "@/components/ui/button";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ExportMenu } from "@/components/export/export-menu";
+import { ExportNotice } from "@/lib/export/notices";
 
 export const metadata: Metadata = { title: "Expenses" };
 
@@ -23,7 +25,7 @@ const EXPENSES_PER_PAGE = 10;
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; export?: string }>;
 }) {
   const context = await requireFarmContext();
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
@@ -40,7 +42,7 @@ export default async function ExpensesPage({
     );
   }
 
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, export: exportReason } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
   const [expenses, expensesCount] = await Promise.all([
@@ -66,14 +68,23 @@ export default async function ExpensesPage({
               Categories
             </Link>
             {canManage && (
-              <Link href="/expenses/new" className={cn(buttonVariants({ size: "md" }))}>
-                <Receipt className="size-4" aria-hidden />
-                Record an expense
-              </Link>
+              <>
+                <ExportMenu
+                  action="/api/export/expenses"
+                  label="Expenses"
+                  locked={!canAccess(entitlement, "data_export")}
+                />
+                <Link href="/expenses/new" className={cn(buttonVariants({ size: "md" }))}>
+                  <Receipt className="size-4" aria-hidden />
+                  Record an expense
+                </Link>
+              </>
             )}
           </div>
         }
       />
+
+      <ExportNotice reason={exportReason} />
 
       {expensesCount === 0 ? (
         <EmptyState

@@ -27,6 +27,14 @@ export interface ProductionEntry {
   mortality: number;
   /** Derived here so the table and the detail page cannot disagree. */
   layingRate: number;
+  /**
+   * Collected but not yet assigned to a size -- same figure
+   * /production/[id] shows per day, surfaced here too so a farmer can see
+   * which day needs sorting without opening each one. Never negative: a
+   * breakdown that (incorrectly) exceeds eggsCollected reads as "fully
+   * sorted", not as a negative gap.
+   */
+  ungradedEggs: number;
 }
 
 export interface ProductionRange {
@@ -96,7 +104,13 @@ export async function getProductionHistory(
     return [];
   }
 
-  return ((data ?? []) as unknown as ProductionJoin[]).map((row) => ({
+  const rows = (data ?? []) as unknown as ProductionJoin[];
+  const gradedById = await gradedEggsByProductionId(
+    supabase,
+    rows.map((row) => row.id)
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     productionDate: row.production_date,
     flockId: row.flock_id,
@@ -107,7 +121,42 @@ export async function getProductionHistory(
     dirtyEggs: row.dirty_eggs,
     mortality: row.mortality,
     layingRate: layingRate(row.eggs_collected, row.hens_present),
+    ungradedEggs: Math.max(0, row.eggs_collected - (gradedById.get(row.id) ?? 0)),
   }));
+}
+
+/**
+ * Sum of `daily_egg_size_production.quantity` per production day, for the
+ * given ids -- one bounded follow-up query for a whole page rather than one
+ * per row. Mirrors `egg_grading_summary` (supabase/migrations/20250101000700_grading_summary.sql),
+ * which computes the same "collected minus graded" gap but only as a
+ * farm-wide total with no way back to which day it came from.
+ */
+async function gradedEggsByProductionId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  productionIds: string[]
+): Promise<Map<string, number>> {
+  const graded = new Map<string, number>();
+  if (productionIds.length === 0) return graded;
+
+  const { data, error } = await supabase
+    .from("daily_egg_size_production")
+    .select("daily_production_id, quantity")
+    .in("daily_production_id", productionIds);
+
+  if (error) {
+    logger.error("graded eggs lookup failed", { reason: error.message });
+    return graded;
+  }
+
+  for (const row of data ?? []) {
+    graded.set(
+      row.daily_production_id,
+      (graded.get(row.daily_production_id) ?? 0) + row.quantity
+    );
+  }
+
+  return graded;
 }
 
 /** How many days are on record, for pagination. Same filters as the list. */
@@ -268,6 +317,10 @@ export async function getProductionDay(
     dirtyEggs: row.dirty_eggs,
     mortality: row.mortality,
     layingRate: layingRate(row.eggs_collected, row.hens_present),
+    ungradedEggs: Math.max(
+      0,
+      row.eggs_collected - sizes.reduce((sum, size) => sum + size.quantity, 0)
+    ),
     averageEggWeight:
       row.average_egg_weight === null ? null : Number(row.average_egg_weight),
     notes: row.notes ?? "",

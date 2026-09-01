@@ -1,6 +1,6 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, TriangleAlert } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canRecordProduction } from "@/lib/auth/permissions";
 import { historyCutoffDate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
@@ -139,6 +139,15 @@ export default async function ProductionPage({
                   </div>
 
                   <div className="flex items-center gap-4 sm:gap-6">
+                    {day.ungradedEggs > 0 && (
+                      <span
+                        className="flex items-center gap-1 text-xs font-medium text-[hsl(var(--status-warn))]"
+                        title={`${formatNumber(day.ungradedEggs)} eggs not sorted by size yet`}
+                      >
+                        <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+                        {formatNumber(day.ungradedEggs)} unsorted
+                      </span>
+                    )}
                     <span className="text-right text-sm font-semibold tabular">
                       {formatNumber(day.eggsCollected)}
                       <span className="ml-1 text-xs font-normal text-muted-foreground">

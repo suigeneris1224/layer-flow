@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Boxes } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canAdjustInventory } from "@/lib/auth/permissions";
@@ -44,8 +45,12 @@ export default async function InventoryPage() {
 
       {ungradedEggs > 0 && (
         <StatusNote tone="warn" title={`${formatNumber(ungradedEggs)} eggs not sorted yet`}>
-          Collected but not yet assigned to a size, so they aren&apos;t counted here. Open the
-          day&apos;s production record and fill in the egg sizes to add them.
+          Collected but not yet assigned to a size, so they aren&apos;t counted here.{" "}
+          <Link href="/production" className="font-medium underline underline-offset-2">
+            See which days need sorting
+          </Link>{" "}
+          — flagged days show an &quot;unsorted&quot; count. Open one and fill in the egg sizes
+          to add it here.
         </StatusNote>
       )}
 

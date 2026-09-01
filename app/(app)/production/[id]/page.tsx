@@ -41,9 +41,6 @@ export default async function ProductionDayPage({
   const day = await getProductionDay(context.farmId, id);
   if (!day) notFound();
 
-  const breakdownTotal = day.sizes.reduce((sum, size) => sum + size.quantity, 0);
-  const ungraded = day.eggsCollected - breakdownTotal;
-
   return (
     <PageShell width="reading">
       <PageHeader
@@ -100,8 +97,8 @@ export default async function ProductionDayPage({
                 value={formatNumber(size.quantity)}
               />
             ))}
-            {ungraded > 0 && (
-              <Row label="Ungraded" value={formatNumber(ungraded)} />
+            {day.ungradedEggs > 0 && (
+              <Row label="Ungraded" value={formatNumber(day.ungradedEggs)} />
             )}
           </dl>
         )}

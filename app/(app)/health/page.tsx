@@ -7,6 +7,7 @@ import {
   canRecordMortality,
   canRecordVaccination,
 } from "@/lib/auth/permissions";
+import { canAccess } from "@/lib/subscriptions/entitlements";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getFeedUsage,
@@ -68,6 +69,11 @@ export default async function HealthPage({
   // A retired flock can still receive a correction to its history, so every
   // flock is offered here -- unlike the production form, which is about today.
   const flockChoices = flocks.map((flock) => ({ id: flock.id, name: flock.name }));
+
+  const offlineEnabled = canAccess(
+    { plan: context.plan, status: context.subscriptionStatus },
+    "offline_mode"
+  );
 
   if (flockChoices.length === 0) {
     return (
@@ -140,7 +146,12 @@ export default async function HealthPage({
             </Panel>
 
             {canRecordMortality(context) ? (
-              <MortalityForm records={mortality} flocks={flockChoices} today={today} />
+              <MortalityForm
+                records={mortality}
+                flocks={flockChoices}
+                today={today}
+                offlineEnabled={offlineEnabled}
+              />
             ) : (
               <StatusNote tone="info" title="Read only">
                 Your role doesn&apos;t allow recording losses.
@@ -192,6 +203,7 @@ export default async function HealthPage({
                 today={today}
                 lastCostPerKg={Number(lastFeedResult.data?.cost_per_kg ?? 0)}
                 currency={context.currency}
+                offlineEnabled={offlineEnabled}
               />
             ) : (
               <StatusNote tone="info" title="Read only">

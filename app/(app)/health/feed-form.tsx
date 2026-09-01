@@ -17,6 +17,9 @@ import {
   recordFeedUsageAction,
   updateFeedUsageAction,
 } from "./actions";
+import { feedUsageSchema, toFieldErrors } from "@/lib/validation/schemas";
+import { useConnectivity } from "@/lib/offline/use-connectivity";
+import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
 
 const NEW = "__new__";
 
@@ -32,14 +35,18 @@ export function FeedForm({
   today,
   lastCostPerKg,
   currency,
+  offlineEnabled,
 }: {
   records: FeedEntry[];
   flocks: FlockChoice[];
   today: string;
   lastCostPerKg: number;
   currency: string;
+  /** Whether the farm's plan includes offline recording (lib/offline/). */
+  offlineEnabled: boolean;
 }) {
   const router = useRouter();
+  const online = useConnectivity();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<string>(NEW);
   const [formError, setFormError] = useState<string | null>(null);
@@ -79,8 +86,34 @@ export function FeedForm({
     setFieldErrors({});
     setSuccess(null);
 
+    const values = { flockId, usageDate, quantityKg, costPerKg, feedType, notes };
+
+    // See the matching comment in mortality-form.tsx: only a brand-new
+    // record queues offline; editing/deleting still needs the server.
+    if (!editing && !online && offlineEnabled) {
+      const parsed = feedUsageSchema.safeParse(values);
+      if (!parsed.success) {
+        setFieldErrors(toFieldErrors(parsed.error));
+        setFormError("Please check the form below.");
+        return;
+      }
+
+      startTransition(async () => {
+        const clientId = generateWriteId();
+        await enqueueWrite({
+          id: clientId,
+          kind: "feed_usage",
+          payload: { ...parsed.data, clientId },
+        });
+        setSuccess("Saved. It will sync when you have signal.");
+        setQuantityKg("");
+        setFeedType("");
+        setNotes("");
+      });
+      return;
+    }
+
     startTransition(async () => {
-      const values = { flockId, usageDate, quantityKg, costPerKg, feedType, notes };
       const result = editing
         ? await updateFeedUsageAction(editing.id, values)
         : await recordFeedUsageAction(values);

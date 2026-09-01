@@ -668,6 +668,7 @@ export type Database = {
       }
       feed_usage: {
         Row: {
+          client_id: string | null
           cost_per_kg: number
           created_at: string
           daily_production_id: string | null
@@ -682,6 +683,7 @@ export type Database = {
           usage_date: string
         }
         Insert: {
+          client_id?: string | null
           cost_per_kg?: number
           created_at?: string
           daily_production_id?: string | null
@@ -696,6 +698,7 @@ export type Database = {
           usage_date: string
         }
         Update: {
+          client_id?: string | null
           cost_per_kg?: number
           created_at?: string
           daily_production_id?: string | null
@@ -836,6 +839,7 @@ export type Database = {
       }
       mortality_records: {
         Row: {
+          client_id: string | null
           created_at: string
           daily_production_id: string | null
           farm_id: string
@@ -848,6 +852,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           daily_production_id?: string | null
           farm_id: string
@@ -860,6 +865,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           daily_production_id?: string | null
           farm_id?: string

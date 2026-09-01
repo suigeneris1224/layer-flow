@@ -66,19 +66,34 @@ export async function recordMortalityAction(
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("mortality_records")
-      .insert({
-        farm_id: context.farmId,
-        flock_id: parsed.data.flockId,
-        daily_production_id: null,
-        record_date: parsed.data.recordDate,
-        quantity: parsed.data.quantity,
-        reason: parsed.data.reason || null,
-        notes: parsed.data.notes || null,
-      })
-      .select("id")
-      .single();
+    const row = {
+      farm_id: context.farmId,
+      flock_id: parsed.data.flockId,
+      daily_production_id: null,
+      record_date: parsed.data.recordDate,
+      quantity: parsed.data.quantity,
+      reason: parsed.data.reason || null,
+      notes: parsed.data.notes || null,
+    };
+
+    /*
+     * A clientId means this came from the offline queue (lib/offline/), which
+     * may call this action more than once for the same write if a sync
+     * attempt fails partway through. Upserting on (farm_id, client_id) makes
+     * a retry land on the same row instead of creating a duplicate loss.
+     * Every online submission omits clientId and gets a plain insert, exactly
+     * as before this existed.
+     */
+    const { data, error } = parsed.data.clientId
+      ? await supabase
+          .from("mortality_records")
+          .upsert(
+            { ...row, client_id: parsed.data.clientId },
+            { onConflict: "farm_id,client_id" }
+          )
+          .select("id")
+          .single()
+      : await supabase.from("mortality_records").insert(row).select("id").single();
 
     if (error) return describeDatabaseError(error, "recordMortalityAction");
 
@@ -223,23 +238,33 @@ export async function recordFeedUsageAction(
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("feed_usage")
-      .insert({
-        farm_id: context.farmId,
-        flock_id: parsed.data.flockId,
-        daily_production_id: null,
-        usage_date: parsed.data.usageDate,
-        quantity_kg: parsed.data.quantityKg,
-        cost_per_kg: parsed.data.costPerKg,
-        // Stored, not derived on read -- matching record_daily_production, so a
-        // later correction to the unit cost never restates what was spent.
-        total_cost: feedCost(parsed.data.quantityKg, parsed.data.costPerKg),
-        feed_type: parsed.data.feedType || null,
-        notes: parsed.data.notes || null,
-      })
-      .select("id")
-      .single();
+    const row = {
+      farm_id: context.farmId,
+      flock_id: parsed.data.flockId,
+      daily_production_id: null,
+      usage_date: parsed.data.usageDate,
+      quantity_kg: parsed.data.quantityKg,
+      cost_per_kg: parsed.data.costPerKg,
+      // Stored, not derived on read -- matching record_daily_production, so a
+      // later correction to the unit cost never restates what was spent.
+      total_cost: feedCost(parsed.data.quantityKg, parsed.data.costPerKg),
+      feed_type: parsed.data.feedType || null,
+      notes: parsed.data.notes || null,
+    };
+
+    // See the matching comment in recordMortalityAction: a clientId means the
+    // offline queue may retry this call, so it upserts on (farm_id,
+    // client_id) instead of a plain insert.
+    const { data, error } = parsed.data.clientId
+      ? await supabase
+          .from("feed_usage")
+          .upsert(
+            { ...row, client_id: parsed.data.clientId },
+            { onConflict: "farm_id,client_id" }
+          )
+          .select("id")
+          .single()
+      : await supabase.from("feed_usage").insert(row).select("id").single();
 
     if (error) return describeDatabaseError(error, "recordFeedUsageAction");
 

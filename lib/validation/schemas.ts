@@ -290,12 +290,20 @@ export const dailyProductionSchema = z
  * re-inserts whatever it finds attached to the day it is saving.
  */
 
+/**
+ * `clientId`, set only by the offline queue (lib/offline/), is the
+ * idempotency key a retried sync lands on -- see
+ * supabase/migrations/20250101001400_offline_idempotency.sql. Every online
+ * submission from these forms omits it, unchanged from before that queue
+ * existed.
+ */
 export const mortalityRecordSchema = z.object({
   flockId: uuid,
   recordDate: isoDate,
   quantity: intFromForm("Birds lost", { min: 1, max: 1_000_000 }),
   reason: z.string().trim().max(120).optional().default(""),
   notes: z.string().trim().max(500).optional().default(""),
+  clientId: z.string().uuid().optional(),
 });
 
 export const feedUsageSchema = z.object({
@@ -305,6 +313,7 @@ export const feedUsageSchema = z.object({
   costPerKg: decimalFromForm("Feed cost per kg", { max: 10_000 }).default(0),
   feedType: z.string().trim().max(120).optional().default(""),
   notes: z.string().trim().max(500).optional().default(""),
+  clientId: z.string().uuid().optional(),
 });
 
 export const vaccinationSchema = z.object({

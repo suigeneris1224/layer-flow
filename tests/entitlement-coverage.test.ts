@@ -28,6 +28,8 @@ const ENFORCED: Record<Feature, string> = {
   data_export: "app/api/export/{sales,expenses}/route.ts — assertCanAccess before any row is read",
   team_management: "app/(app)/team/{page,actions}.ts",
   multi_farm: "enforced indirectly by the `farms` limit in farms/actions.ts",
+  offline_mode:
+    "app/(app)/production/new/page.tsx + app/(app)/health/page.tsx — canAccess gates whether the offline queue (lib/offline/) is used at all",
 } as Record<Feature, string>;
 
 /**
@@ -41,7 +43,6 @@ const ENFORCED: Record<Feature, string> = {
  */
 const NOT_YET_BUILT: Partial<Record<Feature, string>> = {
   advanced_alerts: "No threshold configuration and no notification delivery.",
-  offline_mode: "No service worker and no sync queue — see docs/offline-sync.md.",
   cross_farm_reporting: "Every data function takes a single farmId.",
   priority_support: "Not a software feature; nothing to gate.",
   profitability: "Ungated on Free today. Gating it is a deliberate product call.",

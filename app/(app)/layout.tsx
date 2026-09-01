@@ -8,6 +8,7 @@ import { farmHour, formatDate } from "@/lib/format";
 import { DesktopSidebar } from "@/components/nav/desktop-sidebar";
 import { MobileTabBar } from "@/components/nav/mobile-tab-bar";
 import { AppTopbar } from "@/components/layout/app-topbar";
+import { OfflineStatus } from "@/components/offline/offline-status";
 
 /**
  * Shell for every signed-in screen.
@@ -50,6 +51,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           timezone={context.timezone}
           dateLabel={formatDate(new Date(), context.timezone)}
         />
+
+        <OfflineStatus />
 
         <main id="main" className="flex-1 pb-24 lg:pb-8">
           {children}

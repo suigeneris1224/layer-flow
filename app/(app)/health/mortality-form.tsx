@@ -15,6 +15,9 @@ import {
   recordMortalityAction,
   updateMortalityAction,
 } from "./actions";
+import { mortalityRecordSchema, toFieldErrors } from "@/lib/validation/schemas";
+import { useConnectivity } from "@/lib/offline/use-connectivity";
+import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
 
 const NEW = "__new__";
 
@@ -29,12 +32,16 @@ export function MortalityForm({
   records,
   flocks,
   today,
+  offlineEnabled,
 }: {
   records: MortalityEntry[];
   flocks: FlockChoice[];
   today: string;
+  /** Whether the farm's plan includes offline recording (lib/offline/). */
+  offlineEnabled: boolean;
 }) {
   const router = useRouter();
+  const online = useConnectivity();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<string>(NEW);
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,8 +75,38 @@ export function MortalityForm({
     setFieldErrors({});
     setSuccess(null);
 
+    const values = { flockId, recordDate, quantity, reason, notes };
+
+    /*
+     * Offline queueing only covers a brand-new record (docs/offline-sync.md's
+     * scope) -- editing or deleting an existing one needs the server anyway
+     * to know what it's replacing, so those still go through the network path
+     * and fail normally when there's no connection.
+     */
+    if (!editing && !online && offlineEnabled) {
+      const parsed = mortalityRecordSchema.safeParse(values);
+      if (!parsed.success) {
+        setFieldErrors(toFieldErrors(parsed.error));
+        setFormError("Please check the form below.");
+        return;
+      }
+
+      startTransition(async () => {
+        const clientId = generateWriteId();
+        await enqueueWrite({
+          id: clientId,
+          kind: "mortality",
+          payload: { ...parsed.data, clientId },
+        });
+        setSuccess("Saved. It will sync when you have signal.");
+        setQuantity("");
+        setReason("");
+        setNotes("");
+      });
+      return;
+    }
+
     startTransition(async () => {
-      const values = { flockId, recordDate, quantity, reason, notes };
       const result = editing
         ? await updateMortalityAction(editing.id, values)
         : await recordMortalityAction(values);

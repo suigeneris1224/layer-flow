@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClipboardList } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canRecordProduction } from "@/lib/auth/permissions";
+import { canAccess } from "@/lib/subscriptions/entitlements";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EmptyState, StatusNote } from "@/components/ui/states";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
@@ -98,6 +99,10 @@ export default async function NewProductionPage({
         initialDate={initialDate}
         lastFeedCostPerKg={Number(lastFeedResult.data?.cost_per_kg ?? 0)}
         currency={context.currency}
+        offlineEnabled={canAccess(
+          { plan: context.plan, status: context.subscriptionStatus },
+          "offline_mode"
+        )}
       />
     </PageShell>
   );

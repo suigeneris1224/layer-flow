@@ -11,6 +11,8 @@ import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { loadProductionAction, recordProductionAction } from "@/app/(app)/production/actions";
+import { useConnectivity } from "@/lib/offline/use-connectivity";
+import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
 import {
   eggsToTrays,
   feedCost,
@@ -63,6 +65,7 @@ export function ProductionForm({
   initialDate,
   lastFeedCostPerKg,
   currency,
+  offlineEnabled,
 }: {
   flocks: FlockOption[];
   eggSizes: SizeOption[];
@@ -72,10 +75,14 @@ export function ProductionForm({
   initialDate?: string;
   lastFeedCostPerKg: number;
   currency: string;
+  /** Whether the farm's plan includes offline recording (lib/offline/). */
+  offlineEnabled: boolean;
 }) {
   const router = useRouter();
+  const online = useConnectivity();
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   const [loadingExisting, setLoadingExisting] = useState(false);
   /*
@@ -245,6 +252,7 @@ export function ProductionForm({
 
   const onSubmit = handleSubmit((raw) => {
     setFormError(null);
+    setQueuedOffline(false);
 
     // Same schema the server uses. Validating here saves a round trip; the
     // server still re-validates, because a browser check is not a control.
@@ -264,6 +272,27 @@ export function ProductionForm({
         setError(field as keyof FormValues, { message });
       }
       setFormError(fieldErrors.sizes ?? "Please check the numbers below.");
+      return;
+    }
+
+    /*
+     * record_daily_production upserts on (flock_id, production_date), so
+     * unlike mortality/feed this needs no clientId to be retry-safe -- the
+     * queue's kind + payload are already the idempotency key.
+     */
+    if (!online && offlineEnabled) {
+      startTransition(async () => {
+        await enqueueWrite({
+          id: generateWriteId(),
+          kind: "daily_production",
+          payload: parsed.data,
+        });
+        setQueuedOffline(true);
+        // Stays on this screen rather than navigating to the dashboard, which
+        // needs a connection to load anything meaningful (offline covers
+        // recording, not reading, per docs/offline-sync.md).
+        reset(emptyDay(selectedFlockId, selectedDate));
+      });
       return;
     }
 
@@ -288,6 +317,12 @@ export function ProductionForm({
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {formError && <StatusNote tone="bad">{formError}</StatusNote>}
+
+      {queuedOffline && (
+        <StatusNote tone="good" title="Saved">
+          It will sync when you have signal.
+        </StatusNote>
+      )}
 
       {loadFailed && (
         <StatusNote tone="bad" title="We couldn't check this day">

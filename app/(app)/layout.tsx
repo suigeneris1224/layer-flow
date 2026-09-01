@@ -1,6 +1,7 @@
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
-import { getAlertCount } from "@/lib/data/dashboard";
+import { getDashboardData } from "@/lib/data/dashboard";
+import { getNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getProfile } from "@/lib/data/profile";
 import { greetingFor } from "@/lib/domain/presentation";
 import { farmHour, formatDate } from "@/lib/format";
@@ -17,8 +18,14 @@ import { AppTopbar } from "@/components/layout/app-topbar";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const context = await requireFarmContext();
   const user = await requireUser();
-  const [alertCount, profile] = await Promise.all([
-    getAlertCount(context),
+
+  // Reconciles today's alerts into notifications before the badge/panel below
+  // read them, so this navigation shows the sync it just performed rather than
+  // the previous one.
+  await getDashboardData(context);
+  const [notifications, unreadCount, profile] = await Promise.all([
+    getNotifications(context),
+    getUnreadNotificationCount(context),
     getProfile(user.id),
   ]);
 
@@ -38,7 +45,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           role={ROLE_LABELS[context.role]}
           avatarUrl={profile?.avatarUrl}
           plan={context.plan}
-          alertCount={alertCount}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          timezone={context.timezone}
           dateLabel={formatDate(new Date(), context.timezone)}
         />
 

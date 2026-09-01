@@ -35,8 +35,7 @@ export default async function DashboardPage() {
     <PageShell>
       {/*
         Status first: this is what the farmer needs to act on, so it sits
-        above the figures rather than below them. The topbar bell links to
-        #todays-status, which TodayStatus owns.
+        above the figures rather than below them.
       */}
       <TodayStatus alerts={data.alerts} hasRecord={data.today.hasRecord} />
 

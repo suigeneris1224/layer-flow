@@ -24,7 +24,7 @@ const ENFORCED: Record<Feature, string> = {
   flock_comparison: "lib/data/analytics.ts",
   reports: "app/(app)/reports/page.tsx",
   advanced_reports: "lib/data/reports.ts — profitability by flock",
-  alerts: "lib/data/dashboard.ts — getAlertCount and the dashboard feed",
+  alerts: "lib/data/dashboard.ts — the dashboard feed and lib/data/notifications.ts",
   data_export: "app/api/export/{sales,expenses}/route.ts — assertCanAccess before any row is read",
   team_management: "app/(app)/team/{page,actions}.ts",
   multi_farm: "enforced indirectly by the `farms` limit in farms/actions.ts",

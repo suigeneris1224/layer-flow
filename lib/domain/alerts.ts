@@ -10,9 +10,17 @@
 
 export type AlertLevel = "good" | "warn" | "bad";
 
+/**
+ * Which rule fired. Lets a caller persist or dedupe an alert instance --
+ * `summariseAlerts`'s good-news placeholder carries no type since it is
+ * synthetic, not a rule result.
+ */
+export type AlertType = "production" | "feed_cost" | "mortality" | "egg_size" | "vaccination";
+
 export interface Alert {
   level: AlertLevel;
   message: string;
+  type?: AlertType;
 }
 
 /** A day of production, oldest first. */
@@ -77,6 +85,7 @@ export function productionAlert(points: readonly ProductionPoint[]): Alert | nul
   return {
     level: dropped > THRESHOLDS.productionDrop * 2 ? "bad" : "warn",
     message: `Egg production is down ${Math.round(dropped * 100)}% compared with your recent average.`,
+    type: "production",
   };
 }
 
@@ -89,6 +98,7 @@ export function feedCostAlert(recentCost: number, baselineCost: number): Alert |
   return {
     level: "warn",
     message: `Feed cost is ${Math.round(rise * 100)}% higher than your recent average.`,
+    type: "feed_cost",
   };
 }
 
@@ -101,6 +111,7 @@ export function mortalityAlert(deaths: number, hensPresent: number): Alert | nul
   return {
     level: rate > THRESHOLDS.dailyMortalityRate * 3 ? "bad" : "warn",
     message: `Mortality is higher than your normal range (${deaths} today).`,
+    type: "mortality",
   };
 }
 
@@ -119,6 +130,7 @@ export function eggSizeAlert(
       shift < 0
         ? `${sizeName} egg production is lower than your recent average.`
         : `${sizeName} eggs are a bigger share of your collection than usual.`,
+    type: "egg_size",
   };
 }
 
@@ -163,6 +175,7 @@ export function vaccinationAlert(
     return {
       level: "warn",
       message: `${flock.flockName} has no vaccination recorded.`,
+      type: "vaccination",
     };
   }
 
@@ -172,6 +185,7 @@ export function vaccinationAlert(
   return {
     level: "warn",
     message: `${flock.flockName} has had no vaccination recorded in ${gap} days.`,
+    type: "vaccination",
   };
 }
 

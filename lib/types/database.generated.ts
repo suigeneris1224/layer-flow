@@ -895,6 +895,47 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          farm_id: string
+          id: string
+          level: string
+          message: string
+          read_at: string | null
+          resolved_at: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          farm_id: string
+          id?: string
+          level: string
+          message: string
+          read_at?: string | null
+          resolved_at?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          farm_id?: string
+          id?: string
+          level?: string
+          message?: string
+          read_at?: string | null
+          resolved_at?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

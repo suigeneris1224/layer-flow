@@ -1,10 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, REMEMBER_ME_COOKIE } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/config/env";
 import { describeAuthError, describeUnknownError, failure, type ActionFailure } from "@/lib/errors";
 import { logger } from "@/lib/observability/logger";
@@ -105,9 +106,10 @@ export async function signInAction(
   }
 
   const next = String(formData.get("next") ?? "/dashboard");
+  const rememberMe = formData.get("rememberMe") === "on";
 
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient({ persistSession: rememberMe });
     const { error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,
@@ -118,12 +120,27 @@ export async function signInAction(
     return describeUnknownError(error, "signInAction");
   }
 
+  /*
+   * Only this action knows the farmer's actual choice -- every other call to
+   * createSupabaseServerClient() uses the default persistSession:true, so the
+   * marker is set here explicitly rather than as a side effect of the
+   * generic client, which would otherwise clear or set it on unrelated
+   * requests.
+   */
+  const cookieStore = await cookies();
+  if (rememberMe) {
+    cookieStore.delete(REMEMBER_ME_COOKIE);
+  } else {
+    cookieStore.set(REMEMBER_ME_COOKIE, "1");
+  }
+
   redirect(safeRedirect(next));
 }
 
 export async function signOutAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
+  (await cookies()).delete(REMEMBER_ME_COOKIE);
   revalidatePath("/", "layout");
   redirect("/login");
 }

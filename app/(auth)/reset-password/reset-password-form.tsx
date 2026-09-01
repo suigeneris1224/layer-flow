@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { StatusNote } from "@/components/ui/states";
 import { updatePasswordAction, type AuthState } from "@/app/auth/actions";
 
@@ -24,10 +25,9 @@ export function ResetPasswordForm() {
         hint="At least 8 characters."
         error={fieldErrors?.password}
       >
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           minLength={8}
           required
@@ -41,10 +41,9 @@ export function ResetPasswordForm() {
         htmlFor="confirmPassword"
         error={fieldErrors?.confirmPassword}
       >
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
           minLength={8}
           required

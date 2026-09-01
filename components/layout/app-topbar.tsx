@@ -1,15 +1,15 @@
-import { Bell } from "lucide-react";
 import { MobileDrawer } from "@/components/nav/mobile-drawer";
+import { NotificationMenu } from "@/components/layout/notification-menu";
 import { UserMenu } from "@/components/layout/user-menu";
+import type { Notification } from "@/lib/data/notifications";
 import type { SubscriptionPlan } from "@/lib/types/database";
 
 /**
  * The bar above every signed-in screen.
  *
- * The bell badge counts alerts the dashboard has already computed. It is not a
- * second notification system -- just a surface for the deterministic rules in
- * lib/domain/alerts.ts, which is why it links to the status panel rather than
- * opening a feed of its own.
+ * The notification bell surfaces alerts the dashboard has already computed --
+ * see lib/domain/alerts.ts and lib/data/notifications.ts -- rather than a
+ * second alerting system of its own.
  */
 export function AppTopbar({
   greeting,
@@ -18,7 +18,9 @@ export function AppTopbar({
   role,
   avatarUrl,
   plan,
-  alertCount,
+  notifications,
+  unreadCount,
+  timezone,
   dateLabel,
 }: {
   greeting: string;
@@ -27,7 +29,9 @@ export function AppTopbar({
   role: string;
   avatarUrl?: string | null;
   plan: SubscriptionPlan;
-  alertCount: number;
+  notifications: Notification[];
+  unreadCount: number;
+  timezone: string;
   dateLabel: string;
 }) {
   const firstName = userName.split(" ")[0] || "there";
@@ -49,20 +53,7 @@ export function AppTopbar({
         {dateLabel}
       </span>
 
-      <a
-        href="#todays-status"
-        className="relative flex size-11 items-center justify-center rounded-md hover:bg-muted"
-      >
-        <Bell className="size-5" aria-hidden />
-        {alertCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-4 text-destructive-foreground tabular">
-            {alertCount}
-          </span>
-        )}
-        <span className="sr-only">
-          {alertCount > 0 ? `${alertCount} alerts need attention` : "No alerts"}
-        </span>
-      </a>
+      <NotificationMenu notifications={notifications} unreadCount={unreadCount} timezone={timezone} />
 
       <UserMenu userName={userName} role={role} avatarUrl={avatarUrl} />
     </header>

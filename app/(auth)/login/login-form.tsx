@@ -4,6 +4,8 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusNote } from "@/components/ui/states";
 import { signInAction, type AuthState } from "@/app/auth/actions";
 
@@ -36,16 +38,22 @@ export function LoginForm({ next }: { next: string }) {
       </Field>
 
       <Field label="Password" htmlFor="password" error={fieldErrors?.password}>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           aria-invalid={Boolean(fieldErrors?.password)}
           aria-describedby={fieldErrors?.password ? "password-error" : undefined}
         />
       </Field>
+
+      <Checkbox
+        id="rememberMe"
+        name="rememberMe"
+        defaultChecked
+        label="Remember me"
+      />
 
       <Button type="submit" size="lg" block loading={pending}>
         {pending ? "Signing in…" : "Sign in"}

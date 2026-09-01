@@ -19,6 +19,7 @@ import {
   mortalityAlert,
   productionAlert,
   summariseAlerts,
+  vaccinationAlert,
   type Alert,
   type ProductionPoint,
 } from "@/lib/domain/alerts";
@@ -29,6 +30,8 @@ import {
   toInventoryRows,
   type InventoryBalanceRow,
 } from "@/lib/data/inventory";
+import { getLatestVaccinationByFlock } from "@/lib/data/health";
+import { syncNotifications } from "@/lib/data/notifications";
 import { farmToday, shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 
@@ -126,6 +129,7 @@ interface FlockJoin {
   breed: string;
   current_hens: number;
   status: string;
+  placement_date: string;
   houses: { name: string } | { name: string }[];
 }
 
@@ -158,8 +162,18 @@ export const getDashboardData = cache(async function getDashboardData(
    */
   const hasAlerts = canAccess(entitlement, "alerts");
 
-  const [production, feed, inventory, sales, expenses, flocks, grading, sizesToday, activity] =
-    await Promise.all([
+  const [
+    production,
+    feed,
+    inventory,
+    sales,
+    expenses,
+    flocks,
+    grading,
+    sizesToday,
+    activity,
+    latestVaccinationByFlock,
+  ] = await Promise.all([
     supabase
       .from("daily_production")
       .select(
@@ -195,7 +209,7 @@ export const getDashboardData = cache(async function getDashboardData(
       .lte("expense_date", today),
     supabase
       .from("flocks")
-      .select("id, name, breed, current_hens, status, houses!inner(name)")
+      .select("id, name, breed, current_hens, status, placement_date, houses!inner(name)")
       .eq("farm_id", context.farmId)
       .in("status", ["GROWING", "PRODUCING"])
       .order("name"),
@@ -217,6 +231,7 @@ export const getDashboardData = cache(async function getDashboardData(
       .eq("farm_id", context.farmId)
       .order("created_at", { ascending: false })
       .limit(RECENT_ACTIVITY_LIMIT),
+    getLatestVaccinationByFlock(context.farmId),
   ]);
 
   logFailures({
@@ -279,6 +294,33 @@ export const getDashboardData = cache(async function getDashboardData(
     (row) => row.mortality
   );
 
+  const alerts = hasAlerts
+    ? buildAlerts(
+        productionRows,
+        feedRows,
+        today,
+        mortality,
+        hensOnFarm,
+        flockRows,
+        latestVaccinationByFlock
+      )
+    : [];
+
+  /*
+   * Awaited, not fire-and-forget: the topbar reads getNotifications /
+   * getUnreadNotificationCount in the same request, right after this call, and
+   * they must see today's sync rather than last navigation's. A failure here
+   * must not break the dashboard render, so it is caught and logged instead
+   * of thrown.
+   */
+  try {
+    await syncNotifications(context, alerts);
+  } catch (error) {
+    logger.error("notification sync failed", {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   return {
     date: today,
     today: {
@@ -312,9 +354,7 @@ export const getDashboardData = cache(async function getDashboardData(
     flocks: buildFlockSummaries(flockRows, todayProduction),
     flockStatus: flockStatusLine(deathsThisWeek, hensOnFarm),
     activity: buildActivity(activity.data ?? []),
-    alerts: hasAlerts
-      ? buildAlerts(productionRows, feedRows, today, mortality, hensOnFarm)
-      : [],
+    alerts,
   };
 });
 
@@ -384,7 +424,9 @@ function buildAlerts(
   feedRows: readonly { usage_date: string; total_cost: number }[],
   today: string,
   mortalityToday: number,
-  hens: number
+  hens: number,
+  flockRows: readonly FlockJoin[],
+  latestVaccinationByFlock: ReadonlyMap<string, string>
 ): Alert[] {
   const eggsByDate = new Map<string, number>();
   for (const row of productionRows) {
@@ -406,24 +448,28 @@ function buildAlerts(
       ? sum(earlierFeed, (row) => Number(row.total_cost)) / earlierFeed.length
       : 0;
 
+  /*
+   * At most one flock's gap is surfaced here, even when several are overdue --
+   * the notification this feeds has one open row per alert type, and a farmer
+   * acting on the nearest one will re-check the others anyway. TodayStatus
+   * (which does not persist) is unaffected by this narrowing.
+   */
+  const overdueVaccination = flockRows
+    .map((flock) =>
+      vaccinationAlert({
+        flockName: flock.name,
+        lastVaccinationDate: latestVaccinationByFlock.get(flock.id) ?? null,
+        placementDate: flock.placement_date,
+      })
+    )
+    .find((alert): alert is Alert => alert !== null);
+
   return summariseAlerts([
     productionAlert(points),
     feedCostAlert(feedToday, feedBaseline),
     mortalityAlert(mortalityToday, hens),
+    overdueVaccination ?? null,
   ]);
-}
-
-/**
- * How many alerts are firing, for the top bar badge.
- *
- * Reuses the dashboard's own rules rather than inventing a second notification
- * system. "Production is normal" is the good-news placeholder and is not
- * counted -- a badge saying "1" when nothing is wrong trains people to ignore
- * the badge.
- */
-export async function getAlertCount(context: FarmContext): Promise<number> {
-  const data = await getDashboardData(context);
-  return data.alerts.filter((alert) => alert.level !== "good").length;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

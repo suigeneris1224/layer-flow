@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, Egg, Minus } from "lucide-react";
+import { Check, Minus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { PublicHeader } from "@/components/marketing/public-header";
+import { PublicFooter } from "@/components/marketing/public-footer";
 import { cn } from "@/lib/utils";
 import {
   FEATURE_LABELS,
@@ -48,15 +50,7 @@ function describeLimit(key: LimitKey, value: number | null): string {
 export default function PricingPage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-5">
-        <Link href="/" className="inline-flex items-center gap-2 text-lg font-semibold">
-          <Egg className="size-5 text-primary" aria-hidden />
-          LayerFlow
-        </Link>
-        <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-          Sign in
-        </Link>
-      </header>
+      <PublicHeader />
 
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16">
         <div className="py-8 text-center">
@@ -195,6 +189,8 @@ export default function PricingPage() {
           </p>
         </section>
       </main>
+
+      <PublicFooter />
     </div>
   );
 }

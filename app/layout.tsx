@@ -23,6 +23,12 @@ export const metadata: Metadata = {
     "Simple egg farm management for Philippine layer farmers. Record daily production in seconds and see what your flock actually earns.",
   applicationName: "LayerFlow",
   manifest: "/manifest.webmanifest",
+  /*
+   * A placeholder pick among the candidate marks in public/icons/ (mark-flow,
+   * mark-ascent, mark-pulse) -- swapping this single href is the whole change
+   * once a final mark is chosen.
+   */
+  icons: { icon: "/icons/mark-flow.svg" },
   appleWebApp: {
     capable: true,
     title: "LayerFlow",

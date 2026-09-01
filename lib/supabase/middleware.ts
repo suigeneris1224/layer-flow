@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database";
 import { publicEnv } from "@/lib/config/env";
+import { REMEMBER_ME_COOKIE } from "@/lib/supabase/cookies";
 
 /** Routes reachable without a session. Everything else requires login. */
 const PUBLIC_PATHS = [
@@ -11,6 +12,10 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/pricing",
+  "/about",
+  "/contact",
+  "/privacy",
+  "/terms",
   "/auth/callback",
   "/auth/confirm",
   // An invitee may have no account yet, so the landing page has to be
@@ -35,6 +40,12 @@ function isPublicPath(pathname: string): boolean {
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // "Remember me" was unchecked at sign-in. Without this, refreshing the
+  // token here -- which happens on effectively every request -- would
+  // rewrite the auth cookie with Supabase's default (persistent) options and
+  // silently undo that choice on the very next navigation.
+  const sessionOnly = request.cookies.get(REMEMBER_ME_COOKIE)?.value === "1";
+
   const supabase = createServerClient<Database>(
     publicEnv.supabaseUrl,
     publicEnv.supabaseAnonKey,
@@ -49,7 +60,12 @@ export async function updateSession(request: NextRequest) {
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
+            const finalOptions = { ...options };
+            if (sessionOnly) {
+              delete finalOptions.maxAge;
+              delete finalOptions.expires;
+            }
+            response.cookies.set(name, value, finalOptions);
           }
         },
       },

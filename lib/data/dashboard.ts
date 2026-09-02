@@ -15,14 +15,24 @@ import {
   sellableEggs,
 } from "@/lib/domain/calculations";
 import {
+  daysBetween,
+  eggSizeAlert,
   feedCostAlert,
+  flockLossAlert,
+  lowInventoryAlert,
   mortalityAlert,
   productionAlert,
+  resolveThresholds,
+  stalePricingAlert,
   summariseAlerts,
+  underperformingFlockAlert,
   vaccinationAlert,
   type Alert,
+  type PricedSizeStatus,
   type ProductionPoint,
+  type ResolvedThresholds,
 } from "@/lib/domain/alerts";
+import { attributeFlockProfitability } from "@/lib/domain/profitability";
 import { summariseInventory, type InventoryLine } from "@/lib/domain/inventory";
 import { describeActivity, flockStatusLine, type FlockStatus } from "@/lib/domain/presentation";
 import {
@@ -32,6 +42,8 @@ import {
 } from "@/lib/data/inventory";
 import { getLatestVaccinationByFlock } from "@/lib/data/health";
 import { syncNotifications } from "@/lib/data/notifications";
+import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
+import { getCurrentPrices } from "@/lib/data/pricing";
 import { farmToday, shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 
@@ -133,6 +145,18 @@ interface FlockJoin {
   houses: { name: string } | { name: string }[];
 }
 
+interface SizeProductionRow {
+  quantity: number;
+  egg_sizes: { name: string; sort_order: number } | { name: string; sort_order: number }[];
+  daily_production: { production_date: string } | { production_date: string }[];
+}
+
+/** Postgrest returns a to-one join as an object or a single-element array. */
+function oneOf<T>(value: T | T[] | null | undefined): T | undefined {
+  if (value === null || value === undefined) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
 /**
  * Everything the dashboard renders, in one pass.
  *
@@ -161,6 +185,13 @@ export const getDashboardData = cache(async function getDashboardData(
    * shouting at somebody every morning, and the topbar badge falls to zero.
    */
   const hasAlerts = canAccess(entitlement, "alerts");
+  /*
+   * advanced_alerts (Pro) layers configurable thresholds and four extra rules
+   * on top of the base `alerts` pipeline -- it never runs on its own without
+   * `alerts` also being true, since a farm not entitled to alerts at all gets
+   * an empty alert list regardless.
+   */
+  const hasAdvancedAlerts = hasAlerts && canAccess(entitlement, "advanced_alerts");
 
   const [
     production,
@@ -170,9 +201,11 @@ export const getDashboardData = cache(async function getDashboardData(
     expenses,
     flocks,
     grading,
-    sizesToday,
+    sizeProduction,
     activity,
     latestVaccinationByFlock,
+    thresholdOverrides,
+    prices,
   ] = await Promise.all([
     supabase
       .from("daily_production")
@@ -184,7 +217,7 @@ export const getDashboardData = cache(async function getDashboardData(
       .lte("production_date", today),
     supabase
       .from("feed_usage")
-      .select("usage_date, quantity_kg, total_cost")
+      .select("usage_date, quantity_kg, total_cost, flock_id")
       .eq("farm_id", context.farmId)
       .gte("usage_date", windowStart)
       .lte("usage_date", today),
@@ -196,14 +229,14 @@ export const getDashboardData = cache(async function getDashboardData(
     hasSales
       ? supabase
           .from("egg_sales")
-          .select("sale_date, total_amount")
+          .select("sale_date, total_amount, flock_id")
           .eq("farm_id", context.farmId)
           .gte("sale_date", windowStart)
           .lte("sale_date", today)
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("expenses")
-      .select("expense_date, amount, category")
+      .select("expense_date, amount, category, flock_id")
       .eq("farm_id", context.farmId)
       .gte("expense_date", windowStart)
       .lte("expense_date", today),
@@ -218,13 +251,20 @@ export const getDashboardData = cache(async function getDashboardData(
       .select("eggs_ungraded")
       .eq("farm_id", context.farmId)
       .maybeSingle(),
+    /*
+     * A window, not just today: the egg-size-shift alert (advanced_alerts)
+     * needs a baseline to compare today against, same shape as the
+     * production/feed windows above. `sizesToday` in the chart below still
+     * filters this down to today only.
+     */
     supabase
       .from("daily_egg_size_production")
       .select(
         "quantity, egg_sizes!inner(name, sort_order), daily_production!inner(farm_id, production_date)"
       )
       .eq("daily_production.farm_id", context.farmId)
-      .eq("daily_production.production_date", today),
+      .gte("daily_production.production_date", windowStart)
+      .lte("daily_production.production_date", today),
     supabase
       .from("audit_logs")
       .select("id, action, metadata, created_at")
@@ -232,20 +272,28 @@ export const getDashboardData = cache(async function getDashboardData(
       .order("created_at", { ascending: false })
       .limit(RECENT_ACTIVITY_LIMIT),
     getLatestVaccinationByFlock(context.farmId),
+    hasAdvancedAlerts ? getAlertThresholdOverrides(context.farmId) : Promise.resolve(null),
+    hasAdvancedAlerts ? getCurrentPrices(context.farmId, today) : Promise.resolve([]),
   ]);
 
   logFailures({
-    production, feed, inventory, sales, expenses, flocks, grading, sizesToday, activity,
+    production, feed, inventory, sales, expenses, flocks, grading, sizeProduction, activity,
   });
 
   const productionRows = production.data ?? [];
   const feedRows = feed.data ?? [];
-  const salesRows = (sales.data ?? []) as { sale_date: string; total_amount: number }[];
+  const salesRows = (sales.data ?? []) as {
+    sale_date: string;
+    total_amount: number;
+    flock_id: string | null;
+  }[];
   const expenseRows = (expenses.data ?? []) as {
     expense_date: string;
     amount: number;
     category: string;
+    flock_id: string | null;
   }[];
+  const sizeProductionRows = (sizeProduction.data ?? []) as unknown as SizeProductionRow[];
 
   const todayProduction = productionRows.filter((row) => row.production_date === today);
   const yesterdayProduction = productionRows.filter((row) => row.production_date === yesterday);
@@ -294,16 +342,31 @@ export const getDashboardData = cache(async function getDashboardData(
     (row) => row.mortality
   );
 
+  const inventorySummary = buildInventory(
+    inventory.data ?? [],
+    Number(grading.data?.eggs_ungraded ?? 0)
+  );
+
+  const thresholds = resolveThresholds(thresholdOverrides, hasAdvancedAlerts);
+
   const alerts = hasAlerts
-    ? buildAlerts(
+    ? buildAlerts({
         productionRows,
         feedRows,
+        salesRows,
+        expenseRows,
+        sizeProductionRows,
+        prices,
         today,
-        mortality,
-        hensOnFarm,
+        weekStart,
+        mortalityToday: mortality,
+        hens: hensOnFarm,
         flockRows,
-        latestVaccinationByFlock
-      )
+        latestVaccinationByFlock,
+        totalTrays: inventorySummary.totalTrays,
+        thresholds,
+        hasAdvancedAlerts,
+      })
     : [];
 
   /*
@@ -339,7 +402,7 @@ export const getDashboardData = cache(async function getDashboardData(
       expenses: percentChange(operatingCosts, costsYesterday),
       profit: percentChange(profit, profitYesterday),
     },
-    inventory: buildInventory(inventory.data ?? [], Number(grading.data?.eggs_ungraded ?? 0)),
+    inventory: inventorySummary,
     money: {
       revenue,
       operatingCosts,
@@ -348,7 +411,9 @@ export const getDashboardData = cache(async function getDashboardData(
     },
     charts: {
       production: buildProductionSeries(productionRows, today),
-      sizesToday: buildSizeSlices(sizesToday.data ?? []),
+      sizesToday: buildSizeSlices(
+        sizeProductionRows.filter((row) => oneOf(row.daily_production)?.production_date === today)
+      ),
       sales: buildSalesSeries(salesRows, today),
     },
     flocks: buildFlockSummaries(flockRows, todayProduction),
@@ -419,15 +484,104 @@ function buildFlockSummaries(
   });
 }
 
-function buildAlerts(
-  productionRows: readonly { production_date: string; eggs_collected: number }[],
-  feedRows: readonly { usage_date: string; total_cost: number }[],
-  today: string,
-  mortalityToday: number,
-  hens: number,
-  flockRows: readonly FlockJoin[],
-  latestVaccinationByFlock: ReadonlyMap<string, string>
-): Alert[] {
+/**
+ * Per-size share of the day's collection against a baseline share over the
+ * rest of the window, for the (advanced_alerts) egg-size-shift rule.
+ */
+function buildEggSizeShiftCandidates(
+  rows: readonly SizeProductionRow[],
+  today: string
+): { name: string; todayShare: number; baselineShare: number }[] {
+  const byDateByName = new Map<string, Map<string, number>>();
+  const totalByDate = new Map<string, number>();
+  const names = new Set<string>();
+
+  for (const row of rows) {
+    const size = oneOf(row.egg_sizes);
+    const production = oneOf(row.daily_production);
+    if (!size || !production) continue;
+
+    const date = production.production_date;
+    const quantity = Number(row.quantity) || 0;
+    names.add(size.name);
+
+    const dayMap = byDateByName.get(date) ?? new Map<string, number>();
+    dayMap.set(size.name, (dayMap.get(size.name) ?? 0) + quantity);
+    byDateByName.set(date, dayMap);
+    totalByDate.set(date, (totalByDate.get(date) ?? 0) + quantity);
+  }
+
+  const todayTotal = totalByDate.get(today) ?? 0;
+  const baselineDates = [...totalByDate.keys()].filter(
+    (date) => date !== today && (totalByDate.get(date) ?? 0) > 0
+  );
+
+  return [...names].map((name) => {
+    const todayQty = byDateByName.get(today)?.get(name) ?? 0;
+    const todayShare = todayTotal > 0 ? (todayQty / todayTotal) * 100 : 0;
+
+    if (baselineDates.length === 0) {
+      return { name, todayShare, baselineShare: todayShare };
+    }
+
+    const baselineShare =
+      baselineDates.reduce((sumShare, date) => {
+        const dayTotal = totalByDate.get(date) ?? 0;
+        const qty = byDateByName.get(date)?.get(name) ?? 0;
+        return sumShare + (dayTotal > 0 ? (qty / dayTotal) * 100 : 0);
+      }, 0) / baselineDates.length;
+
+    return { name, todayShare, baselineShare };
+  });
+}
+
+interface BuildAlertsInput {
+  productionRows: readonly {
+    production_date: string;
+    eggs_collected: number;
+    hens_present: number;
+    flock_id: string;
+  }[];
+  feedRows: readonly { usage_date: string; total_cost: number; flock_id: string }[];
+  salesRows: readonly { sale_date: string; total_amount: number; flock_id: string | null }[];
+  expenseRows: readonly {
+    expense_date: string;
+    amount: number;
+    category: string;
+    flock_id: string | null;
+  }[];
+  sizeProductionRows: readonly SizeProductionRow[];
+  prices: readonly { name: string; currentPrice: { effectiveFrom: string } | null }[];
+  today: string;
+  weekStart: string;
+  mortalityToday: number;
+  hens: number;
+  flockRows: readonly FlockJoin[];
+  latestVaccinationByFlock: ReadonlyMap<string, string>;
+  totalTrays: number;
+  thresholds: ResolvedThresholds;
+  hasAdvancedAlerts: boolean;
+}
+
+function buildAlerts(input: BuildAlertsInput): Alert[] {
+  const {
+    productionRows,
+    feedRows,
+    salesRows,
+    expenseRows,
+    sizeProductionRows,
+    prices,
+    today,
+    weekStart,
+    mortalityToday,
+    hens,
+    flockRows,
+    latestVaccinationByFlock,
+    totalTrays,
+    thresholds,
+    hasAdvancedAlerts,
+  } = input;
+
   const eggsByDate = new Map<string, number>();
   for (const row of productionRows) {
     const current = eggsByDate.get(row.production_date) ?? 0;
@@ -452,24 +606,123 @@ function buildAlerts(
    * At most one flock's gap is surfaced here, even when several are overdue --
    * the notification this feeds has one open row per alert type, and a farmer
    * acting on the nearest one will re-check the others anyway. TodayStatus
-   * (which does not persist) is unaffected by this narrowing.
+   * (which does not persist) is unaffected by this narrowing. The same
+   * narrowing applies below to every other per-entity rule the advanced tier
+   * adds.
    */
   const overdueVaccination = flockRows
     .map((flock) =>
-      vaccinationAlert({
-        flockName: flock.name,
-        lastVaccinationDate: latestVaccinationByFlock.get(flock.id) ?? null,
-        placementDate: flock.placement_date,
-      })
+      vaccinationAlert(
+        {
+          flockName: flock.name,
+          lastVaccinationDate: latestVaccinationByFlock.get(flock.id) ?? null,
+          placementDate: flock.placement_date,
+        },
+        new Date(),
+        thresholds.vaccinationGapDays
+      )
     )
     .find((alert): alert is Alert => alert !== null);
 
-  return summariseAlerts([
-    productionAlert(points),
-    feedCostAlert(feedToday, feedBaseline),
-    mortalityAlert(mortalityToday, hens),
+  const alerts: (Alert | null)[] = [
+    productionAlert(points, thresholds.productionDrop),
+    feedCostAlert(feedToday, feedBaseline, thresholds.feedCostRise),
+    mortalityAlert(mortalityToday, hens, thresholds.dailyMortalityRate),
     overdueVaccination ?? null,
-  ]);
+  ];
+
+  if (hasAdvancedAlerts) {
+    // Egg-size shift: pick the size whose share moved the most.
+    const shiftCandidates = buildEggSizeShiftCandidates(sizeProductionRows, today);
+    const worstShift = shiftCandidates.reduce<
+      { name: string; todayShare: number; baselineShare: number; shift: number } | null
+    >((worst, candidate) => {
+      const shift = Math.abs(candidate.todayShare - candidate.baselineShare);
+      if (!worst || shift > worst.shift) return { ...candidate, shift };
+      return worst;
+    }, null);
+    alerts.push(
+      worstShift
+        ? eggSizeAlert(
+            worstShift.name,
+            worstShift.todayShare,
+            worstShift.baselineShare,
+            thresholds.eggSizeShift
+          )
+        : null
+    );
+
+    // Low inventory: a single farm-wide figure, no narrowing needed.
+    alerts.push(lowInventoryAlert(totalTrays, thresholds.lowInventoryTrays));
+
+    // Underperforming flock: pick the single lowest laying rate this week.
+    const weekProduction = productionRows.filter((row) => row.production_date >= weekStart);
+    const flockPerformance = flockRows
+      .map((flock) => {
+        const rows = weekProduction.filter((row) => row.flock_id === flock.id);
+        const eggsSum = sum(rows, (row) => row.eggs_collected);
+        const hensSum = sum(rows, (row) => row.hens_present);
+        return { name: flock.name, layingRate: layingRate(eggsSum, hensSum) };
+      })
+      .filter((entry) => entry.layingRate > 0);
+
+    const farmAvgLayingRate =
+      flockPerformance.length > 0
+        ? flockPerformance.reduce((total, entry) => total + entry.layingRate, 0) /
+          flockPerformance.length
+        : 0;
+
+    const worstPerformer = flockPerformance.reduce<{ name: string; layingRate: number } | null>(
+      (worst, entry) => (!worst || entry.layingRate < worst.layingRate ? entry : worst),
+      null
+    );
+    alerts.push(
+      worstPerformer
+        ? underperformingFlockAlert(worstPerformer, farmAvgLayingRate, thresholds.underperformancePct)
+        : null
+    );
+
+    // Flock losing money: pick the single worst weekly loss.
+    const weekSales = salesRows.filter((row) => row.sale_date >= weekStart);
+    const weekExpenses = expenseRows.filter((row) => row.expense_date >= weekStart);
+    const weekFeed = feedRows.filter((row) => row.usage_date >= weekStart);
+    const flockProfit = attributeFlockProfitability(
+      flockRows.map((flock) => ({ id: flock.id, name: flock.name })),
+      weekSales,
+      weekExpenses,
+      weekFeed,
+      false
+    );
+    const worstLoss = flockProfit.length > 0 ? flockProfit[flockProfit.length - 1] : null;
+    alerts.push(worstLoss ? flockLossAlert(worstLoss, thresholds.lossThresholdPesos) : null);
+
+    // Stale pricing: a never-priced size takes priority; otherwise the largest gap.
+    const pricingStatuses: PricedSizeStatus[] = prices.map((price) => ({
+      name: price.name,
+      effectiveFrom: price.currentPrice?.effectiveFrom ?? null,
+    }));
+    const neverPriced = pricingStatuses.find((status) => status.effectiveFrom === null);
+    if (neverPriced) {
+      alerts.push(stalePricingAlert(neverPriced, new Date(), thresholds.stalePricingDays));
+    } else {
+      const worstPricing = pricingStatuses.reduce<{ status: PricedSizeStatus; gap: number } | null>(
+        (worst, status) => {
+          if (!status.effectiveFrom) return worst;
+          const gap = daysBetween(status.effectiveFrom, new Date());
+          if (!worst || gap > worst.gap) return { status, gap };
+          return worst;
+        },
+        null
+      );
+      alerts.push(
+        worstPricing
+          ? stalePricingAlert(worstPricing.status, new Date(), thresholds.stalePricingDays)
+          : null
+      );
+    }
+  }
+
+  return summariseAlerts(alerts);
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -509,15 +762,10 @@ function buildSalesSeries(
   });
 }
 
-interface SizeJoin {
-  quantity: number;
-  egg_sizes: { name: string; sort_order: number } | { name: string; sort_order: number }[];
-}
-
 /** Today's collection split by size, for the donut. */
-function buildSizeSlices(rows: readonly unknown[]): SizeSlice[] {
-  const slices = (rows as SizeJoin[]).map((row) => {
-    const size = Array.isArray(row.egg_sizes) ? row.egg_sizes[0] : row.egg_sizes;
+function buildSizeSlices(rows: readonly SizeProductionRow[]): SizeSlice[] {
+  const slices = rows.map((row) => {
+    const size = oneOf(row.egg_sizes);
     return {
       name: size?.name ?? "Unknown",
       sortOrder: size?.sort_order ?? 0,

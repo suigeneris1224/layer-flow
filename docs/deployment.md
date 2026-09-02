@@ -61,13 +61,19 @@ Import the repository, then set environment variables for **Production**, **Prev
 | `STORAGE_BUCKET` | `layerflow` |
 | `BILLING_PROVIDER` | `paymongo` or `stripe` when real billing lands |
 | `BILLING_SECRET_KEY` | Server only |
-| `EMAIL_PROVIDER`, `EMAIL_FROM` | As configured |
+| `EMAIL_PROVIDER`, `EMAIL_FROM` | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
+| `BREVO_API_KEY` | Server only. Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
+| `CRON_SECRET` | Server only. Vercel Cron's request must carry it as `Authorization: Bearer <value>` |
 
 Build settings are the defaults: `npm run build`, output `.next`.
 
 > **Build needs network access for fonts.** `next/font/google` fetches Bricolage Grotesque and
 > Public Sans at build time. Vercel has network access, so this is fine there — but a restricted
 > CI box will fail the build.
+
+`vercel.json` declares a daily cron (`/api/cron/subscription-emails`, 01:00 UTC) that sends
+PAST_DUE and upcoming-renewal reminder emails. Vercel's Hobby tier limits cron frequency, but a
+once-daily job is within that limit on every tier.
 
 ## 6. Domain and HTTPS
 

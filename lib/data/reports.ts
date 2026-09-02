@@ -11,6 +11,7 @@ import {
   percentChange,
   roundMoney,
 } from "@/lib/domain/calculations";
+import { attributeFlockProfitability, type FlockProfitRow } from "@/lib/domain/profitability";
 import { shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 import {
@@ -31,13 +32,7 @@ export interface DailyMoneyPoint {
   cost: number;
 }
 
-export interface FlockProfitRow {
-  id: string;
-  name: string;
-  revenue: number;
-  cost: number;
-  profit: number;
-}
+export type { FlockProfitRow };
 
 export interface ReportsData {
   range: ResolvedRange;
@@ -191,7 +186,7 @@ export const getReportsData = cache(async function getReportsData(
       : null,
     chart: buildDailySeries(current.sales, current.feed, current.expenses, range),
     flockProfitability: hasAdvanced
-      ? buildFlockProfitability(flocks, current.sales, current.expenses, current.feed)
+      ? attributeFlockProfitability(flocks, current.sales, current.expenses, current.feed)
       : null,
   };
 });
@@ -226,66 +221,3 @@ function buildDailySeries(
   }));
 }
 
-/**
- * Revenue and cost only count when attributed to a flock (`flock_id` set).
- * Walk-in sales and farm-wide expenses show as "Unassigned" so the numbers
- * here never silently disagree with the farm-wide totals above.
- */
-function buildFlockProfitability(
-  flocks: Awaited<ReturnType<typeof getFlocks>>,
-  sales: readonly SaleRow[],
-  expenses: readonly ExpenseRow[],
-  feed: readonly FeedRow[]
-): FlockProfitRow[] {
-  const revenueByFlock = new Map<string, number>();
-  let unassignedRevenue = 0;
-  for (const row of sales) {
-    const amount = Number(row.total_amount);
-    if (row.flock_id) {
-      revenueByFlock.set(row.flock_id, (revenueByFlock.get(row.flock_id) ?? 0) + amount);
-    } else {
-      unassignedRevenue += amount;
-    }
-  }
-
-  // feed_usage.flock_id is required by the schema, so feed cost is always
-  // attributable -- unlike sales and expenses, there is no "unassigned" case.
-  const feedCostByFlock = new Map<string, number>();
-  for (const row of feed) {
-    feedCostByFlock.set(row.flock_id, (feedCostByFlock.get(row.flock_id) ?? 0) + Number(row.total_cost));
-  }
-
-  const expensesByFlock = new Map<string, ExpenseRow[]>();
-  const unassignedExpenses: ExpenseRow[] = [];
-  for (const row of expenses) {
-    if (row.flock_id) {
-      const list = expensesByFlock.get(row.flock_id) ?? [];
-      list.push(row);
-      expensesByFlock.set(row.flock_id, list);
-    } else {
-      unassignedExpenses.push(row);
-    }
-  }
-
-  const rows: FlockProfitRow[] = flocks.map((flock) => {
-    const revenue = roundMoney(revenueByFlock.get(flock.id) ?? 0);
-    const cost = operatingCostsFromExpenses(
-      feedCostByFlock.get(flock.id) ?? 0,
-      expensesByFlock.get(flock.id) ?? []
-    );
-    return { id: flock.id, name: flock.name, revenue, cost, profit: operatingProfit(revenue, cost) };
-  });
-
-  const unassignedCost = operatingCostsFromExpenses(0, unassignedExpenses);
-  if (unassignedRevenue > 0 || unassignedCost > 0) {
-    rows.push({
-      id: "unassigned",
-      name: "Unassigned",
-      revenue: roundMoney(unassignedRevenue),
-      cost: unassignedCost,
-      profit: operatingProfit(unassignedRevenue, unassignedCost),
-    });
-  }
-
-  return rows.sort((a, b) => b.profit - a.profit);
-}

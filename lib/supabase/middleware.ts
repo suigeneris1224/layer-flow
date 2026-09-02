@@ -21,6 +21,12 @@ const PUBLIC_PATHS = [
   // An invitee may have no account yet, so the landing page has to be
   // reachable signed out. It exposes only farm name, role and expiry.
   "/invite",
+  // Vercel Cron calls this with no user session at all -- it authenticates
+  // itself via a bearer CRON_SECRET inside the route handler
+  // (app/api/cron/subscription-emails/route.ts), not via login. Without this
+  // exemption every invocation would get redirected to /login before the
+  // handler ever ran.
+  "/api/cron",
 ];
 
 function isPublicPath(pathname: string): boolean {

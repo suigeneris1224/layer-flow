@@ -1,8 +1,9 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/observability/logger";
-import type { Json } from "@/lib/types/database";
+import type { Database, Json } from "@/lib/types/database";
 
 /**
  * Append an entry to the farm's audit trail.
@@ -10,17 +11,26 @@ import type { Json } from "@/lib/types/database";
  * Deliberately best-effort: a failed audit write must never roll back the
  * farmer's actual record. Failures are logged for us to investigate rather
  * than surfaced to the user, who can do nothing about them.
+ *
+ * `client` defaults to the request-scoped (cookie-based) server client, which
+ * is right for every normal server action. Pass the admin client instead from
+ * a context with no user session -- currently only
+ * app/api/cron/subscription-emails/route.ts, which also passes `userId: null`
+ * since no user acted -- the cron did.
  */
-export async function recordAuditLog(params: {
-  farmId: string;
-  userId: string;
-  action: string;
-  entityType: string;
-  entityId?: string | null;
-  metadata?: Json;
-}): Promise<void> {
+export async function recordAuditLog(
+  params: {
+    farmId: string;
+    userId: string | null;
+    action: string;
+    entityType: string;
+    entityId?: string | null;
+    metadata?: Json;
+  },
+  client?: SupabaseClient<Database>
+): Promise<void> {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = client ?? (await createSupabaseServerClient());
     const { error } = await supabase.from("audit_logs").insert({
       farm_id: params.farmId,
       user_id: params.userId,
@@ -81,4 +91,7 @@ export const AUDIT_ACTIONS = {
   MEMBER_UPDATED: "member.updated",
   MEMBER_REMOVED: "member.removed",
   PLAN_CHANGED: "subscription.plan_changed",
+  ALERT_THRESHOLDS_UPDATED: "alert_thresholds.updated",
+  /** metadata carries { kind: "receipt" | "past_due_reminder" | "renewal_reminder", to: "self" | "owner", trigger: "manual" | "cron" }. */
+  SUBSCRIPTION_EMAIL_SENT: "subscription.email_sent",
 } as const;

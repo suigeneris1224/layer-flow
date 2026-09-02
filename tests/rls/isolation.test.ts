@@ -443,6 +443,41 @@ suite("RLS tenant isolation", () => {
       expect(flockError).toBeNull();
     });
 
+    it("a worker cannot set alert thresholds", async () => {
+      // alert_thresholds has no `id` column -- farm_id is the primary key --
+      // so it sits outside the generic FARM_SCOPED read/write loops above and
+      // gets its own coverage.
+      const { error } = await worker.client.from("alert_thresholds").upsert({
+        farm_id: farmA.farmId,
+        production_drop: 0.2,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a manager can set alert thresholds for their own farm", async () => {
+      const { error } = await manager.client.from("alert_thresholds").upsert({
+        farm_id: farmA.farmId,
+        production_drop: 0.2,
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it("bob cannot read or write farm A's alert thresholds", async () => {
+      const { data: readData } = await bob.client
+        .from("alert_thresholds")
+        .select("farm_id")
+        .eq("farm_id", farmA.farmId);
+      expect(readData ?? []).toEqual([]);
+
+      const { data: writeData } = await bob.client
+        .from("alert_thresholds")
+        .upsert({ farm_id: farmA.farmId, production_drop: 0.5 })
+        .select("farm_id");
+      expect(writeData ?? []).toEqual([]);
+    });
+
     it("a worker cannot adjust stock", async () => {
       // Adjustments rewrite inventory, so they sit with the manager role
       // alongside sales and pricing rather than with daily recording.

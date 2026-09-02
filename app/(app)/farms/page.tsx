@@ -4,10 +4,13 @@ import { canManageBilling, canManageFarmSettings } from "@/lib/auth/permissions"
 import { canCreate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
 import { isProduction } from "@/lib/config/env";
 import { getFarmDetail } from "@/lib/data/farms";
+import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
+import { PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
+import { BillingPanel } from "./billing-panel";
 import { DevPlanSwitcher } from "./dev-plan-switcher";
 import { FarmForm } from "./farm-form";
 import { FarmSwitcher } from "./farm-switcher";
@@ -19,9 +22,10 @@ export const dynamic = "force-dynamic";
 export default async function FarmsPage() {
   const context = await requireFarmContext();
 
-  const [farms, detail] = await Promise.all([
+  const [farms, detail, subscriptionPeriod] = await Promise.all([
     getUserFarms(),
     getFarmDetail(context.farmId),
+    getSubscriptionPeriod(context.farmId),
   ]);
 
   const canEdit = canManageFarmSettings(context);
@@ -71,6 +75,15 @@ export default async function FarmsPage() {
         <FarmForm mode="create" />
       ) : (
         limitPrompt && <UpgradePanel prompt={limitPrompt} />
+      )}
+
+      {canManageBilling(context) && (
+        <BillingPanel
+          planName={PLANS[context.plan].name}
+          price={formatPlanPrice(PLANS[context.plan])}
+          status={context.subscriptionStatus}
+          currentPeriodEnd={subscriptionPeriod.currentPeriodEnd}
+        />
       )}
 
       {!isProduction && canManageBilling(context) && (

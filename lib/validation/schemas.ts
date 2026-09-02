@@ -135,6 +135,36 @@ export const updatePricesSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Alert thresholds (advanced_alerts, Pro)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every field optional and nullable: a blank input means "use the default,"
+ * not zero. `lib/domain/alerts.ts`'s `resolveThresholds` treats a null the
+ * same way whether it came from an empty override row or a farm not
+ * entitled to set one at all.
+ */
+const optionalThreshold = (label: string, { min = 0, max = 1_000_000 } = {}) =>
+  z
+    .union([decimalFromForm(label, { min, max }), z.literal("")])
+    .optional()
+    .transform((value) => (value === "" || value === undefined ? null : value));
+
+export const alertThresholdsSchema = z.object({
+  productionDrop: optionalThreshold("Production drop", { max: 5 }),
+  feedCostRise: optionalThreshold("Feed cost rise", { max: 5 }),
+  dailyMortalityRate: optionalThreshold("Daily mortality rate", { max: 1 }),
+  eggSizeShift: optionalThreshold("Egg size shift", { max: 100 }),
+  vaccinationGapDays: optionalThreshold("Vaccination gap", { max: 1000 }),
+  lowInventoryTrays: optionalThreshold("Low inventory trays", { max: 100_000 }),
+  stalePricingDays: optionalThreshold("Stale pricing days", { max: 1000 }),
+  underperformancePct: optionalThreshold("Underperformance", { max: 100 }),
+  lossThresholdPesos: optionalThreshold("Loss threshold", { max: 10_000_000 }),
+});
+
+export type AlertThresholdsInput = z.infer<typeof alertThresholdsSchema>;
+
+// ---------------------------------------------------------------------------
 // Inventory adjustments
 // ---------------------------------------------------------------------------
 

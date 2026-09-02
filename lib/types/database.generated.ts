@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      alert_thresholds: {
+        Row: {
+          daily_mortality_rate: number | null
+          egg_size_shift: number | null
+          farm_id: string
+          feed_cost_rise: number | null
+          loss_threshold_pesos: number | null
+          low_inventory_trays: number | null
+          production_drop: number | null
+          stale_pricing_days: number | null
+          underperformance_pct: number | null
+          updated_at: string
+          vaccination_gap_days: number | null
+        }
+        Insert: {
+          daily_mortality_rate?: number | null
+          egg_size_shift?: number | null
+          farm_id: string
+          feed_cost_rise?: number | null
+          loss_threshold_pesos?: number | null
+          low_inventory_trays?: number | null
+          production_drop?: number | null
+          stale_pricing_days?: number | null
+          underperformance_pct?: number | null
+          updated_at?: string
+          vaccination_gap_days?: number | null
+        }
+        Update: {
+          daily_mortality_rate?: number | null
+          egg_size_shift?: number | null
+          farm_id?: string
+          feed_cost_rise?: number | null
+          loss_threshold_pesos?: number | null
+          low_inventory_trays?: number | null
+          production_drop?: number | null
+          stale_pricing_days?: number | null
+          underperformance_pct?: number | null
+          updated_at?: string
+          vaccination_gap_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_thresholds_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: true
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -977,9 +1027,11 @@ export type Database = {
           current_period_start: string | null
           farm_id: string
           id: string
+          past_due_reminder_sent_at: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
           provider_customer_id: string | null
           provider_subscription_id: string | null
+          renewal_reminder_sent_at: string | null
           status: Database["public"]["Enums"]["subscription_status"]
           updated_at: string
         }
@@ -990,9 +1042,11 @@ export type Database = {
           current_period_start?: string | null
           farm_id: string
           id?: string
+          past_due_reminder_sent_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           provider_customer_id?: string | null
           provider_subscription_id?: string | null
+          renewal_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
         }
@@ -1003,9 +1057,11 @@ export type Database = {
           current_period_start?: string | null
           farm_id?: string
           id?: string
+          past_due_reminder_sent_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           provider_customer_id?: string | null
           provider_subscription_id?: string | null
+          renewal_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
         }

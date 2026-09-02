@@ -62,4 +62,29 @@ export const serverEnv = {
   get billingProvider(): string {
     return process.env.BILLING_PROVIDER ?? "mock";
   },
+  /** "mock" (default, logs instead of sending) or "brevo". */
+  get emailProvider(): string {
+    return process.env.EMAIL_PROVIDER ?? "mock";
+  },
+  get emailFrom(): string {
+    return process.env.EMAIL_FROM ?? "LayerFlow <hello@layerflow.local>";
+  },
+  get brevoApiKey(): string {
+    const key = process.env.BREVO_API_KEY;
+    if (!key) {
+      throw new Error(
+        "BREVO_API_KEY is not set. It is required to send real email -- set " +
+          "EMAIL_PROVIDER=mock for local dev/tests instead."
+      );
+    }
+    return key;
+  },
+  /** Bearer secret Vercel Cron must send; verified before any cron route does anything. */
+  get cronSecret(): string {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) {
+      throw new Error("CRON_SECRET is not set. It is required to authenticate cron requests.");
+    }
+    return secret;
+  },
 } as const;

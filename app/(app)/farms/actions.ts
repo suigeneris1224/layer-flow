@@ -187,6 +187,12 @@ export async function switchFarmAction(farmId: string): Promise<ActionResult> {
  * the one place in the app that reaches for `createSupabaseAdminClient()`.
  * Gated twice: the UI that calls this never renders in production, and this
  * refuses independently too, since a hidden button is not a security boundary.
+ *
+ * Also simulates a billing period: every change sets current_period_start/end
+ * to a fresh 30-day window (real billing has no checkout yet, so there is no
+ * other source for these dates) and clears both reminder-dedup columns, since
+ * a plan/status change starts a new episode worth re-notifying about if it
+ * persists. See lib/email/ and app/api/cron/subscription-emails/route.ts.
  */
 export async function devSetSubscriptionAction(input: unknown): Promise<ActionResult> {
   if (isProduction) return failure("Not available.");
@@ -205,10 +211,21 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
   }
 
   try {
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + 30);
+
     const admin = createSupabaseAdminClient();
     const { error } = await admin
       .from("subscriptions")
-      .update({ plan: parsed.data.plan, status: parsed.data.status })
+      .update({
+        plan: parsed.data.plan,
+        status: parsed.data.status,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        past_due_reminder_sent_at: null,
+        renewal_reminder_sent_at: null,
+      })
       .eq("farm_id", context.farmId);
 
     if (error) return describeDatabaseError(error, "devSetSubscriptionAction");

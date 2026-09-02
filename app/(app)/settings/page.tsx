@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CreditCard, LogOut, Warehouse } from "lucide-react";
+import { BellRing, CreditCard, LogOut, Warehouse } from "lucide-react";
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { ROLE_LABELS } from "@/lib/auth/permissions";
 import { PLANS } from "@/lib/subscriptions/plans";
@@ -67,6 +67,13 @@ export default async function SettingsPage() {
           >
             <CreditCard className="size-4" aria-hidden />
             Plans and billing
+          </Link>
+          <Link
+            href="/settings/alerts"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <BellRing className="size-4" aria-hidden />
+            Alert settings
           </Link>
         </div>
       </Panel>

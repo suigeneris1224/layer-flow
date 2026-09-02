@@ -68,6 +68,11 @@ export function canManagePricing(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");
 }
 
+/** Same rule as pricing: farm settings, MANAGER+ (`alert_thresholds_write` mirrors `egg_prices_write`). */
+export function canManageAlertThresholds(context: FarmContext | null): boolean {
+  return context !== null && atLeast(context.role, "MANAGER");
+}
+
 /** Commerce. */
 export function canManageSales(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");

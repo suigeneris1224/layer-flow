@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  THRESHOLDS,
   compareRecentToBaseline,
   eggSizeAlert,
   feedCostAlert,
+  flockLossAlert,
+  lowInventoryAlert,
   mortalityAlert,
   productionAlert,
+  resolveThresholds,
+  stalePricingAlert,
   summariseAlerts,
+  underperformingFlockAlert,
   vaccinationAlert,
+  type AlertThresholdOverrides,
   type ProductionPoint,
 } from "@/lib/domain/alerts";
 
@@ -237,5 +244,170 @@ describe("vaccinationAlert", () => {
         ASOF
       )
     ).not.toThrow();
+  });
+
+  it("respects a custom gap threshold", () => {
+    // 60 days ago is well past a 30-day threshold, but nowhere near the 120-day default.
+    const alert = vaccinationAlert(
+      {
+        flockName: "House 1 layers",
+        lastVaccinationDate: "2026-07-02",
+        placementDate: "2025-01-01",
+      },
+      ASOF,
+      30
+    );
+    expect(alert?.level).toBe("warn");
+  });
+});
+
+describe("parameterized thresholds", () => {
+  it("productionAlert keeps default behavior when no threshold is passed", () => {
+    const points = [...steady(7, 800, 1), ...steady(3, 700, 8)];
+    expect(productionAlert(points)?.level).toBe("warn");
+  });
+
+  it("productionAlert respects a tighter custom threshold", () => {
+    // A 5% drop clears a 4% threshold (but stays under double it, so "warn") --
+    // the 10% default would stay silent.
+    const points = [...steady(7, 800, 1), ...steady(3, 760, 8)];
+    expect(productionAlert(points)).toBeNull();
+    expect(productionAlert(points, 0.04)?.level).toBe("warn");
+  });
+
+  it("feedCostAlert respects a custom threshold", () => {
+    expect(feedCostAlert(1050, 1000)).toBeNull();
+    expect(feedCostAlert(1050, 1000, 0.02)?.level).toBe("warn");
+  });
+
+  it("mortalityAlert respects a custom threshold", () => {
+    expect(mortalityAlert(4, 1000)).toBeNull();
+    // 4/1000 = 0.4% clears a 0.2% threshold but stays under 3x it, so "warn".
+    expect(mortalityAlert(4, 1000, 0.002)?.level).toBe("warn");
+  });
+
+  it("eggSizeAlert respects a custom threshold", () => {
+    expect(eggSizeAlert("Large", 40, 45)).toBeNull();
+    expect(eggSizeAlert("Large", 40, 45, 3)?.message).toContain("lower");
+  });
+});
+
+describe("lowInventoryAlert", () => {
+  it("stays quiet on healthy stock", () => {
+    expect(lowInventoryAlert(20)).toBeNull();
+  });
+
+  it("warns at or below the threshold", () => {
+    expect(lowInventoryAlert(THRESHOLDS.lowInventoryTrays)?.level).toBe("warn");
+  });
+
+  it("escalates when the shed is empty", () => {
+    expect(lowInventoryAlert(0)?.level).toBe("bad");
+  });
+
+  it("respects a custom threshold", () => {
+    expect(lowInventoryAlert(10)).toBeNull();
+    expect(lowInventoryAlert(10, 15)?.level).toBe("warn");
+  });
+});
+
+describe("underperformingFlockAlert", () => {
+  it("stays quiet on a flock near the farm average", () => {
+    expect(underperformingFlockAlert({ name: "House 1", layingRate: 88 }, 90)).toBeNull();
+  });
+
+  it("flags a flock well below the farm average", () => {
+    const alert = underperformingFlockAlert({ name: "House 1", layingRate: 50 }, 90);
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("House 1");
+  });
+
+  it("stays quiet with no farm average to compare against", () => {
+    expect(underperformingFlockAlert({ name: "House 1", layingRate: 50 }, 0)).toBeNull();
+  });
+
+  it("respects a custom threshold", () => {
+    // 15% below average clears a 10% threshold but not the 20% default.
+    expect(underperformingFlockAlert({ name: "House 1", layingRate: 85 }, 100)).toBeNull();
+    expect(
+      underperformingFlockAlert({ name: "House 1", layingRate: 85 }, 100, 10)?.level
+    ).toBe("warn");
+  });
+});
+
+describe("flockLossAlert", () => {
+  it("stays quiet on a profitable flock", () => {
+    expect(flockLossAlert({ name: "House 1", profit: 500 })).toBeNull();
+  });
+
+  it("stays quiet exactly at break-even", () => {
+    expect(flockLossAlert({ name: "House 1", profit: 0 })).toBeNull();
+  });
+
+  it("flags any loss with the default threshold", () => {
+    const alert = flockLossAlert({ name: "House 1", profit: -1 });
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("loss");
+  });
+
+  it("respects a custom threshold", () => {
+    expect(flockLossAlert({ name: "House 1", profit: -300 }, 500)).toBeNull();
+    expect(flockLossAlert({ name: "House 1", profit: -600 }, 500)?.level).toBe("warn");
+  });
+});
+
+describe("stalePricingAlert", () => {
+  const ASOF = new Date("2026-08-31T00:00:00Z");
+
+  it("flags a size that has never been priced", () => {
+    const alert = stalePricingAlert({ name: "Large", effectiveFrom: null }, ASOF);
+    expect(alert?.message).toContain("never been priced");
+  });
+
+  it("stays quiet on a recently priced size", () => {
+    expect(stalePricingAlert({ name: "Large", effectiveFrom: "2026-08-01" }, ASOF)).toBeNull();
+  });
+
+  it("flags a size priced long ago", () => {
+    const alert = stalePricingAlert({ name: "Large", effectiveFrom: "2026-01-01" }, ASOF);
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("days");
+  });
+
+  it("respects a custom threshold", () => {
+    expect(stalePricingAlert({ name: "Large", effectiveFrom: "2026-08-01" }, ASOF, 10)?.level).toBe(
+      "warn"
+    );
+  });
+});
+
+describe("resolveThresholds", () => {
+  const overrides: AlertThresholdOverrides = {
+    productionDrop: 0.2,
+    feedCostRise: null,
+    dailyMortalityRate: null,
+    eggSizeShift: 5,
+    vaccinationGapDays: null,
+    lowInventoryTrays: null,
+    stalePricingDays: null,
+    underperformancePct: null,
+    lossThresholdPesos: null,
+  };
+
+  it("returns pure defaults when not entitled, even with overrides on file", () => {
+    const resolved = resolveThresholds(overrides, false);
+    expect(resolved).toEqual(THRESHOLDS);
+  });
+
+  it("returns pure defaults with no overrides on file", () => {
+    expect(resolveThresholds(null, true)).toEqual(THRESHOLDS);
+  });
+
+  it("merges set fields and falls back on null ones", () => {
+    const resolved = resolveThresholds(overrides, true);
+    expect(resolved.productionDrop).toBe(0.2);
+    expect(resolved.eggSizeShift).toBe(5);
+    expect(resolved.feedCostRise).toBe(THRESHOLDS.feedCostRise);
+    expect(resolved.lowInventoryTrays).toBe(THRESHOLDS.lowInventoryTrays);
   });
 });

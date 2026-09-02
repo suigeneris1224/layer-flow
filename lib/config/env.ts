@@ -87,4 +87,15 @@ export const serverEnv = {
     }
     return secret;
   },
+  /**
+   * LayerFlow's own operators, lowercased -- not a farmer role. Gates
+   * app/admin/ (see lib/auth/admin.ts). Unset means nobody is admin, which is
+   * the safe default for anyone else running this codebase.
+   */
+  get adminEmails(): string[] {
+    return (process.env.ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+  },
 } as const;

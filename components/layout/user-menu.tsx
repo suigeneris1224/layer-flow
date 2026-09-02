@@ -3,21 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, CreditCard, LogOut, Settings } from "lucide-react";
+import { ChevronDown, CreditCard, LogOut, Settings, ShieldCheck } from "lucide-react";
 import { signOutAction } from "@/app/auth/actions";
 
-/** Avatar, name and role, with settings, billing and sign-out behind a small menu. */
+/** Avatar, name and role, with settings, billing, admin and sign-out behind a small menu. */
 export function UserMenu({
   userName,
   role,
   avatarUrl,
   canManageBilling,
+  isAdmin,
 }: {
   userName: string;
   role: string;
   avatarUrl?: string | null;
   /** Billing is owner-only -- hidden for anyone else, same as /billing itself. */
   canManageBilling: boolean;
+  /** LayerFlow's own operators, not a farm role -- hidden for every farmer. */
+  isAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
@@ -109,6 +112,18 @@ export function UserMenu({
             >
               <CreditCard className="size-4" aria-hidden />
               Billing
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+            >
+              <ShieldCheck className="size-4" aria-hidden />
+              Admin
             </Link>
           )}
 

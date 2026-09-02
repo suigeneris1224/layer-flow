@@ -1,5 +1,6 @@
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageBilling, canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
+import { isPlatformAdmin } from "@/lib/auth/admin";
 import { canAccess } from "@/lib/subscriptions/entitlements";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
@@ -57,6 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           timezone={context.timezone}
           dateLabel={formatDate(new Date(), context.timezone)}
           canManageBilling={canManageBilling(context)}
+          isAdmin={isPlatformAdmin(user.email)}
         />
 
         <OfflineStatus offlineEnabled={offlineEnabled} />

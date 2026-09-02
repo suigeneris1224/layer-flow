@@ -10,6 +10,10 @@ import { publicEnv, serverEnv } from "@/lib/config/env";
  * Legitimate uses are narrow:
  *   - billing webhooks, which have no user session
  *   - scheduled/maintenance jobs
+ *   - platform-admin monitoring and overrides (app/admin/), gated by
+ *     lib/auth/admin.ts's email allowlist -- a human operator's own
+ *     deliberate cross-tenant read *and* write (adminSetSubscriptionAction),
+ *     never reachable by a farmer
  *
  * Never reach for this to "make a query work". If a query fails under RLS,
  * that is the policy doing its job -- fix the policy or the access path. Any

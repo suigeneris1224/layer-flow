@@ -64,6 +64,7 @@ Import the repository, then set environment variables for **Production**, **Prev
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
 | `BREVO_API_KEY` | Server only. Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
 | `CRON_SECRET` | Server only. Vercel Cron's request must carry it as `Authorization: Bearer <value>` |
+| `ADMIN_EMAILS` | Server only. Comma-separated, lowercase. Gates `/admin`; blank means nobody can reach it |
 
 Build settings are the defaults: `npm run build`, output `.next`.
 

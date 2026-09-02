@@ -24,6 +24,7 @@ export function AppTopbar({
   timezone,
   dateLabel,
   canManageBilling,
+  isAdmin,
 }: {
   greeting: string;
   farmName: string;
@@ -36,6 +37,7 @@ export function AppTopbar({
   timezone: string;
   dateLabel: string;
   canManageBilling: boolean;
+  isAdmin: boolean;
 }) {
   const firstName = userName.split(" ")[0] || "there";
 
@@ -65,6 +67,7 @@ export function AppTopbar({
         role={role}
         avatarUrl={avatarUrl}
         canManageBilling={canManageBilling}
+        isAdmin={isAdmin}
       />
     </header>
   );

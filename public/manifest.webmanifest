@@ -12,16 +12,10 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/layerflow-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     }
   ],
   "shortcuts": [

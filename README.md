@@ -237,8 +237,14 @@ Full model in [docs/security.md](docs/security.md).
 - **Fonts require network at build.** `next/font/google` fetches Bricolage Grotesque and Public
   Sans at build time. An offline build machine will fail; fall back to a system stack in
   `app/layout.tsx` if that is a constraint.
-- **PWA icons are SVG.** Chrome accepts `sizes: "any"` SVG icons, but shipping real 192px and
-  512px PNGs is better for wider install support.
+- **PWA icon has one size.** `manifest.webmanifest` now points at the real
+  `public/icons/layerflow-logo.png` (1254×1254) rather than the placeholder SVGs, but there are no
+  dedicated 192px/512px resized variants yet — some install surfaces prefer exact sizes over one
+  large image scaled down. Needs an image-resizing pass, not something this environment can do.
+  There is also no dedicated maskable icon: the logo is mostly transparent line art (~8% opaque,
+  see docs/design-system.md), which would look broken if OS-masked into a shape with a background
+  showing through the gaps — a real maskable variant needs an opaque backing shape design, not just
+  a resize.
 - **`next lint` is deprecated** and will be removed in Next.js 16. Migrate with
   `npx @next/codemod@canary next-lint-to-eslint-cli .`
 - **`.env.example` was not reviewed** — it was blocked by local permission settings during

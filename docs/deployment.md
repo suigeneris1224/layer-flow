@@ -80,6 +80,26 @@ once-daily job is within that limit on every tier.
 Add the domain in Vercel and follow the DNS instructions. HTTPS and renewal are automatic. Update
 `NEXT_PUBLIC_APP_URL` and the Supabase Site URL to match, or auth redirects will break.
 
+Buying the domain through Vercel's registrar does not require a Pro plan — a custom domain works
+on Hobby too. The registrar and the DNS host do not have to be the same thing.
+
+### Support inbox, for free
+
+Vercel has no email product. A `support@layerflow.ph` inbox costs real money at most registrars;
+**Cloudflare Email Routing** forwards it to a personal inbox at no cost and needs no mailbox:
+
+1. Point the domain's nameservers at Cloudflare (free account). This does not move hosting —
+   Vercel keeps serving the app; Cloudflare is only handling DNS now.
+2. In Cloudflare → **Email → Email Routing**, verify the domain and add a rule:
+   `support@layerflow.ph` → your personal address.
+3. Re-add Vercel's domain records (the A/CNAME pair from step 6 above) in Cloudflare's DNS tab —
+   moving nameservers to Cloudflare does not carry old records over automatically.
+
+This is receive-only: mail sent *to* `support@layerflow.ph` lands in a personal inbox. It has no
+effect on `EMAIL_FROM` (Brevo, in the table above) — that is what farmers see in the *From* line
+of receipt/reminder emails, and stays whatever address is verified in Brevo until deliberately
+changed.
+
 ## 7. Backups
 
 Supabase takes **daily automatic backups on paid plans**. Free-tier projects are **not** backed

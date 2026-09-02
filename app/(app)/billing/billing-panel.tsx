@@ -7,7 +7,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
 import type { SubscriptionStatus } from "@/lib/types/database";
-import { emailReceiptAction, sendPastDueReminderAction } from "./billing-actions";
+import { emailReceiptAction, sendPastDueReminderAction } from "./actions";
 
 /**
  * Plan summary plus the two manual subscription-email buttons.

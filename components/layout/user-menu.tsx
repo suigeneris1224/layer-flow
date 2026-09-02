@@ -3,18 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, LogOut, Settings } from "lucide-react";
+import { ChevronDown, CreditCard, LogOut, Settings } from "lucide-react";
 import { signOutAction } from "@/app/auth/actions";
 
-/** Avatar, name and role, with settings and sign-out behind a small menu. */
+/** Avatar, name and role, with settings, billing and sign-out behind a small menu. */
 export function UserMenu({
   userName,
   role,
   avatarUrl,
+  canManageBilling,
 }: {
   userName: string;
   role: string;
   avatarUrl?: string | null;
+  /** Billing is owner-only -- hidden for anyone else, same as /billing itself. */
+  canManageBilling: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
@@ -96,6 +99,18 @@ export function UserMenu({
             <Settings className="size-4" aria-hidden />
             Settings
           </Link>
+
+          {canManageBilling && (
+            <Link
+              href="/billing"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+            >
+              <CreditCard className="size-4" aria-hidden />
+              Billing
+            </Link>
+          )}
 
           <form action={signOutAction}>
             <button

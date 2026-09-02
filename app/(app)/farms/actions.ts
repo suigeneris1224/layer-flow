@@ -4,19 +4,12 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ACTIVE_FARM_COOKIE, getFarmContext, getUserFarms, requireUser } from "@/lib/auth/session";
-import { canManageBilling, canManageFarmSettings } from "@/lib/auth/permissions";
+import { canManageFarmSettings } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
-import { isProduction } from "@/lib/config/env";
 import { getFarmCountForUser } from "@/lib/data/farms";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
-import {
-  createFarmSchema,
-  devSetSubscriptionSchema,
-  toFieldErrors,
-  updateFarmSchema,
-} from "@/lib/validation/schemas";
+import { createFarmSchema, toFieldErrors, updateFarmSchema } from "@/lib/validation/schemas";
 import {
   describeDatabaseError,
   describeUnknownError,
@@ -177,72 +170,4 @@ export async function switchFarmAction(farmId: string): Promise<ActionResult> {
   revalidatePath("/", "layout");
 
   return { ok: true };
-}
-
-/**
- * Development-only: set the active farm's plan/status directly.
- *
- * `subscriptions` has no write policy for `authenticated` -- only a
- * service-role client (billing webhooks, normally) can write it -- so this is
- * the one place in the app that reaches for `createSupabaseAdminClient()`.
- * Gated twice: the UI that calls this never renders in production, and this
- * refuses independently too, since a hidden button is not a security boundary.
- *
- * Also simulates a billing period: every change sets current_period_start/end
- * to a fresh 30-day window (real billing has no checkout yet, so there is no
- * other source for these dates) and clears both reminder-dedup columns, since
- * a plan/status change starts a new episode worth re-notifying about if it
- * persists. See lib/email/ and app/api/cron/subscription-emails/route.ts.
- */
-export async function devSetSubscriptionAction(input: unknown): Promise<ActionResult> {
-  if (isProduction) return failure("Not available.");
-
-  const user = await requireUser();
-  const context = await getFarmContext();
-
-  if (!context) return failure("Set up your farm first.");
-  if (!canManageBilling(context)) {
-    return failure("Only the farm owner can change the plan.");
-  }
-
-  const parsed = devSetSubscriptionSchema.safeParse(input);
-  if (!parsed.success) {
-    return failure("Please check the form below.", toFieldErrors(parsed.error));
-  }
-
-  try {
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
-
-    const admin = createSupabaseAdminClient();
-    const { error } = await admin
-      .from("subscriptions")
-      .update({
-        plan: parsed.data.plan,
-        status: parsed.data.status,
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
-        past_due_reminder_sent_at: null,
-        renewal_reminder_sent_at: null,
-      })
-      .eq("farm_id", context.farmId);
-
-    if (error) return describeDatabaseError(error, "devSetSubscriptionAction");
-
-    await recordAuditLog({
-      farmId: context.farmId,
-      userId: user.id,
-      action: AUDIT_ACTIONS.PLAN_CHANGED,
-      entityType: "subscription",
-      entityId: context.farmId,
-      metadata: { plan: parsed.data.plan, status: parsed.data.status },
-    });
-
-    revalidatePath("/", "layout");
-
-    return { ok: true };
-  } catch (error) {
-    return describeUnknownError(error, "devSetSubscriptionAction");
-  }
 }

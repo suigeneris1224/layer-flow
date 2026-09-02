@@ -23,6 +23,7 @@ export function AppTopbar({
   unreadCount,
   timezone,
   dateLabel,
+  canManageBilling,
 }: {
   greeting: string;
   farmName: string;
@@ -34,6 +35,7 @@ export function AppTopbar({
   unreadCount: number;
   timezone: string;
   dateLabel: string;
+  canManageBilling: boolean;
 }) {
   const firstName = userName.split(" ")[0] || "there";
 
@@ -58,7 +60,12 @@ export function AppTopbar({
 
       <NotificationMenu notifications={notifications} unreadCount={unreadCount} timezone={timezone} />
 
-      <UserMenu userName={userName} role={role} avatarUrl={avatarUrl} />
+      <UserMenu
+        userName={userName}
+        role={role}
+        avatarUrl={avatarUrl}
+        canManageBilling={canManageBilling}
+      />
     </header>
   );
 }

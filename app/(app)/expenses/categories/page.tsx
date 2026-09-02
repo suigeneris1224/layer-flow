@@ -39,7 +39,7 @@ export default async function ExpenseCategoriesPage({
   const breakdown = await getExpensesByCategory(context, range);
 
   return (
-    <PageShell width="reading">
+    <PageShell>
       <PageHeader
         title="Expense categories"
         description="Where your money goes, by category."

@@ -25,7 +25,7 @@ export default async function SettingsPage() {
   const plan = PLANS[effectivePlan(context.plan, context.subscriptionStatus)];
 
   return (
-    <PageShell width="reading">
+    <PageShell>
       <PageHeader title="Settings" description="Your account and this farm." />
 
       <ProfileForm
@@ -62,7 +62,7 @@ export default async function SettingsPage() {
             Farm settings
           </Link>
           <Link
-            href="/pricing"
+            href="/billing"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             <CreditCard className="size-4" aria-hidden />

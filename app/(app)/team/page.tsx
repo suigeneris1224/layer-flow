@@ -49,7 +49,7 @@ export default async function TeamPage() {
   const canInvite = canCreate(entitlement, "users", used);
 
   return (
-    <PageShell width="reading">
+    <PageShell>
       <PageHeader
         title="Team"
         description="Let other people record on this farm."

@@ -6,6 +6,7 @@ import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canRecordProduction } from "@/lib/auth/permissions";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { productionExists } from "@/lib/data/production";
+import type { ProductionConflict } from "@/lib/offline/db";
 import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
 import {
   describeDatabaseError,
@@ -97,15 +98,39 @@ export async function loadProductionAction(
   }
 }
 
+interface RecordDailyProductionResult {
+  status: "ok" | "conflict";
+  id: string;
+  server?: {
+    updatedAt: string;
+    hensPresent: number;
+    eggsCollected: number;
+    brokenEggs: number;
+    dirtyEggs: number;
+    mortality: number;
+    notes: string | null;
+    averageEggWeight: number | null;
+    sizes: { eggSizeId: string; quantity: number }[];
+  };
+}
+
 /**
  * Record or correct one flock-day.
  *
  * Input is re-validated here with the same schema the browser used. Client
  * validation is a courtesy; this is the check that counts.
+ *
+ * `options.queuedAt` is set only when this is the offline queue
+ * (lib/offline/sync.ts) replaying a write that was made while offline -- it
+ * becomes the RPC's `p_client_seen_at`, letting the database detect whether
+ * someone else changed this flock-day since this device last saw it. Every
+ * online caller (the form, and edits from /production/[id]) omits it, which
+ * disables the conflict check entirely -- exactly today's behavior.
  */
 export async function recordProductionAction(
-  input: unknown
-): Promise<ActionResult<{ productionId: string }>> {
+  input: unknown,
+  options?: { queuedAt?: number }
+): Promise<ActionResult<{ productionId: string; conflict?: ProductionConflict }>> {
   const user = await requireUser();
   const context = await getFarmContext();
 
@@ -136,7 +161,7 @@ export async function recordProductionAction(
     // One transaction across daily_production, the size breakdown, feed and
     // mortality. The function runs SECURITY INVOKER, so RLS still applies and
     // farm_id is derived from the flock rather than trusted from here.
-    const { data: productionId, error } = await supabase.rpc("record_daily_production", {
+    const { data, error } = await supabase.rpc("record_daily_production", {
       p_flock_id: values.flockId,
       p_production_date: values.productionDate,
       p_hens_present: values.hensPresent,
@@ -154,10 +179,42 @@ export async function recordProductionAction(
       p_sizes: values.sizes
         .filter((size) => size.quantity > 0)
         .map((size) => ({ egg_size_id: size.eggSizeId, quantity: size.quantity })),
+      p_client_seen_at: options?.queuedAt ? new Date(options.queuedAt).toISOString() : undefined,
     });
 
     if (error) return describeDatabaseError(error, "recordProductionAction");
-    if (!productionId) return failure("We couldn't save that record. Please try again.");
+
+    const result = data as unknown as RecordDailyProductionResult | null;
+    if (!result?.id) return failure("We couldn't save that record. Please try again.");
+
+    if (result.status === "conflict" && result.server) {
+      const sizes: Record<string, number> = {};
+      for (const size of result.server.sizes) sizes[size.eggSizeId] = size.quantity;
+
+      // Nothing was written -- the RPC held off rather than overwrite a
+      // disagreement, so there is nothing to audit-log or revalidate.
+      return {
+        ok: true,
+        data: {
+          productionId: result.id,
+          conflict: {
+            serverUpdatedAt: result.server.updatedAt,
+            server: {
+              hensPresent: result.server.hensPresent,
+              eggsCollected: result.server.eggsCollected,
+              brokenEggs: result.server.brokenEggs,
+              dirtyEggs: result.server.dirtyEggs,
+              mortality: result.server.mortality,
+              notes: result.server.notes ?? "",
+              averageEggWeight: result.server.averageEggWeight,
+              sizes,
+            },
+          },
+        },
+      };
+    }
+
+    const productionId = result.id;
 
     await recordAuditLog({
       farmId: context.farmId,

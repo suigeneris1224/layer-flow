@@ -8,6 +8,7 @@ import { onQueueChange } from "@/lib/offline/events";
 import { drainQueue } from "@/lib/offline/sync";
 import type { PendingWrite } from "@/lib/offline/db";
 import { cn } from "@/lib/utils";
+import { ConflictReviewModal } from "@/components/offline/conflict-review-modal";
 
 const KIND_LABEL: Record<PendingWrite["kind"], string> = {
   daily_production: "Production record",
@@ -24,11 +25,12 @@ const KIND_LABEL: Record<PendingWrite["kind"], string> = {
  * is inline/persistent, not ephemeral), so this is a small bespoke banner
  * built from the same status tone tokens as components/dashboard/today-status.tsx.
  */
-export function OfflineStatus() {
+export function OfflineStatus({ offlineEnabled }: { offlineEnabled: boolean }) {
   const online = useConnectivity();
   const [items, setItems] = useState<PendingWrite[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [justSynced, setJustSynced] = useState(false);
+  const [reviewing, setReviewing] = useState<PendingWrite | null>(null);
   const hadPending = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -47,14 +49,22 @@ export function OfflineStatus() {
     return onQueueChange(refresh);
   }, [refresh]);
 
-  // Sync triggers: regaining connectivity, the tab regaining focus, and a
-  // gentle periodic check in case neither fires (some mobile browsers are
-  // unreliable about the `online` event).
+  /*
+   * Sync triggers: regaining connectivity, the tab regaining focus, and a
+   * gentle periodic check in case neither fires (some mobile browsers are
+   * unreliable about the `online` event). None of these fire automatically
+   * for a farm no longer entitled to offline_mode -- a downgraded plan must
+   * never silently keep pushing writes in the background. What's already
+   * queued still exists and is still shown; it just waits for the farmer to
+   * tap "Sync now" below instead.
+   */
   useEffect(() => {
-    if (online) void drainQueue();
-  }, [online]);
+    if (online && offlineEnabled) void drainQueue();
+  }, [online, offlineEnabled]);
 
   useEffect(() => {
+    if (!offlineEnabled) return;
+
     function onFocus() {
       void drainQueue();
     }
@@ -64,10 +74,11 @@ export function OfflineStatus() {
       window.removeEventListener("focus", onFocus);
       window.clearInterval(interval);
     };
-  }, []);
+  }, [offlineEnabled]);
 
   const syncing = items.some((item) => item.status === "syncing");
   const failed = items.filter((item) => item.status === "failed");
+  const conflicts = items.filter((item) => item.status === "conflict");
   const waiting = items.filter((item) => item.status === "pending").length;
 
   if (!online) {
@@ -79,7 +90,37 @@ export function OfflineStatus() {
     );
   }
 
-  if (failed.length > 0) {
+  if (!offlineEnabled && items.length > 0) {
+    return (
+      <div className="border-b border-border bg-[hsl(var(--status-warn))]/10">
+        <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-3 px-4 py-2 text-center text-sm font-medium text-[hsl(var(--status-warn))]">
+          <span>
+            Offline mode isn&apos;t part of your plan. {items.length}{" "}
+            {items.length === 1 ? "record" : "records"} saved earlier still need to sync.
+          </span>
+          <button
+            type="button"
+            onClick={() => void drainQueue()}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+          >
+            <RotateCw className="size-3.5" aria-hidden />
+            Sync now
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (failed.length + conflicts.length > 0) {
+    const failedLabel =
+      failed.length > 0
+        ? `Couldn't sync ${failed.length} ${failed.length === 1 ? "record" : "records"}.`
+        : "";
+    const conflictLabel =
+      conflicts.length > 0
+        ? `${conflicts.length} need${conflicts.length === 1 ? "s" : ""} your review.`
+        : "";
+
     return (
       <div className="border-b border-border bg-[hsl(var(--status-bad))]/10">
         <button
@@ -87,37 +128,56 @@ export function OfflineStatus() {
           onClick={() => setExpanded((value) => !value)}
           className="flex w-full items-center justify-center gap-2 px-4 py-2 text-center text-sm font-medium text-[hsl(var(--status-bad))]"
         >
-          Couldn&apos;t sync {failed.length} {failed.length === 1 ? "record" : "records"}. Tap to
-          review.
+          {[failedLabel, conflictLabel].filter(Boolean).join(" ")} Tap to review.
         </button>
 
         {expanded && (
           <ul className="mx-auto flex max-w-md flex-col gap-2 px-4 pb-3">
-            {failed.map((item) => (
+            {[...failed, ...conflicts].map((item) => (
               <li
                 key={item.id}
                 className="flex items-center justify-between gap-3 rounded-md bg-surface px-3 py-2 text-sm"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">{KIND_LABEL[item.kind]}</p>
-                  {item.lastError && (
+                  {item.status === "failed" && item.lastError && (
                     <p className="truncate text-xs text-muted-foreground">{item.lastError}</p>
                   )}
+                  {item.status === "conflict" && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      Someone else saved different numbers for this day.
+                    </p>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await retryFailed(item.id);
-                    void drainQueue();
-                  }}
-                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
-                >
-                  <RotateCw className="size-3.5" aria-hidden />
-                  Retry
-                </button>
+
+                {item.status === "conflict" ? (
+                  <button
+                    type="button"
+                    onClick={() => setReviewing(item)}
+                    className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+                  >
+                    Review
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await retryFailed(item.id);
+                      void drainQueue();
+                    }}
+                    className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+                  >
+                    <RotateCw className="size-3.5" aria-hidden />
+                    Retry
+                  </button>
+                )}
               </li>
             ))}
           </ul>
+        )}
+
+        {reviewing && (
+          <ConflictReviewModal item={reviewing} onClose={() => setReviewing(null)} />
         )}
       </div>
     );
@@ -126,7 +186,7 @@ export function OfflineStatus() {
   if (syncing || waiting > 0) {
     return (
       <Banner tone="warn" icon={Loader2} spin>
-        Syncing…
+        Syncing{waiting > 0 ? ` ${waiting}` : ""}…
       </Banner>
     );
   }

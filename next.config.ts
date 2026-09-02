@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" }
         ]
+      },
+      {
+        // The service worker's own versioned Cache Storage handles staleness
+        // of what IT caches -- this handles staleness of sw.js itself, so an
+        // updated worker isn't held back by ordinary HTTP caching.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }
+        ]
       }
     ];
   }

@@ -1,5 +1,6 @@
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
+import { canAccess } from "@/lib/subscriptions/entitlements";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getProfile } from "@/lib/data/profile";
@@ -34,6 +35,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // 7am should not be told "good evening" because Vercel is on UTC.
   const greeting = greetingFor(farmHour(context.timezone));
 
+  const offlineEnabled = canAccess(
+    { plan: context.plan, status: context.subscriptionStatus },
+    "offline_mode"
+  );
+
   return (
     <div className="flex min-h-dvh">
       <DesktopSidebar plan={context.plan} />
@@ -52,7 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           dateLabel={formatDate(new Date(), context.timezone)}
         />
 
-        <OfflineStatus />
+        <OfflineStatus offlineEnabled={offlineEnabled} />
 
         <main id="main" className="flex-1 pb-24 lg:pb-8">
           {children}

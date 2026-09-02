@@ -1,15 +1,18 @@
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  discardConflict,
   enqueueWrite,
   generateWriteId,
   listPending,
   markAttemptFailed,
+  markConflict,
   markSynced,
   markSyncing,
   pendingCount,
   retryFailed,
 } from "@/lib/offline/queue";
+import type { ProductionConflict } from "@/lib/offline/db";
 
 /**
  * The queue's CRUD against a real (fake) IndexedDB -- this is the store the
@@ -179,5 +182,129 @@ describe("offline queue", () => {
     const record = (await listPending()).find((item) => item.id === id);
     expect(record?.status).toBe("pending");
     expect(record?.attempts).toBe(0);
+  });
+
+  const SAMPLE_CONFLICT: ProductionConflict = {
+    serverUpdatedAt: "2026-01-02T00:00:00.000Z",
+    server: {
+      hensPresent: 100,
+      eggsCollected: 90,
+      brokenEggs: 1,
+      dirtyEggs: 0,
+      mortality: 0,
+      notes: "",
+      averageEggWeight: null,
+      sizes: {},
+    },
+  };
+
+  it("marks a write as conflicted and stores the server's version", async () => {
+    const id = generateWriteId();
+    await enqueueWrite({
+      id,
+      kind: "daily_production",
+      payload: {
+        flockId: "flock-1",
+        productionDate: "2026-01-01",
+        hensPresent: 100,
+        eggsCollected: 80,
+        brokenEggs: 0,
+        dirtyEggs: 0,
+        mortality: 0,
+        feedKg: 0,
+        feedCostPerKg: 0,
+        sizes: [],
+        notes: "",
+      },
+    });
+
+    await markConflict(id, SAMPLE_CONFLICT);
+
+    const record = (await listPending()).find((item) => item.id === id);
+    expect(record?.status).toBe("conflict");
+    expect(record?.attempts).toBe(1);
+    expect(record?.conflict).toEqual(SAMPLE_CONFLICT);
+  });
+
+  it("never deletes a conflicted write until the farmer resolves it", async () => {
+    const id = generateWriteId();
+    await enqueueWrite({
+      id,
+      kind: "daily_production",
+      payload: {
+        flockId: "flock-1",
+        productionDate: "2026-01-01",
+        hensPresent: 100,
+        eggsCollected: 80,
+        brokenEggs: 0,
+        dirtyEggs: 0,
+        mortality: 0,
+        feedKg: 0,
+        feedCostPerKg: 0,
+        sizes: [],
+        notes: "",
+      },
+    });
+    await markConflict(id, SAMPLE_CONFLICT);
+
+    const record = (await listPending()).find((item) => item.id === id);
+    expect(record).toBeDefined();
+  });
+
+  it("discardConflict deletes the write with no write of its own", async () => {
+    const id = generateWriteId();
+    await enqueueWrite({
+      id,
+      kind: "daily_production",
+      payload: {
+        flockId: "flock-1",
+        productionDate: "2026-01-01",
+        hensPresent: 100,
+        eggsCollected: 80,
+        brokenEggs: 0,
+        dirtyEggs: 0,
+        mortality: 0,
+        feedKg: 0,
+        feedCostPerKg: 0,
+        sizes: [],
+        notes: "",
+      },
+    });
+    await markConflict(id, SAMPLE_CONFLICT);
+
+    await discardConflict(id);
+
+    const pending = await listPending();
+    expect(pending.some((item) => item.id === id)).toBe(false);
+  });
+
+  it("the afterEach cleanup pattern (markSynced) also clears a conflicted leftover", async () => {
+    // Guards the shared afterEach below: markSynced is a plain delete
+    // regardless of status, so a "conflict"-status item left over from a
+    // failing test still gets cleaned up and can't break test isolation.
+    const id = generateWriteId();
+    await enqueueWrite({
+      id,
+      kind: "daily_production",
+      payload: {
+        flockId: "flock-1",
+        productionDate: "2026-01-01",
+        hensPresent: 100,
+        eggsCollected: 80,
+        brokenEggs: 0,
+        dirtyEggs: 0,
+        mortality: 0,
+        feedKg: 0,
+        feedCostPerKg: 0,
+        sizes: [],
+        notes: "",
+      },
+    });
+    await markConflict(id, SAMPLE_CONFLICT);
+
+    await markSynced(id);
+
+    const pending = await listPending();
+    expect(pending.some((item) => item.id === id)).toBe(false);
   });
 });

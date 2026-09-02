@@ -4,6 +4,7 @@ import {
   type PendingWrite,
   type PendingWriteKind,
   type PendingWritePayload,
+  type ProductionConflict,
 } from "@/lib/offline/db";
 import { emitQueueChange } from "@/lib/offline/events";
 
@@ -94,6 +95,38 @@ export async function markAttemptFailed(
     lastError: error,
     lastAttemptAt: Date.now(),
   });
+  emitQueueChange();
+}
+
+/**
+ * The server found a genuine disagreement -- a newer, different row already
+ * exists (see the RPC's conflict check). Never auto-retried: `drainQueue`
+ * skips `"conflict"` items exactly like `"failed"` ones, until the farmer
+ * reviews it in the conflict screen and picks a side.
+ */
+export async function markConflict(id: string, conflict: ProductionConflict): Promise<void> {
+  const db = await getOfflineDB();
+  const record = await db.get(PENDING_WRITES_STORE, id);
+  if (!record) return;
+  await db.put(PENDING_WRITES_STORE, {
+    ...record,
+    status: "conflict",
+    conflict,
+    attempts: record.attempts + 1,
+    lastAttemptAt: Date.now(),
+  });
+  emitQueueChange();
+}
+
+/**
+ * The farmer chose "keep the server's version" in the conflict review. Unlike
+ * `markSynced`, nothing was actually pushed here -- the server row was
+ * already correct -- so this gets its own name rather than reusing that one
+ * and implying a write happened.
+ */
+export async function discardConflict(id: string): Promise<void> {
+  const db = await getOfflineDB();
+  await db.delete(PENDING_WRITES_STORE, id);
   emitQueueChange();
 }
 

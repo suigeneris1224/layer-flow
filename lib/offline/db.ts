@@ -16,7 +16,29 @@ export type PendingWritePayload =
   | { kind: "mortality"; value: MortalityRecordInput }
   | { kind: "feed_usage"; value: FeedUsageInput };
 
-export type PendingWriteStatus = "pending" | "syncing" | "failed";
+export type PendingWriteStatus = "pending" | "syncing" | "failed" | "conflict";
+
+/**
+ * The competing server state for a `"daily_production"` write that lost the
+ * conflict check in `record_daily_production` (see
+ * supabase/migrations/20250101001700_production_conflict_detection.sql). Only
+ * `daily_production` can genuinely collide across devices -- mortality/feed
+ * writes upsert on a fresh client-generated id, so they never do.
+ */
+export interface ProductionConflict {
+  serverUpdatedAt: string;
+  server: {
+    hensPresent: number;
+    eggsCollected: number;
+    brokenEggs: number;
+    dirtyEggs: number;
+    mortality: number;
+    notes: string;
+    averageEggWeight: number | null;
+    /** Quantity per egg size id. */
+    sizes: Record<string, number>;
+  };
+}
 
 export interface PendingWrite {
   /** Client-generated UUID -- the idempotency key. */
@@ -29,6 +51,8 @@ export interface PendingWrite {
   /** When the most recent attempt happened, for backoff timing. */
   lastAttemptAt?: number;
   status: PendingWriteStatus;
+  /** Set only when status is "conflict" -- what the review screen shows. */
+  conflict?: ProductionConflict;
 }
 
 interface OfflineDB extends DBSchema {

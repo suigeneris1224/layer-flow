@@ -1,5 +1,6 @@
 import { MobileDrawer } from "@/components/nav/mobile-drawer";
 import { NotificationMenu } from "@/components/layout/notification-menu";
+import { PendingCountBadge } from "@/components/offline/pending-count-badge";
 import { UserMenu } from "@/components/layout/user-menu";
 import type { Notification } from "@/lib/data/notifications";
 import type { SubscriptionPlan } from "@/lib/types/database";
@@ -52,6 +53,8 @@ export function AppTopbar({
       <span className="hidden items-center rounded-md border border-border px-3 py-2 text-xs text-muted-foreground tabular xl:inline-flex">
         {dateLabel}
       </span>
+
+      <PendingCountBadge />
 
       <NotificationMenu notifications={notifications} unreadCount={unreadCount} timezone={timezone} />
 

@@ -1179,6 +1179,7 @@ export type Database = {
         Args: {
           p_average_egg_weight?: number
           p_broken_eggs?: number
+          p_client_seen_at?: string
           p_dirty_eggs?: number
           p_eggs_collected: number
           p_feed_cost_per_kg?: number
@@ -1190,7 +1191,7 @@ export type Database = {
           p_production_date: string
           p_sizes?: Json
         }
-        Returns: string
+        Returns: Json
       }
       record_egg_sale: {
         Args: {

@@ -1,7 +1,13 @@
 import { recordProductionAction } from "@/app/(app)/production/actions";
 import { recordMortalityAction, recordFeedUsageAction } from "@/app/(app)/health/actions";
-import { listPending, markAttemptFailed, markSynced, markSyncing } from "@/lib/offline/queue";
-import type { PendingWrite } from "@/lib/offline/db";
+import {
+  listPending,
+  markAttemptFailed,
+  markConflict,
+  markSynced,
+  markSyncing,
+} from "@/lib/offline/queue";
+import type { PendingWrite, ProductionConflict } from "@/lib/offline/db";
 
 /**
  * Drains `pending_writes` by calling the same server actions the online forms
@@ -28,15 +34,33 @@ interface SyncOutcome {
   /** A validation or entitlement failure will never succeed by retrying -- it needs a farmer, not the network. */
   permanent: boolean;
   error?: string;
+  /** Set only for a daily_production write the server held off on. Never retried automatically -- see markConflict. */
+  conflict?: ProductionConflict;
 }
 
 async function submitOne(item: PendingWrite): Promise<SyncOutcome> {
   try {
-    const result = await (item.kind === "daily_production"
-      ? recordProductionAction(item.payload)
-      : item.kind === "mortality"
-        ? recordMortalityAction(item.payload)
-        : recordFeedUsageAction(item.payload));
+    if (item.kind === "daily_production") {
+      const result = await recordProductionAction(item.payload, { queuedAt: item.createdAt });
+
+      if (!result.ok) {
+        const permanent = Boolean(result.fieldErrors) || Boolean(result.upgrade);
+        return { ok: false, permanent, error: result.error };
+      }
+      if (result.data.conflict) {
+        return {
+          ok: false,
+          permanent: true,
+          error: "A newer version of this record exists on the server.",
+          conflict: result.data.conflict,
+        };
+      }
+      return { ok: true, permanent: false };
+    }
+
+    const result = await (item.kind === "mortality"
+      ? recordMortalityAction(item.payload)
+      : recordFeedUsageAction(item.payload));
 
     if (result.ok) return { ok: true, permanent: false };
 
@@ -73,7 +97,10 @@ export async function drainQueue(): Promise<void> {
     const items = await listPending();
 
     for (const item of items) {
-      if (item.status === "failed") continue; // stuck until a farmer taps retry
+      // "failed" is stuck until a farmer taps retry; "conflict" is stuck
+      // until a farmer picks a version in the review screen. Neither is
+      // ever auto-retried.
+      if (item.status === "failed" || item.status === "conflict") continue;
       if (!dueForRetry(item)) continue;
       if (typeof navigator !== "undefined" && !navigator.onLine) break;
 
@@ -82,6 +109,8 @@ export async function drainQueue(): Promise<void> {
 
       if (outcome.ok) {
         await markSynced(item.id);
+      } else if (outcome.conflict) {
+        await markConflict(item.id, outcome.conflict);
       } else {
         const exhausted = item.attempts + 1 >= MAX_ATTEMPTS;
         await markAttemptFailed(item.id, outcome.error ?? "Sync failed.", outcome.permanent || exhausted);

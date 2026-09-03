@@ -190,7 +190,7 @@ const FAQ_ITEMS = [
   {
     question: "Can multiple people use one farm?",
     answer:
-      "Yes, from the Starter plan up. Invite teammates by role — worker, manager, or owner — so everyone sees the same numbers.",
+      "Yes, from the Pro plan. Invite teammates by role — worker, manager, or owner — so everyone sees the same numbers.",
   },
   {
     question: "Can I manage multiple farms?",

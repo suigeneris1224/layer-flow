@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NumberInput } from "@/components/ui/field";
+import { InfoTip } from "@/components/ui/info-tip";
 import { StatusNote } from "@/components/ui/states";
 import { createHouseAction, type OnboardingActionState } from "@/app/onboarding/actions";
 
@@ -40,7 +41,15 @@ export function HouseStep({ farmName }: { farmName: string }) {
         </Field>
 
         <Field
-          label="Capacity"
+          label={
+            <span className="flex items-center gap-1">
+              Capacity
+              <InfoTip label="About capacity">
+                The maximum number of hens this house is built to hold — not how many you have
+                today. You&apos;ll record your actual bird count separately when you add a flock.
+              </InfoTip>
+            </span>
+          }
           htmlFor="capacity"
           hint="How many hens this house can hold."
           error={fieldErrors?.capacity}

@@ -78,6 +78,7 @@ export default async function AnalyticsPage({
               icon={LineChart}
               tint="green"
               label="Avg laying rate"
+              info="The share of hens that laid an egg that day, averaged across this period. Higher means your flock is producing more consistently."
               value={formatPercent(data.totals.avgLayingRate)}
               sublabel={range.label}
             />
@@ -85,6 +86,7 @@ export default async function AnalyticsPage({
               icon={Wheat}
               tint="teal"
               label="Avg feed per hen"
+              info="Total feed given divided by the number of hens on hand, averaged per day over this period. Watch this alongside laying rate — feed use climbing while laying rate falls can be an early warning sign."
               value={formatKg(data.totals.avgFeedPerHen)}
               sublabel="Per hen, per day"
             />

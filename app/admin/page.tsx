@@ -7,6 +7,7 @@ import { PLANS, PLAN_ORDER } from "@/lib/subscriptions/plans";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/states";
+import { InfoTip } from "@/components/ui/info-tip";
 import { buttonVariants } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -82,7 +83,19 @@ export default async function AdminSubscriptionsPage({
             <p className="text-xs text-muted-foreground">farms</p>
           </Panel>
         ))}
-        <Panel title="Est. monthly" bodyClassName="p-4">
+        <Panel
+          title={
+            <h2 className="flex items-center gap-1 text-sm font-semibold">
+              Est. monthly
+              <InfoTip label="About est. monthly">
+                Sum of each ACTIVE or PAST_DUE farm&apos;s plan price. No proration — a farm that
+                upgraded mid-period is counted at its current plan price for the full month, not a
+                blended rate. Treat this as a rough estimate, not a real revenue figure.
+              </InfoTip>
+            </h2>
+          }
+          bodyClassName="p-4"
+        >
           <p className="text-2xl font-bold tabular">{formatCurrency(monthlyEstimate / 100)}</p>
           <p className="text-xs text-muted-foreground">
             active + past due, no proration

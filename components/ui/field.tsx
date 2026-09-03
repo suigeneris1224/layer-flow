@@ -153,7 +153,7 @@ export function Label({
 }
 
 interface FieldProps {
-  label: string;
+  label: React.ReactNode;
   htmlFor: string;
   error?: string;
   hint?: string;

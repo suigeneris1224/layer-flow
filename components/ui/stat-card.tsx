@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { IconChip, type ChipTint } from "@/components/ui/icon-chip";
 import { Delta } from "@/components/ui/delta";
+import { InfoTip } from "@/components/ui/info-tip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,6 +14,7 @@ export function StatCard({
   icon,
   tint,
   label,
+  info,
   value,
   sublabel,
   delta,
@@ -23,6 +25,8 @@ export function StatCard({
   icon: LucideIcon;
   tint: ChipTint;
   label: string;
+  /** Definition shown in an "i" popover next to the label, e.g. how a rate is computed. */
+  info?: React.ReactNode;
   value: string;
   sublabel?: string;
   delta?: number | null;
@@ -46,7 +50,10 @@ export function StatCard({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
         <IconChip icon={icon} tint={tint} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+            <span className="truncate">{label}</span>
+            {info && <InfoTip label={`About ${label}`}>{info}</InfoTip>}
+          </p>
           <p className="stat-figure mt-1.5">{value}</p>
           {sublabel && (
             <p className="mt-1 truncate text-xs text-muted-foreground">{sublabel}</p>

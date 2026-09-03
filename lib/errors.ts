@@ -127,8 +127,25 @@ export function describeDatabaseError(
   return failure("We couldn't save that. Please try again.");
 }
 
-/** Supabase Auth errors, which have their own vocabulary. */
-export function describeAuthError(message: string): ActionFailure {
+const AUTH_FALLBACK_MESSAGES = {
+  signIn: "We couldn't sign you in. Please try again.",
+  signUp: "We couldn't create your account. Please try again.",
+  password: "We couldn't update your password. Please try again.",
+} as const;
+
+/**
+ * Supabase Auth errors, which have their own vocabulary.
+ *
+ * `context` only affects the generic fallback below -- signInAction,
+ * signUpAction and updatePasswordAction all funnel through here, and a
+ * fallback fixed to "We couldn't sign you in" was showing on signup and
+ * password-reset failures too, telling someone who was never signing in that
+ * they couldn't sign in.
+ */
+export function describeAuthError(
+  message: string,
+  context: keyof typeof AUTH_FALLBACK_MESSAGES = "signIn"
+): ActionFailure {
   const normalized = message.toLowerCase();
 
   if (normalized.includes("invalid login credentials")) {
@@ -147,8 +164,8 @@ export function describeAuthError(message: string): ActionFailure {
     return failure("Too many attempts. Please wait a minute and try again.");
   }
 
-  logger.warn("unmapped auth error", { message });
-  return failure("We couldn't sign you in. Please try again.");
+  logger.warn("unmapped auth error", { message, context });
+  return failure(AUTH_FALLBACK_MESSAGES[context]);
 }
 
 /** Catch-all for a server action, so nothing raw ever reaches the client. */

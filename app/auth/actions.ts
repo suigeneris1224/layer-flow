@@ -78,7 +78,7 @@ export async function signUpAction(
       },
     });
 
-    if (error) return describeAuthError(error.message);
+    if (error) return describeAuthError(error.message, "signUp");
   } catch (error) {
     return describeUnknownError(error, "signUpAction");
   }
@@ -210,7 +210,7 @@ export async function updatePasswordAction(
     }
 
     const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-    if (error) return describeAuthError(error.message);
+    if (error) return describeAuthError(error.message, "password");
   } catch (error) {
     return describeUnknownError(error, "updatePasswordAction");
   }

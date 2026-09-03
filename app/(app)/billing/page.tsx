@@ -6,6 +6,7 @@ import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
+import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
 import { BillingPanel } from "./billing-panel";
 import { DevPlanSwitcher } from "./dev-plan-switcher";
 
@@ -33,6 +34,13 @@ export default async function BillingPage() {
   return (
     <PageShell>
       <PageHeader title="Billing" description="Your plan and billing details." />
+
+      <RenewalBanner
+        plan={context.plan}
+        status={context.subscriptionStatus}
+        currentPeriodEnd={currentPeriodEnd}
+        showManageLink={false}
+      />
 
       <BillingPanel
         planName={PLANS[context.plan].name}

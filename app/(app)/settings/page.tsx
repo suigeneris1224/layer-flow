@@ -35,6 +35,7 @@ export default async function SettingsPage() {
         initialFullName={profile?.fullName || user.fullName}
         initialPhone={profile?.phone ?? ""}
         avatarUrl={profile?.avatarUrl ?? null}
+        coverUrl={profile?.coverUrl ?? null}
       />
 
       <Panel title="This farm">

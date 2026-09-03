@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Bird, Egg, PhilippinePeso, Plus, Receipt, TrendingUp } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
+import { canManageBilling } from "@/lib/auth/permissions";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getFarmOverview } from "@/lib/data/farms";
+import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusNote } from "@/components/ui/states";
+import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
 import { PageShell } from "@/components/layout/page-shell";
 // Deferred: Recharts is heavy and must not block the figures. See charts/lazy.
 import { EggSizeDonut, ProductionChart, SalesChart } from "@/components/charts/lazy";
@@ -26,13 +29,23 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const context = await requireFarmContext();
-  const [data, farmOverview] = await Promise.all([
+  const isOwner = canManageBilling(context);
+  const [data, farmOverview, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),
     getFarmOverview(context.farmId),
+    isOwner ? getSubscriptionPeriod(context.farmId) : Promise.resolve(null),
   ]);
 
   return (
     <PageShell>
+      {isOwner && subscriptionPeriod && (
+        <RenewalBanner
+          plan={context.plan}
+          status={context.subscriptionStatus}
+          currentPeriodEnd={subscriptionPeriod.currentPeriodEnd}
+        />
+      )}
+
       {/*
         Status first: this is what the farmer needs to act on, so it sits
         above the figures rather than below them.

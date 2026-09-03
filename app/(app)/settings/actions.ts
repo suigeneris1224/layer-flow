@@ -32,6 +32,11 @@ const AVATAR_TYPES: Record<string, string> = {
   "image/webp": "webp",
 };
 
+// Cover photos are wide banner images, not a small square -- same file types,
+// a looser size cap.
+const COVER_MAX_BYTES = 5 * 1024 * 1024;
+const COVER_TYPES = AVATAR_TYPES;
+
 export async function updateProfileAction(input: unknown): Promise<ActionResult> {
   const user = await requireUser();
 
@@ -161,5 +166,81 @@ export async function removeAvatarAction(): Promise<ActionResult> {
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "removeAvatarAction");
+  }
+}
+
+/**
+ * Cover photo upload -- same shape as uploadAvatarAction, a different bucket
+ * and column (covers/<user id>/cover.<ext>, profiles.cover_url).
+ */
+export async function uploadCoverAction(formData: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+
+  const file = formData.get("cover");
+  if (!(file instanceof File) || file.size === 0) {
+    return failure("Choose an image to upload.");
+  }
+
+  const extension = COVER_TYPES[file.type];
+  if (!extension) {
+    return failure("Use a JPG, PNG or WebP image.");
+  }
+  if (file.size > COVER_MAX_BYTES) {
+    return failure("That image is larger than 5 MB. Please choose a smaller one.");
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const path = `${user.id}/cover.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("covers")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      return failure("We couldn't upload that image. Please try again.");
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("covers").getPublicUrl(path);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ cover_url: `${publicUrl}?v=${Date.now()}` })
+      .eq("id", user.id);
+
+    if (error) return describeDatabaseError(error, "uploadCoverAction");
+
+    revalidatePath("/settings");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "uploadCoverAction");
+  }
+}
+
+export async function removeCoverAction(): Promise<ActionResult> {
+  const user = await requireUser();
+
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ cover_url: null })
+      .eq("id", user.id);
+
+    if (error) return describeDatabaseError(error, "removeCoverAction");
+
+    await supabase.storage
+      .from("covers")
+      .remove(Object.values(COVER_TYPES).map((ext) => `${user.id}/cover.${ext}`));
+
+    revalidatePath("/settings");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "removeCoverAction");
   }
 }

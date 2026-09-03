@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { AUDIT_ACTIONS } from "@/lib/data/audit";
 import { logger } from "@/lib/observability/logger";
 import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
@@ -85,5 +86,67 @@ export async function getAllSubscriptions(): Promise<AdminFarmRow[]> {
     if (a.currentPeriodEnd === null) return 1;
     if (b.currentPeriodEnd === null) return -1;
     return a.currentPeriodEnd.localeCompare(b.currentPeriodEnd);
+  });
+}
+
+export type EmailKind = "receipt" | "past_due_reminder" | "renewal_reminder";
+export type EmailTrigger = "manual" | "cron";
+
+export interface AdminEmailLogRow {
+  id: string;
+  farmId: string;
+  farmName: string;
+  kind: EmailKind | "unknown";
+  to: "self" | "owner" | "unknown";
+  trigger: EmailTrigger | "unknown";
+  createdAt: string;
+}
+
+interface EmailAuditJoinRow {
+  id: string;
+  farm_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  farms: { name: string } | { name: string }[] | null;
+}
+
+/**
+ * Every subscription email LayerFlow has sent, newest first -- every send
+ * path (lib/email/client.ts's sendEmail, wherever it's called) already
+ * writes one of these via recordAuditLog with
+ * AUDIT_ACTIONS.SUBSCRIPTION_EMAIL_SENT, so this reads that trail rather
+ * than needing a dedicated emails table.
+ *
+ * `limit` caps this at a flat number rather than real pagination -- fine
+ * until a farm count exists that makes 200 rows too few to be useful; not
+ * worth solving before that's true.
+ */
+export async function getEmailLog(limit = 200): Promise<AdminEmailLogRow[]> {
+  const admin = createSupabaseAdminClient();
+
+  const { data, error } = await admin
+    .from("audit_logs")
+    .select("id, farm_id, metadata, created_at, farms(name)")
+    .eq("action", AUDIT_ACTIONS.SUBSCRIPTION_EMAIL_SENT)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    logger.error("admin email log lookup failed", { reason: error.message });
+    return [];
+  }
+
+  return ((data ?? []) as unknown as EmailAuditJoinRow[]).map((row) => {
+    const farm = one(row.farms);
+    const metadata = row.metadata ?? {};
+    return {
+      id: row.id,
+      farmId: row.farm_id ?? "",
+      farmName: farm?.name ?? "Unknown farm",
+      kind: (metadata.kind as EmailKind | undefined) ?? "unknown",
+      to: (metadata.to as "self" | "owner" | undefined) ?? "unknown",
+      trigger: (metadata.trigger as EmailTrigger | undefined) ?? "unknown",
+      createdAt: row.created_at,
+    };
   });
 }

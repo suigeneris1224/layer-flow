@@ -12,22 +12,27 @@ import logo from "@/public/icons/layerflow-logo.png";
  * transparent, so on the light theme it reads as part of the sidebar. See the
  * note in docs/design-system.md about how it behaves on the dark theme.
  */
-export function Brand() {
+export function Brand({ compact = false }: { compact?: boolean } = {}) {
   return (
     <div className="flex items-center gap-2.5">
       {/* Sized to the height of the two text lines beside it, so the lockup
-          reads as one block rather than a small mark with text hanging off it. */}
+          reads as one block rather than a small mark with text hanging off it.
+          `compact` drops to a single line's height instead -- for a slim
+          utility bar (app/admin/) where the full lockup has no room, not the
+          main marketing/auth surfaces this component was designed for. */}
       <Image
         src={logo}
         alt=""
         width={48}
         height={48}
         priority
-        className="size-12 shrink-0 object-contain"
+        className={compact ? "size-8 shrink-0 object-contain" : "size-12 shrink-0 object-contain"}
       />
       <span className="flex flex-col leading-tight">
         <span className="text-base font-extrabold tracking-tight">LayerFlow</span>
-        <span className="text-[11px] text-muted-foreground">Smart Poultry Management</span>
+        {!compact && (
+          <span className="text-[11px] text-muted-foreground">Smart Poultry Management</span>
+        )}
       </span>
     </div>
   );

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/auth/admin";
 import { signOutAction } from "@/app/auth/actions";
 import { Brand } from "@/components/nav/brand";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Shell for the platform-admin pages (app/admin/).
@@ -18,22 +19,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 lg:px-6">
-        <div className="flex items-center gap-3">
-          <Brand />
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border bg-surface px-4 py-3 lg:px-6">
+        <div className="flex items-center gap-2">
+          <Brand compact />
           <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
             Admin
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Back to app
+          <Link
+            href="/dashboard"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+            <span className="hidden sm:inline">Back to app</span>
           </Link>
           <form action={signOutAction}>
             <Button type="submit" variant="outline" size="sm">
               <LogOut className="size-4" aria-hidden />
-              Sign out
+              <span className="hidden sm:inline">Sign out</span>
             </Button>
           </form>
         </div>

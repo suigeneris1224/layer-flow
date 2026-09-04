@@ -260,7 +260,7 @@ export default function LandingPage() {
                   Priced in ₱
                 </span>
                 <span className="rounded-md border border-border bg-muted px-2.5 py-1">
-                  Asia/Manila
+                  Philippine time
                 </span>
                 <span className="rounded-md border border-border bg-muted px-2.5 py-1">
                   Free for one flock, no card

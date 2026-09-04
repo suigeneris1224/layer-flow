@@ -9,8 +9,7 @@ export function PublicFooter() {
         <div className="max-w-xs">
           <Brand />
           <p className="mt-3 text-sm text-muted-foreground">
-            Egg farm management for Philippine layer farmers. Prices in PHP. Times in
-            Asia/Manila.
+             A modern farm management platform designed for Philippine layer farmers, with local pricing and time settings.
           </p>
         </div>
 

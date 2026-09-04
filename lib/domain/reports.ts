@@ -136,6 +136,25 @@ function shiftYear(date: string): string {
   return `${previous}-${String(month).padStart(2, "0")}-${String(clamped).padStart(2, "0")}`;
 }
 
+/**
+ * The same window one calendar month earlier -- the month-over-month
+ * counterpart to `sameRangeLastYear`, for comparisons shorter than a year.
+ * Same day-of-month clamping logic (e.g. a 31st shifts to the 30th or 28th
+ * in a shorter previous month).
+ */
+export function samePeriodLastMonth(from: string, to: string): { from: string; to: string } {
+  return { from: shiftMonth(from), to: shiftMonth(to) };
+}
+
+function shiftMonth(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const totalMonths = year * 12 + (month - 1) - 1;
+  const y = Math.floor(totalMonths / 12);
+  const m = (totalMonths % 12) + 1;
+  const clamped = Math.min(day, daysInMonth(y, m));
+  return `${y}-${String(m).padStart(2, "0")}-${String(clamped).padStart(2, "0")}`;
+}
+
 /** Every date from `from` to `to`, inclusive, for building a daily series over any resolved range. */
 export function eachDate(from: string, to: string): string[] {
   const dates: string[] = [];

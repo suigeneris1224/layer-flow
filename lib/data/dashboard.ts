@@ -109,6 +109,8 @@ export interface DashboardData {
      * let the farmer think they went missing.
      */
     ungradedEggs: number;
+    /** The farm's own low-inventory alert threshold (trays), for coloring each line. */
+    lowStockTrays: number;
   };
   /** Period-over-period change for the KPI row. Null when there is no basis. */
   deltas: {
@@ -127,7 +129,6 @@ export interface DashboardData {
   charts: {
     production: SeriesPoint[];
     sizesToday: SizeSlice[];
-    sales: { day: string; amount: number }[];
   };
   flocks: ActiveFlockSummary[];
   flockStatus: FlockStatus;
@@ -402,7 +403,7 @@ export const getDashboardData = cache(async function getDashboardData(
       expenses: percentChange(operatingCosts, costsYesterday),
       profit: percentChange(profit, profitYesterday),
     },
-    inventory: inventorySummary,
+    inventory: { ...inventorySummary, lowStockTrays: thresholds.lowInventoryTrays },
     money: {
       revenue,
       operatingCosts,
@@ -414,7 +415,6 @@ export const getDashboardData = cache(async function getDashboardData(
       sizesToday: buildSizeSlices(
         sizeProductionRows.filter((row) => oneOf(row.daily_production)?.production_date === today)
       ),
-      sales: buildSalesSeries(salesRows, today),
     },
     flocks: buildFlockSummaries(flockRows, todayProduction),
     flockStatus: flockStatusLine(deathsThisWeek, hensOnFarm),
@@ -446,7 +446,7 @@ function sum<T>(rows: readonly T[], pick: (row: T) => number): number {
 function buildInventory(
   rows: readonly InventoryBalanceRow[],
   ungradedEggs: number
-): DashboardData["inventory"] {
+): Omit<DashboardData["inventory"], "lowStockTrays"> {
   const summary = summariseInventory(toInventoryRows(rows));
 
   return {
@@ -744,21 +744,6 @@ function buildProductionSeries(
       thisWeek: byDate.get(date) ?? 0,
       lastWeek: byDate.get(shiftDate(date, -7)) ?? 0,
     };
-  });
-}
-
-function buildSalesSeries(
-  rows: readonly { sale_date: string; total_amount: number }[],
-  today: string
-): { day: string; amount: number }[] {
-  const byDate = new Map<string, number>();
-  for (const row of rows) {
-    byDate.set(row.sale_date, (byDate.get(row.sale_date) ?? 0) + Number(row.total_amount));
-  }
-
-  return Array.from({ length: WINDOW_DAYS }, (_, index) => {
-    const date = shiftDate(today, -(WINDOW_DAYS - 1 - index));
-    return { day: date.slice(8), amount: roundMoney(byDate.get(date) ?? 0) };
   });
 }
 

@@ -6,10 +6,13 @@ import { canManageBilling } from "@/lib/auth/permissions";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getFarmOverview } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
+import { getSalesOverview, type SalesOverviewRange } from "@/lib/data/sales-overview";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusNote } from "@/components/ui/states";
+import { InfoTip } from "@/components/ui/info-tip";
+import { Delta } from "@/components/ui/delta";
 import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
 import { PageShell } from "@/components/layout/page-shell";
 // Deferred: Recharts is heavy and must not block the figures. See charts/lazy.
@@ -19,6 +22,7 @@ import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { FlockStatusPanel } from "@/components/dashboard/flock-status-panel";
 import { FarmsOverviewPanel } from "@/components/dashboard/farms-overview-panel";
 import { TodayStatus } from "@/components/dashboard/today-status";
+import { SalesRangeToggle } from "@/components/dashboard/sales-range-toggle";
 import { formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -27,15 +31,26 @@ export const metadata: Metadata = { title: "Overview" };
 // Today's numbers change as the farmer records; never serve a cached page.
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ salesRange?: string }>;
+}) {
   const context = await requireFarmContext();
   const isOwner = canManageBilling(context);
   const showRenewalBanner = isOwner && !context.isBetaOverride;
+  const { salesRange: salesRangeParam } = await searchParams;
+  const salesRange: SalesOverviewRange = salesRangeParam === "year" ? "year" : "month";
+
   const [data, farmOverview, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),
     getFarmOverview(context.farmId),
     showRenewalBanner ? getSubscriptionPeriod(context.farmId) : Promise.resolve(null),
   ]);
+
+  const salesOverview = data.money.isComplete
+    ? await getSalesOverview(context.farmId, salesRange, data.date)
+    : null;
 
   return (
     <PageShell>
@@ -106,18 +121,28 @@ export default async function DashboardPage() {
       {/* Production · sizes · activity */}
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
         <Panel
-          title="Production overview"
+          title={
+            <h2 className="flex items-center gap-1 text-sm font-semibold">
+              Production overview
+              <InfoTip label="About production overview">
+                Total eggs collected each day this week (green), against the same weekday last
+                week (gray) — lined up by day of week, not by date, so a Monday always compares
+                to the Monday before it. Use it to spot whether production is trending up or down
+                week over week.
+              </InfoTip>
+            </h2>
+          }
           className="lg:col-span-7 xl:col-span-6"
           action={<span className="text-xs text-muted-foreground">Last 7 days</span>}
         >
           <ProductionChart data={data.charts.production} />
           <p className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-4 rounded bg-good" aria-hidden />
+              <span className="size-2.5 shrink-0 rounded-full bg-good" aria-hidden />
               This week
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-4 rounded bg-muted-foreground/50" aria-hidden />
+              <span className="size-2.5 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden />
               Last week
             </span>
           </p>
@@ -140,16 +165,42 @@ export default async function DashboardPage() {
           totalTrays={data.inventory.totalTrays}
           hasNegative={data.inventory.hasNegative}
           ungradedEggs={data.inventory.ungradedEggs}
+          lowStockTrays={data.inventory.lowStockTrays}
           className="lg:col-span-6 xl:col-span-4"
         />
 
         <Panel
-          title="Sales overview"
+          title={
+            <h2 className="flex items-center gap-1 text-sm font-semibold">
+              Sales overview
+              <InfoTip label="About sales overview">
+                Total value of egg sales recorded for the selected period, broken down by day
+                (This month) or by month (This year). The percentage compares against the same
+                number of days in the prior month or year, so a few days into a new month isn&apos;t
+                compared against a full previous month.
+              </InfoTip>
+            </h2>
+          }
           className="lg:col-span-6 xl:col-span-5"
-          action={<span className="text-xs text-muted-foreground">Last 30 days</span>}
+          action={salesOverview && <SalesRangeToggle value={salesRange} />}
         >
-          {data.money.isComplete ? (
-            <SalesChart data={data.charts.sales} currency={context.currency} />
+          {salesOverview ? (
+            <>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <p className="stat-figure">
+                  {formatCurrencyShort(salesOverview.total, context.currency)}
+                </p>
+                <Delta value={salesOverview.deltaPercent} label={salesOverview.deltaLabel} />
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Total sales — {salesOverview.rangeLabel}
+              </p>
+              <SalesChart
+                data={salesOverview.series}
+                currency={context.currency}
+                emptyMessage={`No sales recorded ${salesRange === "month" ? "this month" : "this year"}.`}
+              />
+            </>
           ) : (
             <StatusNote tone="info">
               Sales tracking is on Starter.{" "}

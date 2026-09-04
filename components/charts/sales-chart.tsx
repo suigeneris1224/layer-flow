@@ -3,20 +3,27 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency, formatCurrencyShort } from "@/lib/format";
 
-/** Daily sales across the last 30 days. */
+/**
+ * Sales per point -- one bar per day (This month) or one per month (This
+ * year), whichever the caller resolved. `label` is shown as-is, both on the
+ * axis and in the tooltip, so it needs to already be exactly what the reader
+ * should see ("14" for a day-of-month, "Jan" for a month).
+ */
 export function SalesChart({
   data,
   currency,
+  emptyMessage = "No sales recorded.",
 }: {
-  data: { day: string; amount: number }[];
+  data: { label: string; amount: number }[];
   currency: string;
+  emptyMessage?: string;
 }) {
   const hasSales = data.some((point) => point.amount > 0);
 
   if (!hasSales) {
     return (
       <p className="py-12 text-center text-sm text-muted-foreground">
-        No sales recorded in the last 30 days.
+        {emptyMessage}
       </p>
     );
   }
@@ -27,12 +34,14 @@ export function SalesChart({
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
           <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
 
-          {/* Every third label: 30 ticks would be unreadable on a phone. */}
           <XAxis
-            dataKey="day"
+            dataKey="label"
             tickLine={false}
             axisLine={false}
-            interval={2}
+            // Daily (This month, ~30 points) skips two of every three ticks
+            // so they stay readable on a phone; monthly (This year, 12
+            // points) has room to show every one.
+            interval={data.length > 15 ? 2 : 0}
             tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
           />
           <YAxis
@@ -52,7 +61,6 @@ export function SalesChart({
               fontSize: 12,
             }}
             formatter={(value: number) => [formatCurrency(value, currency), "Sales"]}
-            labelFormatter={(label) => `Day ${label}`}
           />
 
           <Bar dataKey="amount" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} maxBarSize={14} />

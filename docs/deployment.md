@@ -1,7 +1,9 @@
 # Deployment
 
-Target: **Vercel + Supabase Cloud**. The same code runs locally and in production; only
-environment configuration differs. No business logic is environment-specific.
+Target: **Cloudflare Workers + Supabase Cloud**. The same code runs locally and in production;
+only environment configuration differs. No business logic is environment-specific — moving off
+Vercel changed nothing about the app itself, only how it's built and hosted (see `open-next.config.ts`,
+`wrangler.jsonc`, `workers/cron-worker.ts`).
 
 > Do not deploy until the migrations have been executed and verified locally. See the README.
 
@@ -47,54 +49,92 @@ rate-limited and not for production.
 Create the bucket named in `STORAGE_BUCKET` (default `layerflow`). Keep it **private** and add
 policies scoped to farm membership. Nothing in the current slice uploads files, so this can wait.
 
-## 5. Vercel
+## 5. Cloudflare Workers
 
-Import the repository, then set environment variables for **Production**, **Preview** and
-**Development**:
+The app deploys via [OpenNext's Cloudflare adapter](https://opennext.js.org/cloudflare)
+(`@opennextjs/cloudflare`), not the older "Cloudflare Pages" Next.js support and not Cloudflare's
+experimental `vinext` — OpenNext is the mature, production path, and requires no code changes
+because the app never sets `export const runtime = "edge"` anywhere; everything already runs on
+the Node.js runtime OpenNext expects.
 
-| Variable | Notes |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Safe in the browser; RLS constrains it |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Server only. Never prefix with `NEXT_PUBLIC_`.** |
-| `NEXT_PUBLIC_APP_URL` | `https://yourdomain.com` |
-| `STORAGE_BUCKET` | `layerflow` |
-| `BILLING_PROVIDER` | `paymongo` or `stripe` when real billing lands |
-| `BILLING_SECRET_KEY` | Server only |
-| `EMAIL_PROVIDER`, `EMAIL_FROM` | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
-| `BREVO_API_KEY` | Server only. Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
-| `CRON_SECRET` | Server only. Vercel Cron's request must carry it as `Authorization: Bearer <value>` |
-| `ADMIN_EMAILS` | Server only. Comma-separated, lowercase. Gates `/admin`; blank means nobody can reach it |
+**One-time setup:**
+```bash
+npx wrangler login
+```
 
-Build settings are the defaults: `npm run build`, output `.next`.
+**Build and deploy:**
+```bash
+npm run cf:build    # next build, then opennextjs-cloudflare's bundling step
+npm run cf:deploy    # uploads the built Worker to Cloudflare
+```
+(`npm run cf:preview` runs the built Worker locally via `wrangler dev` for a final check before
+deploying — see the Windows note below.)
+
+Cloudflare splits environment variables into two buckets, both needed:
+
+| Variable | Where | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Build var + runtime var | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Build var + runtime var | Safe in the browser; RLS constrains it |
+| `NEXT_PUBLIC_APP_URL` | Build var + runtime var | `https://yourdomain.com` (or the `*.workers.dev` URL before a custom domain is attached) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret | **Server only. Never prefix with `NEXT_PUBLIC_`.** |
+| `STORAGE_BUCKET` | Runtime var | `layerflow` |
+| `BILLING_PROVIDER` | Runtime var | `paymongo` or `stripe` when real billing lands |
+| `BILLING_SECRET_KEY` | Secret | Server only |
+| `EMAIL_PROVIDER`, `EMAIL_FROM` | Runtime var | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
+| `BREVO_API_KEY` | Secret | Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
+| `CRON_SECRET` | Secret | The scheduled Worker (`workers/cron-worker.ts`) sends it as `Authorization: Bearer <value>` — same value the route already expected under Vercel Cron |
+| `ADMIN_EMAILS` | Secret | Comma-separated, lowercase. Gates `/admin`; blank means nobody can reach it |
+
+`NEXT_PUBLIC_*` values are needed at **build** time too (to inline into the client bundle), not
+just at runtime — set them as both a Cloudflare "Build variable" and a runtime binding, or the
+build will inline an empty/stale value. Everything else only needs to exist at runtime.
+
+Locally, `wrangler dev`/`cf:preview` picks up `.env.local` automatically for these — no separate
+`.dev.vars` file needed.
 
 > **Build needs network access for fonts.** `next/font/google` fetches Bricolage Grotesque and
-> Public Sans at build time. Vercel has network access, so this is fine there — but a restricted
-> CI box will fail the build.
+> Public Sans at build time. Cloudflare's build environment has network access, so this is fine —
+> but a fully offline/restricted CI box will fail the build, same as it would have on Vercel.
 
-`vercel.json` declares a daily cron (`/api/cron/subscription-emails`, 01:00 UTC) that sends
-PAST_DUE and upcoming-renewal reminder emails. Vercel's Hobby tier limits cron frequency, but a
-once-daily job is within that limit on every tier.
+> **Windows note.** `wrangler dev`/`cf:preview`'s local `workerd` runtime is not fully compatible
+> with native Windows (confirmed directly: it starts, then crashes silently with no error output,
+> a known limitation — Cloudflare's own tooling warns about this on every build). `npm run cf:build`
+> and `npm run cf:deploy` are unaffected (they don't run the app locally, just bundle and upload
+> it), so this only blocks the local-preview step. If you need reliable local preview, run it from
+> WSL instead of native Windows; otherwise skip straight to a real deploy on a workers.dev URL for
+> testing.
+
+**Cron**: `vercel.json`'s daily cron (`/api/cron/subscription-emails`, 01:00 UTC) is replaced by a
+Cloudflare Cron Trigger declared in `wrangler.jsonc`'s `triggers.crons`, handled by
+`workers/cron-worker.ts`'s `scheduled()` export. It calls the exact same route with the exact same
+bearer secret — the route itself needed no changes. Test it directly with:
+```bash
+curl "http://127.0.0.1:8787/cdn-cgi/local/scheduled"   # local preview
+```
+or the "Trigger Cron" button on the Worker's dashboard page once deployed.
 
 ## 6. Domain and HTTPS
 
-Add the domain in Vercel and follow the DNS instructions. HTTPS and renewal are automatic. Update
-`NEXT_PUBLIC_APP_URL` and the Supabase Site URL to match, or auth redirects will break.
+Add a custom domain to the Worker from its Cloudflare dashboard page (**Settings → Domains &
+Routes**) — HTTPS and renewal are automatic. Update `NEXT_PUBLIC_APP_URL` and the Supabase Site
+URL to match, or auth redirects will break.
 
-Buying the domain through Vercel's registrar does not require a Pro plan — a custom domain works
-on Hobby too. The registrar and the DNS host do not have to be the same thing.
+Since the app is already hosted on Cloudflare, domain purchase and DNS both live in the same
+account and zone as everything below — there's no separate registrar/DNS host to keep in sync
+the way there was when Vercel hosted the app and Cloudflare only handled DNS.
 
 ### Support inbox, for free
 
-Vercel has no email product. A `support@layerflow.ph` inbox costs real money at most registrars;
-**Cloudflare Email Routing** forwards it to a personal inbox at no cost and needs no mailbox:
+A `support@layerflow.ph` inbox costs real money at most registrars; **Cloudflare Email Routing**
+forwards it to a personal inbox at no cost and needs no mailbox — same Cloudflare zone the domain
+and the Worker already live in:
 
-1. Point the domain's nameservers at Cloudflare (free account). This does not move hosting —
-   Vercel keeps serving the app; Cloudflare is only handling DNS now.
-2. In Cloudflare → **Email → Email Routing**, verify the domain and add a rule:
+1. In Cloudflare → **Email → Email Routing**, verify the domain and add a rule:
    `support@layerflow.ph` → your personal address.
-3. Re-add Vercel's domain records (the A/CNAME pair from step 6 above) in Cloudflare's DNS tab —
-   moving nameservers to Cloudflare does not carry old records over automatically.
+2. Confirm the Worker's custom-domain DNS record (from step 6 above) and the Email Routing MX/TXT
+   records coexist in the same zone without conflicting — Cloudflare manages both automatically
+   once Email Routing is enabled.
 
 This is receive-only: mail sent *to* `support@layerflow.ph` lands in a personal inbox. It has no
 effect on `EMAIL_FROM` (Brevo, in the table above) — that is what farmers see in the *From* line
@@ -124,9 +164,11 @@ scenario that ends a business.
 
 ## 8. Monitoring
 
-- Vercel gives you request logs and errors out of the box.
+- The Worker's dashboard page (**Logs**) gives you real-time request logs; **Observability →
+  Workers Analytics Engine** (or `wrangler tail`) covers errors and latency.
 - Supabase logs live under **Logs** in the dashboard.
-- `logger` emits one JSON line per event in production, which Vercel log drains parse directly.
+- `logger` emits one JSON line per event in production, which Cloudflare's log stream carries the
+  same way Vercel's log drains did.
 - To add Sentry or similar, implement `reportError` in `lib/observability/logger.ts`. Nothing else
   changes.
 
@@ -134,8 +176,9 @@ Worth alerting on: server action error rate, failed logins, and p95 dashboard re
 
 ## 9. Rollback
 
-**Application** — Vercel keeps every deployment. Promote the previous one from the dashboard.
-Rollback is near-instant and does not touch the database.
+**Application** — Cloudflare keeps a history of Worker deployments (dashboard **Deployments**
+tab, or `wrangler rollback [deployment-id]`). Rollback is near-instant and does not touch the
+database.
 
 **Database** — migrations are forward-only. There is no `down`.
 

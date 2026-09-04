@@ -5,13 +5,19 @@ import { requireUser } from "@/lib/auth/session";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
-import { devSetSubscriptionSchema, toFieldErrors } from "@/lib/validation/schemas";
+import {
+  addBetaTesterSchema,
+  devSetSubscriptionSchema,
+  toFieldErrors,
+} from "@/lib/validation/schemas";
 import {
   describeDatabaseError,
   describeUnknownError,
   failure,
   type ActionResult,
 } from "@/lib/errors";
+
+const MAX_BETA_TESTERS = 5;
 
 /**
  * The production-safe equivalent of app/(app)/billing/actions.ts's
@@ -80,5 +86,111 @@ export async function adminSetSubscriptionAction(
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "adminSetSubscriptionAction");
+  }
+}
+
+/** Flip the beta-testing toggle -- see lib/subscriptions/beta.ts for what it gates. */
+export async function setBetaModeAction(enabled: boolean): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { error } = await admin.from("beta_settings").update({ enabled }).eq("id", true);
+    if (error) return describeDatabaseError(error, "setBetaModeAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.BETA_MODE_TOGGLED,
+        entityType: "beta_settings",
+        metadata: { enabled },
+      },
+      admin
+    );
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "setBetaModeAction");
+  }
+}
+
+/** Add a beta tester by email, capped at MAX_BETA_TESTERS. */
+export async function addBetaTesterAction(input: unknown): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  const parsed = addBetaTesterSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { count } = await admin
+      .from("beta_testers")
+      .select("email", { count: "exact", head: true });
+
+    if ((count ?? 0) >= MAX_BETA_TESTERS) {
+      return failure(`You can have at most ${MAX_BETA_TESTERS} beta testers. Remove one first.`);
+    }
+
+    const { error } = await admin
+      .from("beta_testers")
+      .insert({ email: parsed.data.email, added_by: user.id });
+
+    if (error) return describeDatabaseError(error, "addBetaTesterAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.BETA_TESTER_ADDED,
+        entityType: "beta_testers",
+        metadata: { email: parsed.data.email },
+      },
+      admin
+    );
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "addBetaTesterAction");
+  }
+}
+
+/** Remove a beta tester by email. */
+export async function removeBetaTesterAction(email: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { error } = await admin.from("beta_testers").delete().eq("email", email);
+    if (error) return describeDatabaseError(error, "removeBetaTesterAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.BETA_TESTER_REMOVED,
+        entityType: "beta_testers",
+        metadata: { email },
+      },
+      admin
+    );
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "removeBetaTesterAction");
   }
 }

@@ -144,7 +144,7 @@ describe("history window", () => {
 describe("role permissions", () => {
   const as = (role: FarmContext["role"]): FarmContext => ({
     farmId: "f", farmName: "Farm", currency: "PHP", timezone: "Asia/Manila",
-    role, plan: "PRO", subscriptionStatus: "ACTIVE",
+    role, plan: "PRO", subscriptionStatus: "ACTIVE", isBetaOverride: false,
   });
 
   it("lets every member record production", () => {

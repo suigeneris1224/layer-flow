@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
-import { getAllSubscriptions } from "@/lib/data/admin";
+import { getAllSubscriptions, getBetaSettings } from "@/lib/data/admin";
 import { searchFarms, paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
 import { PLANS, PLAN_ORDER } from "@/lib/subscriptions/plans";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
@@ -15,6 +15,7 @@ import { Building2, Mail } from "lucide-react";
 import { AdminFarmRow } from "./admin-farm-row";
 import { FarmSearch } from "./farm-search";
 import { AdminPagination } from "./pagination";
+import { BetaPanel } from "./beta-panel";
 
 export const metadata: Metadata = { title: "Admin — Subscriptions" };
 
@@ -32,7 +33,7 @@ export default async function AdminSubscriptionsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const { q = "", page: pageParam } = await searchParams;
-  const rows = await getAllSubscriptions();
+  const [rows, betaSettings] = await Promise.all([getAllSubscriptions(), getBetaSettings()]);
 
   const countByPlan = Object.fromEntries(
     PLAN_ORDER.map((id) => [id, rows.filter((row) => row.plan === id).length])
@@ -75,6 +76,8 @@ export default async function AdminSubscriptionsPage({
           </Link>
         }
       />
+
+      <BetaPanel enabled={betaSettings.enabled} testers={betaSettings.testers} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {PLAN_ORDER.map((id) => (

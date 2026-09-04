@@ -20,7 +20,8 @@ import type { Database, Json } from "@/lib/types/database";
  */
 export async function recordAuditLog(
   params: {
-    farmId: string;
+    /** Null for a platform-level event with no farm to attach to (see the beta-testing actions). */
+    farmId: string | null;
     userId: string | null;
     action: string;
     entityType: string;
@@ -94,4 +95,7 @@ export const AUDIT_ACTIONS = {
   ALERT_THRESHOLDS_UPDATED: "alert_thresholds.updated",
   /** metadata carries { kind: "receipt" | "past_due_reminder" | "renewal_reminder", to: "self" | "owner", trigger: "manual" | "cron" }. */
   SUBSCRIPTION_EMAIL_SENT: "subscription.email_sent",
+  BETA_MODE_TOGGLED: "beta.mode_toggled",
+  BETA_TESTER_ADDED: "beta.tester_added",
+  BETA_TESTER_REMOVED: "beta.tester_removed",
 } as const;

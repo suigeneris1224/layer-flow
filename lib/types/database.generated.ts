@@ -65,7 +65,7 @@ export type Database = {
           created_at: string
           entity_id: string | null
           entity_type: string
-          farm_id: string
+          farm_id: string | null
           id: string
           metadata: Json | null
           user_id: string | null
@@ -75,7 +75,7 @@ export type Database = {
           created_at?: string
           entity_id?: string | null
           entity_type: string
-          farm_id: string
+          farm_id?: string | null
           id?: string
           metadata?: Json | null
           user_id?: string | null
@@ -85,7 +85,7 @@ export type Database = {
           created_at?: string
           entity_id?: string | null
           entity_type?: string
-          farm_id?: string
+          farm_id?: string | null
           id?: string
           metadata?: Json | null
           user_id?: string | null
@@ -99,6 +99,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      beta_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      beta_testers: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          email: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          email: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          email?: string
+        }
+        Relationships: []
       }
       customers: {
         Row: {

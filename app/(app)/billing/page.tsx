@@ -35,12 +35,19 @@ export default async function BillingPage() {
     <PageShell>
       <PageHeader title="Billing" description="Your plan and billing details." />
 
-      <RenewalBanner
-        plan={context.plan}
-        status={context.subscriptionStatus}
-        currentPeriodEnd={currentPeriodEnd}
-        showManageLink={false}
-      />
+      {context.isBetaOverride ? (
+        <StatusNote tone="info" title="Beta access">
+          You have complimentary Beta access to {PLANS[context.plan].name} features. This isn&apos;t
+          a paid subscription — there&apos;s nothing to renew or cancel.
+        </StatusNote>
+      ) : (
+        <RenewalBanner
+          plan={context.plan}
+          status={context.subscriptionStatus}
+          currentPeriodEnd={currentPeriodEnd}
+          showManageLink={false}
+        />
+      )}
 
       <BillingPanel
         planName={PLANS[context.plan].name}

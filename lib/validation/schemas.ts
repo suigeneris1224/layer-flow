@@ -266,6 +266,17 @@ export const devSetSubscriptionSchema = z.object({
   }),
 });
 
+/** Adding a beta tester by email -- lowercased to match beta_testers.email's primary key. */
+export const addBetaTesterSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, "Enter an email address")
+    .max(255)
+    .email("That doesn't look like an email address"),
+});
+
 export type RecordSaleInput = z.infer<typeof recordSaleSchema>;
 export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;

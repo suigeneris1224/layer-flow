@@ -150,3 +150,38 @@ export async function getEmailLog(limit = 200): Promise<AdminEmailLogRow[]> {
     };
   });
 }
+
+export interface BetaTesterRow {
+  email: string;
+  addedAt: string;
+}
+
+export interface BetaSettings {
+  enabled: boolean;
+  testers: BetaTesterRow[];
+}
+
+/** The beta-testing toggle and tester list, for app/admin/'s beta panel. */
+export async function getBetaSettings(): Promise<BetaSettings> {
+  const admin = createSupabaseAdminClient();
+
+  const [settingsResult, testersResult] = await Promise.all([
+    admin.from("beta_settings").select("enabled").eq("id", true).maybeSingle(),
+    admin.from("beta_testers").select("email, added_at").order("added_at", { ascending: true }),
+  ]);
+
+  if (settingsResult.error) {
+    logger.error("beta settings lookup failed", { reason: settingsResult.error.message });
+  }
+  if (testersResult.error) {
+    logger.error("beta testers lookup failed", { reason: testersResult.error.message });
+  }
+
+  return {
+    enabled: settingsResult.data?.enabled ?? false,
+    testers: (testersResult.data ?? []).map((row) => ({
+      email: row.email,
+      addedAt: row.added_at,
+    })),
+  };
+}

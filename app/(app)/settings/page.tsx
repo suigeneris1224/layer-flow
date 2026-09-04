@@ -50,7 +50,14 @@ export default async function SettingsPage() {
           </div>
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-sm text-muted-foreground">Plan</dt>
-            <dd className="text-sm font-medium">{plan.name}</dd>
+            <dd className="text-sm font-medium">
+              {plan.name}
+              {context.isBetaOverride && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  (Beta access)
+                </span>
+              )}
+            </dd>
           </div>
         </dl>
 

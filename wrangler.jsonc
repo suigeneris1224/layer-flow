@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "layerflow",
+  // Points at the custom worker wrapper (workers/cron-worker.ts), not
+  // OpenNext's generated .open-next/worker.js directly -- the wrapper is
+  // what adds the scheduled() handler for the daily subscription-email
+  // cron alongside the untouched Next.js fetch handler. See that file.
+  "main": "workers/cron-worker.ts",
+  "compatibility_date": "2026-09-04",
+  // Required for OpenNext's Node.js-runtime mode, and covers the app's
+  // node:crypto randomUUID() usage (app/(app)/team/actions.ts,
+  // app/onboarding/actions.ts, app/(app)/farms/actions.ts).
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  // Same schedule vercel.json used: daily at 01:00 UTC.
+  "triggers": {
+    "crons": ["0 1 * * *"]
+  }
+}

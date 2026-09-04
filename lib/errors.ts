@@ -52,6 +52,7 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   // the precheck (houseHasFlocks) already blocks this in the normal case.
   flocks_house_id_fkey:
     "This house has a flock recorded against it, including past ones. Houses with any flock history cannot be deleted.",
+  beta_testers_pkey: "This person is already a beta tester.",
 };
 
 const CODE_MESSAGES: Record<string, string> = {

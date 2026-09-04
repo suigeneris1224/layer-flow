@@ -6,6 +6,8 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient, REMEMBER_ME_COOKIE } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isBetaModeEnabled, isListedBetaTester } from "@/lib/subscriptions/beta";
 import { publicEnv } from "@/lib/config/env";
 import { describeAuthError, describeUnknownError, failure, type ActionFailure } from "@/lib/errors";
 import { logger } from "@/lib/observability/logger";
@@ -68,6 +70,20 @@ export async function signUpAction(
   const next = String(formData.get("next") ?? "");
 
   try {
+    // Closed beta: while free-tier infra can't absorb open growth, only the
+    // handful of listed testers may register. No session exists yet, so RLS
+    // (beta_testers_select_self) can't apply -- this is the admin client's
+    // one legitimate pre-session use, per lib/supabase/admin.ts's doc comment.
+    const admin = createSupabaseAdminClient();
+    if (
+      (await isBetaModeEnabled(admin)) &&
+      !(await isListedBetaTester(parsed.data.email, admin))
+    ) {
+      return failure(
+        "LayerFlow is in a closed beta right now. If you'd like early access, reach out and we'll add you."
+      );
+    }
+
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signUp({
       email: parsed.data.email,

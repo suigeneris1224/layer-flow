@@ -17,6 +17,14 @@ backups
 # Verification builds (kept separate so they never clobber a running dev server)
 .next-verify
 
+# Cloudflare/OpenNext build output and local runtime state -- .wrangler/ in
+# particular caches request/response data from `wrangler dev`/`cf:preview`
+# (miniflare's local SQLite stores), which can include the env vars
+# `.env.local` was loaded with. Neither is ever meant to be committed.
+.open-next
+.wrangler
+.dev.vars
+
 # Claude Code machine-local settings (permissions, per-machine config).
 # launch.json is intentionally shared; settings.local.json is not.
 .claude/settings.local.json

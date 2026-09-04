@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasBetaProAccess } from "@/lib/subscriptions/beta";
 import type { FarmRole, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
 export const ACTIVE_FARM_COOKIE = "lf_active_farm";
@@ -22,6 +23,12 @@ export interface FarmContext {
   role: FarmRole;
   plan: SubscriptionPlan;
   subscriptionStatus: SubscriptionStatus;
+  /**
+   * True when `plan`/`subscriptionStatus` above come from the beta-testing
+   * override (lib/subscriptions/beta.ts), not a real subscription -- lets
+   * billing/renewal UI avoid presenting complimentary access as a paid plan.
+   */
+  isBetaOverride: boolean;
 }
 
 /**
@@ -100,10 +107,27 @@ export const getFarmContext = cache(async (): Promise<FarmContext | null> => {
     .eq("farm_id", selected.farmId)
     .maybeSingle();
 
+  let plan: SubscriptionPlan = subscription?.plan ?? "FREE";
+  let subscriptionStatus: SubscriptionStatus = subscription?.status ?? "ACTIVE";
+  let isBetaOverride = false;
+
+  // Beta testing gives the OWNER of their own farm full Pro access with no
+  // real subscription -- restricted to owned farms so it can never boost a
+  // farm the tester merely belongs to (see lib/subscriptions/beta.ts).
+  if (selected.role === "OWNER") {
+    const user = await getSessionUser();
+    if (user && (await hasBetaProAccess(user.email))) {
+      plan = "PRO";
+      subscriptionStatus = "ACTIVE";
+      isBetaOverride = true;
+    }
+  }
+
   return {
     ...selected,
-    plan: subscription?.plan ?? "FREE",
-    subscriptionStatus: subscription?.status ?? "ACTIVE",
+    plan,
+    subscriptionStatus,
+    isBetaOverride,
   };
 });
 

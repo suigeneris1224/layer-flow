@@ -30,15 +30,16 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const context = await requireFarmContext();
   const isOwner = canManageBilling(context);
+  const showRenewalBanner = isOwner && !context.isBetaOverride;
   const [data, farmOverview, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),
     getFarmOverview(context.farmId),
-    isOwner ? getSubscriptionPeriod(context.farmId) : Promise.resolve(null),
+    showRenewalBanner ? getSubscriptionPeriod(context.farmId) : Promise.resolve(null),
   ]);
 
   return (
     <PageShell>
-      {isOwner && subscriptionPeriod && (
+      {showRenewalBanner && subscriptionPeriod && (
         <RenewalBanner
           plan={context.plan}
           status={context.subscriptionStatus}

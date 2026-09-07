@@ -1123,6 +1123,53 @@ export type Database = {
           },
         ]
       }
+      support_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          farm_id: string
+          id: string
+          message: string
+          priority: boolean
+          status: string
+          subject: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          farm_id: string
+          id?: string
+          message: string
+          priority?: boolean
+          status?: string
+          subject: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          farm_id?: string
+          id?: string
+          message?: string
+          priority?: boolean
+          status?: string
+          subject?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vaccinations: {
         Row: {
           created_at: string

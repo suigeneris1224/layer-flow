@@ -48,7 +48,8 @@ export interface AnalyticsData {
   };
   charts: {
     layingRate: LayingRatePoint[];
-    sizes: SizeSlice[];
+    /** Only populated when the farm's plan includes egg_size_analytics. */
+    sizes: SizeSlice[] | null;
   };
   /** Only populated when the farm's plan includes flock_comparison. */
   flockComparison: FlockComparisonRow[] | null;
@@ -77,6 +78,7 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
 
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
   const hasFlockComparison = canAccess(entitlement, "flock_comparison");
+  const hasSizeAnalytics = canAccess(entitlement, "egg_size_analytics");
 
   const [production, feed, sizes, flocks] = await Promise.all([
     supabase
@@ -91,14 +93,16 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
       .eq("farm_id", context.farmId)
       .gte("usage_date", range.from)
       .lte("usage_date", range.to),
-    supabase
-      .from("daily_egg_size_production")
-      .select(
-        "quantity, egg_sizes!inner(name, sort_order), daily_production!inner(farm_id, production_date)"
-      )
-      .eq("daily_production.farm_id", context.farmId)
-      .gte("daily_production.production_date", range.from)
-      .lte("daily_production.production_date", range.to),
+    hasSizeAnalytics
+      ? supabase
+          .from("daily_egg_size_production")
+          .select(
+            "quantity, egg_sizes!inner(name, sort_order), daily_production!inner(farm_id, production_date)"
+          )
+          .eq("daily_production.farm_id", context.farmId)
+          .gte("daily_production.production_date", range.from)
+          .lte("daily_production.production_date", range.to)
+      : Promise.resolve({ data: [], error: null }),
     hasFlockComparison ? getFlocks(context.farmId) : Promise.resolve([]),
   ]);
 
@@ -131,7 +135,7 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
     },
     charts: {
       layingRate: layingRateSeries,
-      sizes: buildSizeSlices(sizes.data ?? []),
+      sizes: hasSizeAnalytics ? buildSizeSlices(sizes.data ?? []) : null,
     },
     flockComparison: hasFlockComparison
       ? buildFlockComparison(flocks, productionRows, today)

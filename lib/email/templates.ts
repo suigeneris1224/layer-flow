@@ -82,3 +82,25 @@ export function buildRenewalReminderEmail(
     text,
   };
 }
+
+/** Notifies the support inbox of a new request -- see app/(app)/support/actions.ts. */
+export function buildSupportRequestNotificationEmail(ctx: {
+  farmName: string;
+  submitterEmail: string;
+  priority: boolean;
+  subject: string;
+  message: string;
+}): BuiltEmail {
+  const tag = ctx.priority ? "[Priority] " : "";
+  const bodyLines = [
+    `New support request from ${ctx.farmName} (${ctx.submitterEmail})${ctx.priority ? " -- Pro plan, priority handling." : "."}`,
+    `Subject: ${ctx.subject}`,
+    ctx.message,
+  ];
+
+  return {
+    subject: `${tag}Support request: ${ctx.subject}`,
+    html: `<p>${bodyLines.map((line) => line.replace(/\n/g, "<br />")).join("</p><p>")}</p>`,
+    text: bodyLines.join("\n\n"),
+  };
+}

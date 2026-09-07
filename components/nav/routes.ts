@@ -4,9 +4,11 @@ import {
   Boxes,
   ClipboardList,
   FolderTree,
+  GitCompare,
   HeartPulse,
   Home,
   Layers,
+  LifeBuoy,
   LineChart,
   PhilippinePeso,
   Receipt,
@@ -88,7 +90,17 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "analytics", href: "/analytics", label: "Analytics", icon: LineChart },
       { key: "reports", href: "/reports", label: "Reports", icon: BarChart3 },
+      {
+        key: "cross-farm",
+        href: "/reports/cross-farm",
+        label: "Compare Farms",
+        icon: GitCompare,
+      },
     ],
+  },
+  {
+    label: "Support",
+    items: [{ key: "support", href: "/support", label: "Support", icon: LifeBuoy }],
   },
 ];
 

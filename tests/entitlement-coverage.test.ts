@@ -21,6 +21,8 @@ const ENFORCED: Record<Feature, string> = {
   customers: "app/(app)/customers/{page,actions}.ts",
   full_expenses: "app/(app)/expenses/page.tsx",
   production_charts: "app/(app)/analytics/page.tsx",
+  egg_size_analytics:
+    "lib/data/dashboard.ts + lib/data/analytics.ts — the eggs-by-size panel on /dashboard and /analytics",
   flock_comparison: "lib/data/analytics.ts",
   reports: "app/(app)/reports/page.tsx",
   advanced_reports: "lib/data/reports.ts — profitability by flock",
@@ -32,23 +34,21 @@ const ENFORCED: Record<Feature, string> = {
   multi_farm: "enforced indirectly by the `farms` limit in farms/actions.ts",
   offline_mode:
     "app/(app)/production/new/page.tsx + app/(app)/health/page.tsx — canAccess gates whether the offline queue (lib/offline/) is used at all",
+  cross_farm_reporting: "app/(app)/reports/cross-farm/page.tsx",
+  priority_support: "app/(app)/support/actions.ts — priority flag set from context.plan/isBetaOverride",
 } as Record<Feature, string>;
 
 /**
  * Sold on the pricing page, no implementing code yet.
  *
- * `profitability` and `egg_size_analytics` are a different case from the rest:
- * they are Starter features that Free users can see today. Gating them would
- * take something away from existing users, which is a product decision and not
- * one to make as a side effect of an audit. They stay here until that call is
- * made deliberately.
+ * Kept empty on purpose: every feature plans.ts sells now has a real
+ * enforcement site. `profitability` used to sit here -- it was removed from
+ * plans.ts entirely rather than gated, since the one place it was genuinely
+ * ungated (the dashboard's headline Est. profit KPI) has no clean "locked"
+ * affordance, and everywhere else it would apply was already covered by
+ * `reports`/`advanced_reports`.
  */
-const NOT_YET_BUILT: Partial<Record<Feature, string>> = {
-  cross_farm_reporting: "Every data function takes a single farmId.",
-  priority_support: "Not a software feature; nothing to gate.",
-  profitability: "Ungated on Free today. Gating it is a deliberate product call.",
-  egg_size_analytics: "Ungated on Free today. Gating it is a deliberate product call.",
-};
+const NOT_YET_BUILT: Partial<Record<Feature, string>> = {};
 
 const ALL_FEATURES = [...new Set(Object.values(PLANS).flatMap((plan) => plan.features))];
 

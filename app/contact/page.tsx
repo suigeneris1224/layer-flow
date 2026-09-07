@@ -43,6 +43,14 @@ export default function ContactPage() {
             On a paid plan and need faster turnaround? Mention your farm name and plan in your
             email — Pro plans get priority handling.
           </p>
+
+          <p className="mt-2 text-sm text-muted-foreground">
+            Already signed in? Use{" "}
+            <a href="/support" className="font-medium text-primary hover:underline">
+              Support
+            </a>{" "}
+            in your dashboard instead — it reaches us faster.
+          </p>
         </PageShell>
       </main>
 

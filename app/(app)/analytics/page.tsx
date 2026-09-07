@@ -112,9 +112,16 @@ export default async function AnalyticsPage({
               <LayingRateChart data={data.charts.layingRate} />
             </Panel>
 
-            <Panel title="Eggs by size" className="lg:col-span-4 lg:self-start">
-              <EggSizeDonut slices={data.charts.sizes} total={data.totals.totalEggs} />
-            </Panel>
+            {data.charts.sizes ? (
+              <Panel title="Eggs by size" className="lg:col-span-4 lg:self-start">
+                <EggSizeDonut slices={data.charts.sizes} total={data.totals.totalEggs} />
+              </Panel>
+            ) : (
+              <UpgradePanel
+                className="lg:col-span-4"
+                prompt={featureLockedPrompt(entitlement, "egg_size_analytics")}
+              />
+            )}
           </div>
 
           {data.flockComparison ? (

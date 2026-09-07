@@ -185,3 +185,68 @@ export async function getBetaSettings(): Promise<BetaSettings> {
     })),
   };
 }
+
+export interface SupportRequestRow {
+  id: string;
+  farmName: string;
+  submitterEmail: string | null;
+  subject: string;
+  message: string;
+  priority: boolean;
+  status: string;
+  createdAt: string;
+}
+
+interface SupportRequestJoinRow {
+  id: string;
+  farm_id: string;
+  submitted_by: string;
+  subject: string;
+  message: string;
+  priority: boolean;
+  status: string;
+  created_at: string;
+  farms: { name: string } | { name: string }[] | null;
+}
+
+/**
+ * Every open request, priority first then newest -- for app/admin/'s support
+ * panel. Same "one listUsers() call, not one per row" shape as
+ * getAllSubscriptions, since submitter email isn't stored on the row itself.
+ */
+export async function getSupportRequests(): Promise<SupportRequestRow[]> {
+  const admin = createSupabaseAdminClient();
+
+  const [requestsResult, usersResult] = await Promise.all([
+    admin
+      .from("support_requests")
+      .select(
+        "id, farm_id, submitted_by, subject, message, priority, status, created_at, farms!inner(name)"
+      )
+      .eq("status", "open")
+      .order("priority", { ascending: false })
+      .order("created_at", { ascending: false }),
+    admin.auth.admin.listUsers(),
+  ]);
+
+  if (requestsResult.error) {
+    logger.error("support requests lookup failed", { reason: requestsResult.error.message });
+    return [];
+  }
+  if (usersResult.error) {
+    logger.error("admin user list lookup failed", { reason: usersResult.error.message });
+  }
+
+  const emailById = new Map(usersResult.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
+
+  return ((requestsResult.data ?? []) as unknown as SupportRequestJoinRow[]).map((row) => ({
+    id: row.id,
+    farmName: one(row.farms)?.name ?? "Unknown farm",
+    submitterEmail: emailById.get(row.submitted_by) ?? null,
+    subject: row.subject,
+    message: row.message,
+    priority: row.priority,
+    status: row.status,
+    createdAt: row.created_at,
+  }));
+}

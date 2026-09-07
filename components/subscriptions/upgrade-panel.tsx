@@ -12,9 +12,21 @@ import type { UpgradePrompt } from "@/lib/subscriptions/entitlements";
  * plan that unlocks it is read from lib/subscriptions/plans.ts rather than
  * restated here and left to go stale.
  */
-export function UpgradePanel({ prompt }: { prompt: UpgradePrompt }) {
+export function UpgradePanel({
+  prompt,
+  className,
+}: {
+  prompt: UpgradePrompt;
+  /** For dropping this into a sized grid slot (e.g. a locked KPI/chart cell). */
+  className?: string;
+}) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 p-8 text-center">
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 p-8 text-center",
+        className
+      )}
+    >
       <Lock className="size-8 text-muted-foreground" aria-hidden />
       <div>
         <p className="font-medium">{prompt.title}</p>

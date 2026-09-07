@@ -129,6 +129,8 @@ export interface DashboardData {
   charts: {
     production: SeriesPoint[];
     sizesToday: SizeSlice[];
+    /** False on Free, where the size breakdown is a locked upsell rather than data. */
+    hasSizeAnalytics: boolean;
   };
   flocks: ActiveFlockSummary[];
   flockStatus: FlockStatus;
@@ -193,6 +195,7 @@ export const getDashboardData = cache(async function getDashboardData(
    * an empty alert list regardless.
    */
   const hasAdvancedAlerts = hasAlerts && canAccess(entitlement, "advanced_alerts");
+  const hasSizeAnalytics = canAccess(entitlement, "egg_size_analytics");
 
   const [
     production,
@@ -412,9 +415,14 @@ export const getDashboardData = cache(async function getDashboardData(
     },
     charts: {
       production: buildProductionSeries(productionRows, today),
-      sizesToday: buildSizeSlices(
-        sizeProductionRows.filter((row) => oneOf(row.daily_production)?.production_date === today)
-      ),
+      sizesToday: hasSizeAnalytics
+        ? buildSizeSlices(
+            sizeProductionRows.filter(
+              (row) => oneOf(row.daily_production)?.production_date === today
+            )
+          )
+        : [],
+      hasSizeAnalytics,
     },
     flocks: buildFlockSummaries(flockRows, todayProduction),
     flockStatus: flockStatusLine(deathsThisWeek, hensOnFarm),

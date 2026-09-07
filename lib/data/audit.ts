@@ -98,4 +98,6 @@ export const AUDIT_ACTIONS = {
   BETA_MODE_TOGGLED: "beta.mode_toggled",
   BETA_TESTER_ADDED: "beta.tester_added",
   BETA_TESTER_REMOVED: "beta.tester_removed",
+  SUPPORT_REQUEST_CREATED: "support_request.created",
+  SUPPORT_REQUEST_RESOLVED: "support_request.resolved",
 } as const;

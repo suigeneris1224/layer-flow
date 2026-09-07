@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bird, Egg, PhilippinePeso, Plus, Receipt, TrendingUp } from "lucide-react";
 import { getUserFarms, requireFarmContext } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
+import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getFarmCardsForUser } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
@@ -14,6 +15,7 @@ import { StatusNote } from "@/components/ui/states";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Delta } from "@/components/ui/delta";
 import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
+import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { PageShell } from "@/components/layout/page-shell";
 // Deferred: Recharts is heavy and must not block the figures. See charts/lazy.
 import { EggSizeDonut, ProductionChart, SalesChart } from "@/components/charts/lazy";
@@ -39,6 +41,7 @@ export default async function DashboardPage({
   const context = await requireFarmContext();
   const isOwner = canManageBilling(context);
   const showRenewalBanner = isOwner && !context.isBetaOverride;
+  const entitlement = { plan: context.plan, status: context.subscriptionStatus };
   const { salesRange: salesRangeParam } = await searchParams;
   const salesRange: SalesOverviewRange =
     salesRangeParam === "year" ? "year" : salesRangeParam === "month" ? "month" : "week";
@@ -150,9 +153,16 @@ export default async function DashboardPage({
           </p>
         </Panel>
 
-        <Panel title="Eggs by size" className="lg:col-span-5 xl:col-span-3">
-          <EggSizeDonut slices={data.charts.sizesToday} total={data.today.eggs} />
-        </Panel>
+        {data.charts.hasSizeAnalytics ? (
+          <Panel title="Eggs by size" className="lg:col-span-5 xl:col-span-3">
+            <EggSizeDonut slices={data.charts.sizesToday} total={data.today.eggs} />
+          </Panel>
+        ) : (
+          <UpgradePanel
+            className="lg:col-span-5 xl:col-span-3"
+            prompt={featureLockedPrompt(entitlement, "egg_size_analytics")}
+          />
+        )}
 
         <Panel title="Recent activity" className="lg:col-span-12 xl:col-span-3">
           <RecentActivity entries={data.activity} timezone={context.timezone} />

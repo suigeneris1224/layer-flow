@@ -165,6 +165,40 @@ export async function addBetaTesterAction(input: unknown): Promise<ActionResult>
   }
 }
 
+/** Mark a support request resolved. */
+export async function resolveSupportRequestAction(requestId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { error } = await admin
+      .from("support_requests")
+      .update({ status: "resolved" })
+      .eq("id", requestId);
+
+    if (error) return describeDatabaseError(error, "resolveSupportRequestAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.SUPPORT_REQUEST_RESOLVED,
+        entityType: "support_request",
+        entityId: requestId,
+      },
+      admin
+    );
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "resolveSupportRequestAction");
+  }
+}
+
 /** Remove a beta tester by email. */
 export async function removeBetaTesterAction(email: string): Promise<ActionResult> {
   const user = await requireUser();

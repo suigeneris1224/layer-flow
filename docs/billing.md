@@ -4,17 +4,21 @@
 
 | | Free | Starter | Pro |
 |---|---|---|---|
-| Price | ₱0 | **₱199/mo** | ₱499/mo |
+| Price | ₱0 | **₱349/mo** | ₱899/mo |
 | Farms | 1 | 1 | 3 |
 | Houses | 1 | 3 | Unlimited |
 | Active flocks | 1 | 5 | Unlimited |
-| Users | 1 | 2 | 10 |
+| Users | 1 | 1 | 10 |
 | Customers | — | 20 | Unlimited |
 | History | 30 days | Unlimited | Unlimited |
 
 Free covers daily production, egg sizes, basic inventory, mortality, feed and a basic dashboard.
-Starter adds sales, full expenses, profitability, charts, alerts, reports and offline mode. Pro
-adds multiple farms, advanced reports, flock comparison, CSV export and team management.
+Starter adds sales, full expenses, egg size analytics, charts, alerts, reports and offline mode.
+Pro adds multiple farms, advanced reports, flock comparison, CSV export, team management,
+cross-farm reporting and priority support.
+
+Starter's Users stays at 1 -- team management (inviting a 2nd person) is Pro-only, so the limit
+is never reached on Starter.
 
 Everything above is defined **once**, in `lib/subscriptions/plans.ts`. The pricing page renders
 from it. Nothing is hard-coded in JSX, and adding a plan is a one-file change.

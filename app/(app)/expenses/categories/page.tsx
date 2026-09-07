@@ -3,13 +3,14 @@ import { FolderTree } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getExpensesByCategory } from "@/lib/data/expenses";
+import { getFarmStartYear } from "@/lib/data/farms";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { ExpenseCategoryChart } from "@/components/charts/lazy";
-import { RangePicker } from "@/components/reports/range-picker";
-import { listRecentMonths, listRecentYears, resolveReportRange } from "@/lib/domain/reports";
+import { ReportRangeSelect } from "@/components/reports/report-range-select";
+import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
 import { farmToday, formatCurrency, formatPercent } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Expense categories" };
@@ -36,7 +37,10 @@ export default async function ExpenseCategoriesPage({
   const today = farmToday(context.timezone);
   const { range: rangeParam } = await searchParams;
   const range = resolveReportRange(rangeParam, today);
-  const breakdown = await getExpensesByCategory(context, range);
+  const [breakdown, startYear] = await Promise.all([
+    getExpensesByCategory(context, range),
+    getFarmStartYear(context.farmId),
+  ]);
 
   return (
     <PageShell>
@@ -44,11 +48,10 @@ export default async function ExpenseCategoriesPage({
         title="Expense categories"
         description="Where your money goes, by category."
         action={
-          <RangePicker
+          <ReportRangeSelect
             basePath="/expenses/categories"
             value={range.value}
-            months={listRecentMonths(today)}
-            years={listRecentYears(today)}
+            years={listYearsSince(startYear, today)}
           />
         }
       />

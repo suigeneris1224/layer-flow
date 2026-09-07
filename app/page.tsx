@@ -157,8 +157,8 @@ const ALERT_TONE = {
 
 const PLAN_FEATURE_ROWS: Record<string, Feature[]> = {
   FREE: ["production_charts"],
-  STARTER: ["egg_sales", "full_expenses", "profitability", "alerts", "reports"],
-  PRO: ["team_management", "multi_farm", "advanced_reports", "data_export"],
+  STARTER: ["egg_sales", "full_expenses", "egg_size_analytics", "alerts", "reports"],
+  PRO: ["team_management", "multi_farm", "cross_farm_reporting", "priority_support"],
 };
 
 const FAQ_ITEMS = [

@@ -12,7 +12,6 @@ export type Feature =
   | "egg_sales"
   | "customers"
   | "full_expenses"
-  | "profitability"
   | "production_charts"
   | "egg_size_analytics"
   | "alerts"
@@ -57,7 +56,6 @@ const STARTER_FEATURES: readonly Feature[] = [
   "egg_sales",
   "customers",
   "full_expenses",
-  "profitability",
   "production_charts",
   "egg_size_analytics",
   "alerts",
@@ -97,7 +95,7 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   STARTER: {
     id: "STARTER",
     name: "Starter",
-    priceCentavos: 19_900,
+    priceCentavos: 34_900,
     tagline: "Sell eggs and see what you actually earn.",
     audience: "A working farm selling eggs and watching its costs.",
     highlight: "Most popular",
@@ -118,7 +116,7 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   PRO: {
     id: "PRO",
     name: "Pro",
-    priceCentavos: 49_900,
+    priceCentavos: 89_900,
     tagline: "Run several farms with a team.",
     audience: "Multiple farms or houses, with staff recording data.",
     limits: {
@@ -174,7 +172,6 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   egg_sales: "Egg sales",
   customers: "Customer records",
   full_expenses: "Full expense tracking",
-  profitability: "Profitability",
   production_charts: "Production charts",
   egg_size_analytics: "Egg size analytics",
   alerts: "Alerts",

@@ -97,18 +97,6 @@ export interface RangeOption {
   label: string;
 }
 
-/** The last `count` full calendar months, newest first, for the month picker. */
-export function listRecentMonths(today: string, count = 24): RangeOption[] {
-  const [year, month] = today.slice(0, 7).split("-").map(Number);
-  return Array.from({ length: count }, (_, index) => {
-    const offset = month - 1 - index;
-    const y = year + Math.floor(offset / 12);
-    const m = ((offset % 12) + 12) % 12; // 0-11
-    const ym = `${y}-${String(m + 1).padStart(2, "0")}`;
-    return { value: `m:${ym}`, label: monthLabel(ym) };
-  });
-}
-
 /** Inclusive day count between two ISO dates, for sizing a "previous period" comparison window. */
 export function daysBetween(from: string, to: string): number {
   const a = new Date(`${from}T00:00:00Z`).getTime();
@@ -165,15 +153,6 @@ export function eachDate(from: string, to: string): string[] {
     dates.push(cursor);
   }
   return dates;
-}
-
-/** The last `count` calendar years, newest first, for the year picker. */
-export function listRecentYears(today: string, count = 5): RangeOption[] {
-  const year = Number(today.slice(0, 4));
-  return Array.from({ length: count }, (_, index) => {
-    const y = String(year - index);
-    return { value: `y:${y}`, label: y };
-  });
 }
 
 /**

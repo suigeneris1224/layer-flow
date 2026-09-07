@@ -27,7 +27,6 @@ const FEATURE_ROWS: Feature[] = [
   "egg_sales",
   "customers",
   "full_expenses",
-  "profitability",
   "production_charts",
   "egg_size_analytics",
   "alerts",
@@ -38,6 +37,8 @@ const FEATURE_ROWS: Feature[] = [
   "data_export",
   "team_management",
   "multi_farm",
+  "cross_farm_reporting",
+  "priority_support",
 ];
 
 function describeLimit(key: LimitKey, value: number | null): string {

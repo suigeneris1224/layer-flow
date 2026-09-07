@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -10,6 +11,7 @@ import { submitSupportRequestAction } from "./actions";
 
 /** Ask for help. Every plan can submit; the Pro perk is response priority, not access to the form. */
 export function SupportForm({ priority }: { priority: boolean }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -39,6 +41,7 @@ export function SupportForm({ priority }: { priority: boolean }) {
           ? "Sent, with priority handling. We'll get back to you soon."
           : "Sent. We'll get back to you soon."
       );
+      router.refresh();
     });
   }
 

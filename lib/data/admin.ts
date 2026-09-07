@@ -222,8 +222,10 @@ interface SupportRequestJoinRow {
 }
 
 /**
- * Every open request, priority first then newest -- for app/admin/'s support
- * panel. Same "one listUsers() call, not one per row" shape as
+ * Every request, open first (then priority, then newest) -- for app/admin/'s
+ * support panel, which splits this into an open list and a collapsed
+ * "Resolved" section itself. Capped at 100 rows so history doesn't grow
+ * without bound; same "one listUsers() call, not one per row" shape as
  * getAllSubscriptions, since submitter email isn't stored on the row itself.
  */
 export async function getSupportRequests(): Promise<SupportRequestRow[]> {
@@ -235,9 +237,10 @@ export async function getSupportRequests(): Promise<SupportRequestRow[]> {
       .select(
         "id, farm_id, submitted_by, subject, message, priority, status, created_at, farms!inner(name)"
       )
-      .eq("status", "open")
+      .order("status", { ascending: true })
       .order("priority", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(100),
     admin.auth.admin.listUsers(),
   ]);
 

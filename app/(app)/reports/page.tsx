@@ -3,14 +3,15 @@ import { BarChart3, PhilippinePeso, Receipt, TrendingUp } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getReportsData } from "@/lib/data/reports";
+import { getFarmStartYear } from "@/lib/data/farms";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { ProfitChart } from "@/components/charts/lazy";
-import { RangePicker } from "@/components/reports/range-picker";
-import { listRecentMonths, listRecentYears, resolveReportRange } from "@/lib/domain/reports";
+import { ReportRangeSelect } from "@/components/reports/report-range-select";
+import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
 import {
   farmToday,
   formatCurrency,
@@ -44,7 +45,10 @@ export default async function ReportsPage({
   const today = farmToday(context.timezone);
   const { range: rangeParam } = await searchParams;
   const range = resolveReportRange(rangeParam, today);
-  const data = await getReportsData(context, range);
+  const [data, startYear] = await Promise.all([
+    getReportsData(context, range),
+    getFarmStartYear(context.farmId),
+  ]);
   const hasMoney = data.totals.revenue > 0 || data.totals.cost > 0;
 
   return (
@@ -53,11 +57,10 @@ export default async function ReportsPage({
         title="Reports"
         description="Revenue, cost, and estimated profit over time."
         action={
-          <RangePicker
+          <ReportRangeSelect
             basePath="/reports"
             value={range.value}
-            months={listRecentMonths(today)}
-            years={listRecentYears(today)}
+            years={listYearsSince(startYear, today)}
           />
         }
       />

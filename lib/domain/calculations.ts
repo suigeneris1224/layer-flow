@@ -73,6 +73,12 @@ export function feedCost(quantityKg: number, costPerKg: number): number {
   return roundMoney(Math.max(0, quantityKg) * Math.max(0, costPerKg));
 }
 
+/** Cost per kg implied by a sack's price and weight, for the "buy by the sack" entry mode. */
+export function costPerKgFromSack(sackPrice: number, sackSizeKg: number): number {
+  if (sackSizeKg <= 0) return 0;
+  return Math.round((Math.max(0, sackPrice) / sackSizeKg) * 10000) / 10000;
+}
+
 /** Kilograms of feed per hen per day. Typical layer range is 0.10-0.13. */
 export function feedPerHen(quantityKg: number, hensPresent: number): number {
   if (hensPresent <= 0) return 0;

@@ -8,6 +8,7 @@ import { shiftDate } from "@/lib/format";
  * `{from, to}` window is what every query actually uses.
  */
 export type ReportRangeValue =
+  | "day"
   | "week"
   | "month"
   | "30"
@@ -43,7 +44,7 @@ function clampToToday(date: string, today: string): string {
 }
 
 export function resolveReportRange(raw: string | undefined, today: string): ResolvedRange {
-  const value = (raw as ReportRangeValue | undefined) ?? "30";
+  const value = (raw as ReportRangeValue | undefined) ?? "day";
 
   if (value.startsWith("m:")) {
     const ym = value.slice(2);
@@ -68,6 +69,8 @@ export function resolveReportRange(raw: string | undefined, today: string): Reso
   }
 
   switch (value) {
+    case "day":
+      return { value: "day", from: today, to: today, label: "Today" };
     case "week": {
       const day = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0=Sun..6=Sat
       const from = shiftDate(today, -((day + 6) % 7)); // back to Monday
@@ -169,6 +172,21 @@ export function listRecentYears(today: string, count = 5): RangeOption[] {
   const year = Number(today.slice(0, 4));
   return Array.from({ length: count }, (_, index) => {
     const y = String(year - index);
+    return { value: `y:${y}`, label: y };
+  });
+}
+
+/**
+ * Every calendar year from `startYear` up to last year, newest first.
+ *
+ * The current year is excluded -- "This year" already covers it -- so this is
+ * only the fully-elapsed years a farm has history for, back to when it started.
+ */
+export function listYearsSince(startYear: number, today: string): RangeOption[] {
+  const currentYear = Number(today.slice(0, 4));
+  const count = Math.max(0, currentYear - startYear);
+  return Array.from({ length: count }, (_, index) => {
+    const y = String(currentYear - 1 - index);
     return { value: `y:${y}`, label: y };
   });
 }

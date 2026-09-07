@@ -718,6 +718,7 @@ export type Database = {
           municipality: string
           name: string
           owner_id: string
+          photo_url: string | null
           province: string
           timezone: string
           updated_at: string
@@ -732,6 +733,7 @@ export type Database = {
           municipality?: string
           name: string
           owner_id: string
+          photo_url?: string | null
           province?: string
           timezone?: string
           updated_at?: string
@@ -746,6 +748,7 @@ export type Database = {
           municipality?: string
           name?: string
           owner_id?: string
+          photo_url?: string | null
           province?: string
           timezone?: string
           updated_at?: string
@@ -764,6 +767,8 @@ export type Database = {
           id: string
           notes: string | null
           quantity_kg: number
+          sack_price: number | null
+          sack_size_kg: number | null
           total_cost: number
           updated_at: string
           usage_date: string
@@ -779,6 +784,8 @@ export type Database = {
           id?: string
           notes?: string | null
           quantity_kg: number
+          sack_price?: number | null
+          sack_size_kg?: number | null
           total_cost?: number
           updated_at?: string
           usage_date: string
@@ -794,6 +801,8 @@ export type Database = {
           id?: string
           notes?: string | null
           quantity_kg?: number
+          sack_price?: number | null
+          sack_size_kg?: number | null
           total_cost?: number
           updated_at?: string
           usage_date?: string
@@ -1228,6 +1237,8 @@ export type Database = {
           p_mortality?: number
           p_notes?: string
           p_production_date: string
+          p_sack_price?: number
+          p_sack_size_kg?: number
           p_sizes?: Json
         }
         Returns: Json

@@ -137,3 +137,36 @@ export function shiftDate(date: string, days: number): string {
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }
+
+/** Monday of the calendar week containing `date` (weeks run Mon-Sun). */
+export function startOfWeek(date: string): string {
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay(); // 0 = Sun ... 6 = Sat
+  const offsetToMonday = day === 0 ? -6 : 1 - day;
+  return shiftDate(date, offsetToMonday);
+}
+
+/**
+ * "Sep 7 - 13, 2026" for a range within one month, expanding to repeat the
+ * month and/or year on the end date once the range crosses either boundary.
+ */
+export function formatDateRangeLabel(start: string, end: string): string {
+  const startValue = new Date(`${start}T00:00:00Z`);
+  const endValue = new Date(`${end}T00:00:00Z`);
+  const part = (value: Date, options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(PH_LOCALE, { timeZone: "UTC", ...options }).format(value);
+
+  const startMonth = part(startValue, { month: "short" });
+  const endMonth = part(endValue, { month: "short" });
+  const startYear = part(startValue, { year: "numeric" });
+  const endYear = part(endValue, { year: "numeric" });
+  const startDay = part(startValue, { day: "numeric" });
+  const endDay = part(endValue, { day: "numeric" });
+
+  if (startYear !== endYear) {
+    return `${startMonth} ${startDay}, ${startYear} - ${endMonth} ${endDay}, ${endYear}`;
+  }
+  if (startMonth !== endMonth) {
+    return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${endYear}`;
+  }
+  return `${startMonth} ${startDay} - ${endDay}, ${endYear}`;
+}

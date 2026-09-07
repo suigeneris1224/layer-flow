@@ -6,7 +6,7 @@ import { getDashboardData } from "@/lib/data/dashboard";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getProfile } from "@/lib/data/profile";
 import { greetingFor } from "@/lib/domain/presentation";
-import { farmHour, formatDate } from "@/lib/format";
+import { farmHour, farmToday, formatDateRangeLabel, shiftDate, startOfWeek } from "@/lib/format";
 import { DesktopSidebar } from "@/components/nav/desktop-sidebar";
 import { MobileTabBar } from "@/components/nav/mobile-tab-bar";
 import { AppTopbar } from "@/components/layout/app-topbar";
@@ -36,6 +36,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // 7am should not be told "good evening" because Vercel is on UTC.
   const greeting = greetingFor(farmHour(context.timezone));
 
+  // Mon-Sun range for the week in progress, e.g. "Sep 7 - 13, 2026".
+  const weekStart = startOfWeek(farmToday(context.timezone));
+  const weekLabel = formatDateRangeLabel(weekStart, shiftDate(weekStart, 6));
+
   const offlineEnabled = canAccess(
     { plan: context.plan, status: context.subscriptionStatus },
     "offline_mode"
@@ -56,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           notifications={notifications}
           unreadCount={unreadCount}
           timezone={context.timezone}
-          dateLabel={formatDate(new Date(), context.timezone)}
+          dateLabel={weekLabel}
           canManageBilling={canManageBilling(context)}
           isAdmin={isPlatformAdmin(user.email)}
         />

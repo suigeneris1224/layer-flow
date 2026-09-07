@@ -21,6 +21,7 @@ export interface FarmDetail {
   timezone: string;
   currency: string;
   ownerId: string;
+  photoUrl: string | null;
 }
 
 export async function getFarmDetail(farmId: string): Promise<FarmDetail | null> {
@@ -28,7 +29,9 @@ export async function getFarmDetail(farmId: string): Promise<FarmDetail | null> 
 
   const { data, error } = await supabase
     .from("farms")
-    .select("id, name, barangay, municipality, province, country, timezone, currency, owner_id")
+    .select(
+      "id, name, barangay, municipality, province, country, timezone, currency, owner_id, photo_url"
+    )
     .eq("id", farmId)
     .maybeSingle();
 
@@ -48,7 +51,32 @@ export async function getFarmDetail(farmId: string): Promise<FarmDetail | null> 
     timezone: data.timezone,
     currency: data.currency,
     ownerId: data.owner_id,
+    photoUrl: data.photo_url,
   };
+}
+
+/**
+ * The calendar year the farm was created, for the reports year picker.
+ *
+ * Falls back to the current year on any read failure, so a hiccup here just
+ * hides past years from the picker rather than breaking the page.
+ */
+export async function getFarmStartYear(farmId: string): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const currentYear = new Date().getUTCFullYear();
+
+  const { data, error } = await supabase
+    .from("farms")
+    .select("created_at")
+    .eq("id", farmId)
+    .maybeSingle();
+
+  if (error || !data?.created_at) {
+    if (error) logger.error("farm start year lookup failed", { reason: error.message });
+    return currentYear;
+  }
+
+  return new Date(data.created_at).getUTCFullYear();
 }
 
 /**
@@ -73,56 +101,73 @@ export async function getFarmCountForUser(userId: string): Promise<number> {
   return count ?? 0;
 }
 
-export interface FarmOverview {
-  houseCount: number;
-  /** Combined capacity of every house, in birds. */
-  totalCapacity: number;
-  activeFlockCount: number;
-  /** Live birds across active flocks, trigger-derived from the mortality ledger. */
+export interface FarmCard {
+  farmId: string;
+  photoUrl: string | null;
+  location: string;
   totalBirds: number;
-  /** Birds as a share of capacity, 0-100. Null when no capacity is recorded. */
-  capacityUsed: number | null;
+  houseCount: number;
 }
 
 /**
- * The structural picture of a farm: how many houses, how many flocks, how
- * full it is.
+ * The card data for every farm in `farmIds`, for the /farms overview grid.
  *
- * Deliberately separate from getDashboardData, which is about *today*. This
- * is about the setup, changes rarely, and reads two small tables -- folding
- * it into that function would have meant threading it through 500 lines for
- * no gain, since the page issues both in parallel anyway.
+ * Three grouped queries across all farms rather than one round trip per farm
+ * card -- a farmer with several farms would otherwise pay N+1 queries just to
+ * open the page.
  */
-export async function getFarmOverview(farmId: string): Promise<FarmOverview> {
+export async function getFarmCardsForUser(farmIds: string[]): Promise<Record<string, FarmCard>> {
+  if (farmIds.length === 0) return {};
+
   const supabase = await createSupabaseServerClient();
 
-  const [housesResult, flocksResult] = await Promise.all([
-    supabase.from("houses").select("capacity").eq("farm_id", farmId),
+  const [farmsResult, housesResult, flocksResult] = await Promise.all([
+    supabase.from("farms").select("id, municipality, province, photo_url").in("id", farmIds),
+    supabase.from("houses").select("farm_id").in("farm_id", farmIds),
     supabase
       .from("flocks")
-      .select("current_hens")
-      .eq("farm_id", farmId)
+      .select("farm_id, current_hens")
+      .in("farm_id", farmIds)
       .in("status", ["GROWING", "PRODUCING"]),
   ]);
 
-  for (const result of [housesResult, flocksResult]) {
+  for (const result of [farmsResult, housesResult, flocksResult]) {
     if (result.error) {
-      logger.error("farm overview lookup failed", { reason: result.error.message });
+      logger.error("farm cards lookup failed", { reason: result.error.message });
     }
   }
 
-  const houses = (housesResult.data ?? []) as { capacity: number }[];
-  const flocks = (flocksResult.data ?? []) as { current_hens: number }[];
+  const farms = (farmsResult.data ?? []) as {
+    id: string;
+    municipality: string;
+    province: string;
+    photo_url: string | null;
+  }[];
+  const houses = (housesResult.data ?? []) as { farm_id: string }[];
+  const flocks = (flocksResult.data ?? []) as { farm_id: string; current_hens: number }[];
 
-  const totalCapacity = houses.reduce((sum, house) => sum + (house.capacity ?? 0), 0);
-  const totalBirds = flocks.reduce((sum, flock) => sum + (flock.current_hens ?? 0), 0);
+  const houseCounts = new Map<string, number>();
+  for (const house of houses) {
+    houseCounts.set(house.farm_id, (houseCounts.get(house.farm_id) ?? 0) + 1);
+  }
 
-  return {
-    houseCount: houses.length,
-    totalCapacity,
-    activeFlockCount: flocks.length,
-    totalBirds,
-    capacityUsed:
-      totalCapacity > 0 ? Math.round((totalBirds / totalCapacity) * 1000) / 10 : null,
-  };
+  const birdCounts = new Map<string, number>();
+  for (const flock of flocks) {
+    birdCounts.set(
+      flock.farm_id,
+      (birdCounts.get(flock.farm_id) ?? 0) + (flock.current_hens ?? 0)
+    );
+  }
+
+  const cards: Record<string, FarmCard> = {};
+  for (const farm of farms) {
+    cards[farm.id] = {
+      farmId: farm.id,
+      photoUrl: farm.photo_url,
+      location: [farm.municipality, farm.province].filter(Boolean).join(", "),
+      totalBirds: birdCounts.get(farm.id) ?? 0,
+      houseCount: houseCounts.get(farm.id) ?? 0,
+    };
+  }
+  return cards;
 }

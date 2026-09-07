@@ -304,6 +304,16 @@ export const dailyProductionSchema = z
       .optional(),
     feedKg: decimalFromForm("Feed used", { max: 100_000 }).default(0),
     feedCostPerKg: decimalFromForm("Feed cost per kg", { max: 10_000 }).default(0),
+    // Union with "" rather than a bare .optional(): these arrive from the
+    // form as a string, and z.coerce.number() reads "" as 0 (a valid decimal,
+    // not "absent") -- which would then fail feed_usage's sack_size_kg > 0
+    // check once nulled out below. See the same pattern on averageEggWeight.
+    sackSizeKg: z
+      .union([decimalFromForm("Sack size", { min: 0.01, max: 100 }), z.literal("")])
+      .optional(),
+    sackPrice: z
+      .union([decimalFromForm("Sack price", { max: 100_000 }), z.literal("")])
+      .optional(),
     sizes: z.array(eggSizeQuantitySchema).default([]),
     notes: z.string().trim().max(500).optional().default(""),
   })
@@ -352,6 +362,15 @@ export const feedUsageSchema = z.object({
   usageDate: isoDate,
   quantityKg: decimalFromForm("Feed used", { min: 0, max: 100_000 }),
   costPerKg: decimalFromForm("Feed cost per kg", { max: 10_000 }).default(0),
+  // See the matching comment on dailyProductionSchema's sackSizeKg: union
+  // with "" rather than .optional(), since z.coerce.number() reads "" as a
+  // valid 0, not "absent".
+  sackSizeKg: z
+    .union([decimalFromForm("Sack size", { min: 0.01, max: 100 }), z.literal("")])
+    .optional(),
+  sackPrice: z
+    .union([decimalFromForm("Sack price", { max: 100_000 }), z.literal("")])
+    .optional(),
   feedType: z.string().trim().max(120).optional().default(""),
   notes: z.string().trim().max(500).optional().default(""),
   clientId: z.string().uuid().optional(),

@@ -9,6 +9,7 @@ import { Panel } from "@/components/ui/panel";
 import { Field, Input, Label, NumberInput, Select, Textarea } from "@/components/ui/field";
 import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
+import { FeedCostInput } from "@/components/production/feed-cost-input";
 import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { loadProductionAction, recordProductionAction } from "@/app/(app)/production/actions";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
@@ -21,7 +22,7 @@ import {
   sellableEggs,
   validateEggSizeBreakdown,
 } from "@/lib/domain/calculations";
-import { currencySymbol, formatCurrency, formatNumber, formatPercent } from "@/lib/format";
+import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface FlockOption {
@@ -47,6 +48,8 @@ interface FormValues {
   mortality: string;
   feedKg: string;
   feedCostPerKg: string;
+  sackSizeKg: string;
+  sackPrice: string;
   notes: string;
   sizes: { eggSizeId: string; quantity: string }[];
 }
@@ -64,6 +67,8 @@ export function ProductionForm({
   initialFlockId,
   initialDate,
   lastFeedCostPerKg,
+  lastFeedSackSizeKg,
+  lastFeedSackPrice,
   currency,
   offlineEnabled,
 }: {
@@ -74,6 +79,8 @@ export function ProductionForm({
   initialFlockId?: string;
   initialDate?: string;
   lastFeedCostPerKg: number;
+  lastFeedSackSizeKg: number;
+  lastFeedSackPrice: number;
   currency: string;
   /** Whether the farm's plan includes offline recording (lib/offline/). */
   offlineEnabled: boolean;
@@ -118,6 +125,8 @@ export function ProductionForm({
       mortality: "0",
       feedKg: "",
       feedCostPerKg: lastFeedCostPerKg > 0 ? String(lastFeedCostPerKg) : "",
+      sackSizeKg: lastFeedSackSizeKg > 0 ? String(lastFeedSackSizeKg) : "",
+      sackPrice: lastFeedSackPrice > 0 ? String(lastFeedSackPrice) : "",
       notes: "",
       sizes: eggSizes.map((size) => ({ eggSizeId: size.id, quantity: "" })),
     },
@@ -140,10 +149,12 @@ export function ProductionForm({
       mortality: "0",
       feedKg: "",
       feedCostPerKg: lastFeedCostPerKg > 0 ? String(lastFeedCostPerKg) : "",
+      sackSizeKg: lastFeedSackSizeKg > 0 ? String(lastFeedSackSizeKg) : "",
+      sackPrice: lastFeedSackPrice > 0 ? String(lastFeedSackPrice) : "",
       notes: "",
       sizes: eggSizes.map((size) => ({ eggSizeId: size.id, quantity: "" })),
     }),
-    [eggSizes, flocks, lastFeedCostPerKg]
+    [eggSizes, flocks, lastFeedCostPerKg, lastFeedSackSizeKg, lastFeedSackPrice]
   );
 
   /*
@@ -197,6 +208,18 @@ export function ProductionForm({
               ? String(existing.feedCostPerKg)
               : lastFeedCostPerKg > 0
                 ? String(lastFeedCostPerKg)
+                : "",
+          sackSizeKg:
+            existing.feedSackSizeKg > 0
+              ? String(existing.feedSackSizeKg)
+              : lastFeedSackSizeKg > 0
+                ? String(lastFeedSackSizeKg)
+                : "",
+          sackPrice:
+            existing.feedSackPrice > 0
+              ? String(existing.feedSackPrice)
+              : lastFeedSackPrice > 0
+                ? String(lastFeedSackPrice)
                 : "",
           notes: existing.notes,
           sizes: eggSizes.map((size) => ({
@@ -507,23 +530,30 @@ export function ProductionForm({
                 <NumberInput id="feedKg" min={0} step="0.1" placeholder="0" {...register("feedKg")} />
               </Field>
 
-              <Field
-                label="Feed cost per kg"
-                htmlFor="feedCostPerKg"
-                hint={
-                  derived.feedCost > 0 ? `${formatCurrency(derived.feedCost, currency)} today` : undefined
-                }
-                error={errors.feedCostPerKg?.message}
-              >
-                <NumberInput
-                  id="feedCostPerKg"
-                  min={0}
-                  step="0.01"
-                  placeholder="0"
-                  adornment={currencySymbol(currency)}
-                  {...register("feedCostPerKg")}
+              <div className="col-span-2 flex flex-col gap-1.5">
+                <FeedCostInput
+                  key={`${selectedFlockId}|${selectedDate}`}
+                  value={{
+                    costPerKg: values.feedCostPerKg,
+                    sackSizeKg: values.sackSizeKg,
+                    sackPrice: values.sackPrice,
+                  }}
+                  onChange={(next) => {
+                    setValue("feedCostPerKg", next.costPerKg, { shouldDirty: true });
+                    setValue("sackSizeKg", next.sackSizeKg, { shouldDirty: true });
+                    setValue("sackPrice", next.sackPrice, { shouldDirty: true });
+                  }}
+                  currency={currency}
+                  costPerKgError={errors.feedCostPerKg?.message}
+                  sackSizeKgError={errors.sackSizeKg?.message}
+                  sackPriceError={errors.sackPrice?.message}
                 />
-              </Field>
+                {derived.feedCost > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(derived.feedCost, currency)} today
+                  </p>
+                )}
+              </div>
             </div>
 
             <Field label="Notes" htmlFor="notes" hint="Optional." error={errors.notes?.message}>

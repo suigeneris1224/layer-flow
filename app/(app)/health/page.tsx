@@ -59,7 +59,7 @@ export default async function HealthPage({
     // Same pre-fill the production form uses: one number instead of two.
     supabase
       .from("feed_usage")
-      .select("cost_per_kg")
+      .select("cost_per_kg, sack_size_kg, sack_price")
       .eq("farm_id", context.farmId)
       .order("usage_date", { ascending: false })
       .limit(1)
@@ -202,6 +202,8 @@ export default async function HealthPage({
                 flocks={flockChoices}
                 today={today}
                 lastCostPerKg={Number(lastFeedResult.data?.cost_per_kg ?? 0)}
+                lastSackSizeKg={Number(lastFeedResult.data?.sack_size_kg ?? 0)}
+                lastSackPrice={Number(lastFeedResult.data?.sack_price ?? 0)}
                 currency={context.currency}
                 offlineEnabled={offlineEnabled}
               />

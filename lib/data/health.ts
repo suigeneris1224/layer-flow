@@ -137,6 +137,8 @@ export interface FeedEntry {
   flockName: string;
   quantityKg: number;
   costPerKg: number;
+  sackSizeKg: number;
+  sackPrice: number;
   totalCost: number;
   feedType: string;
   notes: string;
@@ -148,6 +150,8 @@ type FeedJoin = {
   flock_id: string;
   quantity_kg: number;
   cost_per_kg: number;
+  sack_size_kg: number | null;
+  sack_price: number | null;
   total_cost: number;
   feed_type: string | null;
   notes: string | null;
@@ -155,8 +159,8 @@ type FeedJoin = {
 };
 
 const FEED_COLUMNS =
-  "id, usage_date, flock_id, quantity_kg, cost_per_kg, total_cost, feed_type, " +
-  "notes, flocks!inner(name)";
+  "id, usage_date, flock_id, quantity_kg, cost_per_kg, sack_size_kg, sack_price, " +
+  "total_cost, feed_type, notes, flocks!inner(name)";
 
 /** Ad-hoc feed deliveries, newest first. Never the rows a day owns. */
 export async function getFeedUsage(
@@ -194,6 +198,8 @@ export async function getFeedUsage(
     flockName: one(row.flocks)?.name ?? "Unknown",
     quantityKg: Number(row.quantity_kg ?? 0),
     costPerKg: Number(row.cost_per_kg ?? 0),
+    sackSizeKg: Number(row.sack_size_kg ?? 0),
+    sackPrice: Number(row.sack_price ?? 0),
     totalCost: Number(row.total_cost ?? 0),
     feedType: row.feed_type ?? "",
     notes: row.notes ?? "",

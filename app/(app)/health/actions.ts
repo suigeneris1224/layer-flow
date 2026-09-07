@@ -245,6 +245,14 @@ export async function recordFeedUsageAction(
       usage_date: parsed.data.usageDate,
       quantity_kg: parsed.data.quantityKg,
       cost_per_kg: parsed.data.costPerKg,
+      // Metadata only, for prefilling the next entry -- cost_per_kg/total_cost
+      // above remain what every calculation reads.
+      sack_size_kg: parsed.data.sackSizeKg === "" || parsed.data.sackSizeKg === undefined
+        ? null
+        : parsed.data.sackSizeKg,
+      sack_price: parsed.data.sackPrice === "" || parsed.data.sackPrice === undefined
+        ? null
+        : parsed.data.sackPrice,
       // Stored, not derived on read -- matching record_daily_production, so a
       // later correction to the unit cost never restates what was spent.
       total_cost: feedCost(parsed.data.quantityKg, parsed.data.costPerKg),
@@ -315,6 +323,12 @@ export async function updateFeedUsageAction(
         usage_date: parsed.data.usageDate,
         quantity_kg: parsed.data.quantityKg,
         cost_per_kg: parsed.data.costPerKg,
+        sack_size_kg: parsed.data.sackSizeKg === "" || parsed.data.sackSizeKg === undefined
+          ? null
+          : parsed.data.sackSizeKg,
+        sack_price: parsed.data.sackPrice === "" || parsed.data.sackPrice === undefined
+          ? null
+          : parsed.data.sackPrice,
         total_cost: feedCost(parsed.data.quantityKg, parsed.data.costPerKg),
         feed_type: parsed.data.feedType || null,
         notes: parsed.data.notes || null,

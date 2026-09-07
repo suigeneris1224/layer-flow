@@ -64,7 +64,10 @@ export function InventoryPanel({
       title="Egg inventory"
       className={className}
       action={
-        <Link href="/inventory" className="text-xs font-medium text-primary hover:underline">
+        <Link
+          href="/inventory"
+          className="inline-flex min-h-8 items-center rounded-md border border-input px-2.5 text-xs font-medium text-primary hover:border-primary hover:bg-muted"
+        >
           View all
         </Link>
       }

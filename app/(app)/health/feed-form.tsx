@@ -8,6 +8,7 @@ import { Panel } from "@/components/ui/panel";
 import { Field, Input, NumberInput, Select, Textarea } from "@/components/ui/field";
 import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
+import { FeedCostInput } from "@/components/production/feed-cost-input";
 import { feedCost } from "@/lib/domain/calculations";
 import { formatCurrency } from "@/lib/format";
 import type { FeedEntry } from "@/lib/data/health";
@@ -34,6 +35,8 @@ export function FeedForm({
   flocks,
   today,
   lastCostPerKg,
+  lastSackSizeKg,
+  lastSackPrice,
   currency,
   offlineEnabled,
 }: {
@@ -41,6 +44,8 @@ export function FeedForm({
   flocks: FlockChoice[];
   today: string;
   lastCostPerKg: number;
+  lastSackSizeKg: number;
+  lastSackPrice: number;
   currency: string;
   /** Whether the farm's plan includes offline recording (lib/offline/). */
   offlineEnabled: boolean;
@@ -56,11 +61,15 @@ export function FeedForm({
   const editing = records.find((record) => record.id === selected) ?? null;
 
   const defaultCost = lastCostPerKg > 0 ? String(lastCostPerKg) : "";
+  const defaultSackSizeKg = lastSackSizeKg > 0 ? String(lastSackSizeKg) : "";
+  const defaultSackPrice = lastSackPrice > 0 ? String(lastSackPrice) : "";
 
   const [flockId, setFlockId] = useState(flocks[0]?.id ?? "");
   const [usageDate, setUsageDate] = useState(today);
   const [quantityKg, setQuantityKg] = useState("");
   const [costPerKg, setCostPerKg] = useState(defaultCost);
+  const [sackSizeKg, setSackSizeKg] = useState(defaultSackSizeKg);
+  const [sackPrice, setSackPrice] = useState(defaultSackPrice);
   const [feedType, setFeedType] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -73,6 +82,8 @@ export function FeedForm({
     setUsageDate(next?.usageDate ?? today);
     setQuantityKg(next ? String(next.quantityKg) : "");
     setCostPerKg(next ? String(next.costPerKg) : defaultCost);
+    setSackSizeKg(next && next.sackSizeKg > 0 ? String(next.sackSizeKg) : defaultSackSizeKg);
+    setSackPrice(next && next.sackPrice > 0 ? String(next.sackPrice) : defaultSackPrice);
     setFeedType(next?.feedType ?? "");
     setNotes(next?.notes ?? "");
     setFormError(null);
@@ -86,7 +97,16 @@ export function FeedForm({
     setFieldErrors({});
     setSuccess(null);
 
-    const values = { flockId, usageDate, quantityKg, costPerKg, feedType, notes };
+    const values = {
+      flockId,
+      usageDate,
+      quantityKg,
+      costPerKg,
+      sackSizeKg,
+      sackPrice,
+      feedType,
+      notes,
+    };
 
     // See the matching comment in mortality-form.tsx: only a brand-new
     // record queues offline; editing/deleting still needs the server.
@@ -198,37 +218,30 @@ export function FeedForm({
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Feed used (kg)"
-            htmlFor="feed-quantity"
-            error={fieldErrors.quantityKg}
-          >
-            <NumberInput
-              id="feed-quantity"
-              min={0}
-              step="0.001"
-              value={quantityKg}
-              onChange={(event) => setQuantityKg(event.target.value)}
-              aria-invalid={!!fieldErrors.quantityKg}
-            />
-          </Field>
+        <Field label="Feed used (kg)" htmlFor="feed-quantity" error={fieldErrors.quantityKg}>
+          <NumberInput
+            id="feed-quantity"
+            min={0}
+            step="0.001"
+            value={quantityKg}
+            onChange={(event) => setQuantityKg(event.target.value)}
+            aria-invalid={!!fieldErrors.quantityKg}
+          />
+        </Field>
 
-          <Field
-            label="Cost per kg"
-            htmlFor="feed-cost"
-            hint="Optional."
-            error={fieldErrors.costPerKg}
-          >
-            <NumberInput
-              id="feed-cost"
-              min={0}
-              step="0.01"
-              value={costPerKg}
-              onChange={(event) => setCostPerKg(event.target.value)}
-            />
-          </Field>
-        </div>
+        <FeedCostInput
+          key={selected}
+          value={{ costPerKg, sackSizeKg, sackPrice }}
+          onChange={(next) => {
+            setCostPerKg(next.costPerKg);
+            setSackSizeKg(next.sackSizeKg);
+            setSackPrice(next.sackPrice);
+          }}
+          currency={currency}
+          costPerKgError={fieldErrors.costPerKg}
+          sackSizeKgError={fieldErrors.sackSizeKg}
+          sackPriceError={fieldErrors.sackPrice}
+        />
 
         {total > 0 && (
           <p className="text-sm text-muted-foreground">

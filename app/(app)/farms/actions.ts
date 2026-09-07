@@ -17,6 +17,13 @@ import {
   type ActionResult,
 } from "@/lib/errors";
 
+const FARM_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const FARM_PHOTO_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 export async function updateFarmAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   const user = await requireUser();
   const context = await getFarmContext();
@@ -60,6 +67,116 @@ export async function updateFarmAction(input: unknown): Promise<ActionResult<{ i
     return { ok: true, data: { id: context.farmId } };
   } catch (error) {
     return describeUnknownError(error, "updateFarmAction");
+  }
+}
+
+/**
+ * Farm photo upload -- same shape as settings' avatar/cover uploads
+ * (app/(app)/settings/actions.ts), but the folder is fenced by farm id
+ * (farm-photos/<farm id>/<file>) and gated to OWNER, since a farm's photo is
+ * shared by everyone on it rather than owned by the uploader.
+ */
+export async function uploadFarmPhotoAction(formData: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const context = await getFarmContext();
+
+  if (!context) return failure("Set up your farm first.");
+  if (!canManageFarmSettings(context)) {
+    return failure("Only the farm owner can change the farm photo.");
+  }
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) {
+    return failure("Choose an image to upload.");
+  }
+
+  const extension = FARM_PHOTO_TYPES[file.type];
+  if (!extension) {
+    return failure("Use a JPG, PNG or WebP image.");
+  }
+  if (file.size > FARM_PHOTO_MAX_BYTES) {
+    return failure("That image is larger than 5 MB. Please choose a smaller one.");
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const path = `${context.farmId}/photo.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("farm-photos")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      return failure("We couldn't upload that image. Please try again.");
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("farm-photos").getPublicUrl(path);
+
+    const { error } = await supabase
+      .from("farms")
+      .update({ photo_url: `${publicUrl}?v=${Date.now()}` })
+      .eq("id", context.farmId);
+
+    if (error) return describeDatabaseError(error, "uploadFarmPhotoAction");
+
+    await recordAuditLog({
+      farmId: context.farmId,
+      userId: user.id,
+      action: AUDIT_ACTIONS.FARM_UPDATED,
+      entityType: "farm",
+      entityId: context.farmId,
+    });
+
+    revalidatePath("/farms");
+    revalidatePath("/dashboard");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "uploadFarmPhotoAction");
+  }
+}
+
+export async function removeFarmPhotoAction(): Promise<ActionResult> {
+  const user = await requireUser();
+  const context = await getFarmContext();
+
+  if (!context) return failure("Set up your farm first.");
+  if (!canManageFarmSettings(context)) {
+    return failure("Only the farm owner can change the farm photo.");
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase
+      .from("farms")
+      .update({ photo_url: null })
+      .eq("id", context.farmId);
+
+    if (error) return describeDatabaseError(error, "removeFarmPhotoAction");
+
+    // Best-effort: the row is what the UI reads, so a failed object delete
+    // leaves a harmless orphan rather than a broken photo.
+    await supabase.storage
+      .from("farm-photos")
+      .remove(Object.values(FARM_PHOTO_TYPES).map((ext) => `${context.farmId}/photo.${ext}`));
+
+    await recordAuditLog({
+      farmId: context.farmId,
+      userId: user.id,
+      action: AUDIT_ACTIONS.FARM_UPDATED,
+      entityType: "farm",
+      entityId: context.farmId,
+    });
+
+    revalidatePath("/farms");
+    revalidatePath("/dashboard");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "removeFarmPhotoAction");
   }
 }
 

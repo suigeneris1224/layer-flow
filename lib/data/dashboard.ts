@@ -44,7 +44,7 @@ import { getLatestVaccinationByFlock } from "@/lib/data/health";
 import { syncNotifications } from "@/lib/data/notifications";
 import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
 import { getCurrentPrices } from "@/lib/data/pricing";
-import { farmToday, shiftDate } from "@/lib/format";
+import { farmToday, shiftDate, startOfWeek } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 
 export type { InventoryLine };
@@ -727,7 +727,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/** Last 7 days against the 7 before them, aligned by weekday. */
+/** This calendar week (Mon-Sun) against the same weekday last week. */
 function buildProductionSeries(
   rows: readonly { production_date: string; eggs_collected: number }[],
   today: string
@@ -737,8 +737,9 @@ function buildProductionSeries(
     byDate.set(row.production_date, (byDate.get(row.production_date) ?? 0) + row.eggs_collected);
   }
 
+  const monday = startOfWeek(today);
   return Array.from({ length: 7 }, (_, index) => {
-    const date = shiftDate(today, -(6 - index));
+    const date = shiftDate(monday, index);
     return {
       day: WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()],
       thisWeek: byDate.get(date) ?? 0,

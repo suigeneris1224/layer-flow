@@ -3,9 +3,10 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveReportRange, eachDate, samePeriodLastMonth, sameRangeLastYear } from "@/lib/domain/reports";
 import { percentChange } from "@/lib/domain/calculations";
+import { shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 
-export type SalesOverviewRange = "month" | "year";
+export type SalesOverviewRange = "week" | "month" | "year";
 
 export interface SalesOverviewPoint {
   label: string;
@@ -26,20 +27,25 @@ const MONTH_SHORT = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 interface SaleRow {
   sale_date: string;
   total_amount: number;
 }
 
-/** One point per day this month, or one per month so far this year. */
+/** One point per day this week/month, or one per month so far this year. */
 function buildSeries(rows: SaleRow[], range: SalesOverviewRange, from: string, to: string): SalesOverviewPoint[] {
-  if (range === "month") {
+  if (range === "week" || range === "month") {
     const byDate = new Map<string, number>();
     for (const row of rows) {
       byDate.set(row.sale_date, (byDate.get(row.sale_date) ?? 0) + Number(row.total_amount));
     }
     return eachDate(from, to).map((date) => ({
-      label: String(Number(date.slice(8, 10))),
+      label:
+        range === "week"
+          ? WEEKDAY_SHORT[new Date(`${date}T00:00:00Z`).getUTCDay()]
+          : String(Number(date.slice(8, 10))),
       amount: byDate.get(date) ?? 0,
     }));
   }
@@ -78,10 +84,16 @@ export async function getSalesOverview(
   // month against all 31 days of last month would always look like a
   // collapse. samePeriodLastMonth/sameRangeLastYear both clamp day-of-month
   // the same way, so a month-to-date and a year-to-date comparison are each
-  // measuring the same number of days on both sides.
+  // measuring the same number of days on both sides. A week is already a
+  // fixed length, so a plain 7-day shift back does the same job.
   const comparisonRange =
-    range === "month" ? samePeriodLastMonth(resolved.from, resolved.to) : sameRangeLastYear(resolved.from, resolved.to);
-  const deltaLabel = range === "month" ? "vs last month" : "vs last year";
+    range === "week"
+      ? { from: shiftDate(resolved.from, -7), to: shiftDate(resolved.to, -7) }
+      : range === "month"
+        ? samePeriodLastMonth(resolved.from, resolved.to)
+        : sameRangeLastYear(resolved.from, resolved.to);
+  const deltaLabel =
+    range === "week" ? "vs last week" : range === "month" ? "vs last month" : "vs last year";
 
   const [current, previous] = await Promise.all([
     supabase

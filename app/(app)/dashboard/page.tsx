@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Bird, Egg, PhilippinePeso, Plus, Receipt, TrendingUp } from "lucide-react";
-import { requireFarmContext } from "@/lib/auth/session";
+import { getUserFarms, requireFarmContext } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
 import { getDashboardData } from "@/lib/data/dashboard";
-import { getFarmOverview } from "@/lib/data/farms";
+import { getFarmCardsForUser } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getSalesOverview, type SalesOverviewRange } from "@/lib/data/sales-overview";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import { EggSizeDonut, ProductionChart, SalesChart } from "@/components/charts/l
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { FlockStatusPanel } from "@/components/dashboard/flock-status-panel";
-import { FarmsOverviewPanel } from "@/components/dashboard/farms-overview-panel";
+import { FarmCards } from "@/components/farms/farm-cards";
 import { TodayStatus } from "@/components/dashboard/today-status";
 import { SalesRangeToggle } from "@/components/dashboard/sales-range-toggle";
 import { formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
@@ -40,13 +40,15 @@ export default async function DashboardPage({
   const isOwner = canManageBilling(context);
   const showRenewalBanner = isOwner && !context.isBetaOverride;
   const { salesRange: salesRangeParam } = await searchParams;
-  const salesRange: SalesOverviewRange = salesRangeParam === "year" ? "year" : "month";
+  const salesRange: SalesOverviewRange =
+    salesRangeParam === "year" ? "year" : salesRangeParam === "month" ? "month" : "week";
 
-  const [data, farmOverview, subscriptionPeriod] = await Promise.all([
+  const [data, farms, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),
-    getFarmOverview(context.farmId),
+    getUserFarms(),
     showRenewalBanner ? getSubscriptionPeriod(context.farmId) : Promise.resolve(null),
   ]);
+  const cardsByFarm = await getFarmCardsForUser(farms.map((farm) => farm.farmId));
 
   const salesOverview = data.money.isComplete
     ? await getSalesOverview(context.farmId, salesRange, data.date)
@@ -133,7 +135,7 @@ export default async function DashboardPage({
             </h2>
           }
           className="lg:col-span-7 xl:col-span-6"
-          action={<span className="text-xs text-muted-foreground">Last 7 days</span>}
+          action={<span className="text-xs text-muted-foreground">This week</span>}
         >
           <ProductionChart data={data.charts.production} />
           <p className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
@@ -175,9 +177,9 @@ export default async function DashboardPage({
               Sales overview
               <InfoTip label="About sales overview">
                 Total value of egg sales recorded for the selected period, broken down by day
-                (This month) or by month (This year). The percentage compares against the same
-                number of days in the prior month or year, so a few days into a new month isn&apos;t
-                compared against a full previous month.
+                (This week, This month) or by month (This year). The percentage compares against
+                the same number of days in the prior week, month, or year, so a few days into a
+                new period isn&apos;t compared against a full previous one.
               </InfoTip>
             </h2>
           }
@@ -198,7 +200,9 @@ export default async function DashboardPage({
               <SalesChart
                 data={salesOverview.series}
                 currency={context.currency}
-                emptyMessage={`No sales recorded ${salesRange === "month" ? "this month" : "this year"}.`}
+                emptyMessage={`No sales recorded ${
+                  salesRange === "week" ? "this week" : salesRange === "month" ? "this month" : "this year"
+                }.`}
               />
             </>
           ) : (
@@ -218,7 +222,27 @@ export default async function DashboardPage({
         />
       </div>
 
-      <FarmsOverviewPanel farmName={context.farmName} overview={farmOverview} />
+      <Panel
+        title="Farms overview"
+        action={
+          <Link href="/farms" className="text-xs text-muted-foreground hover:text-foreground">
+            Farm settings
+          </Link>
+        }
+      >
+        <FarmCards
+          farms={farms.map((farm) => ({
+            farmId: farm.farmId,
+            farmName: farm.farmName,
+            role: farm.role,
+            location: cardsByFarm[farm.farmId]?.location ?? "",
+            photoUrl: cardsByFarm[farm.farmId]?.photoUrl ?? null,
+            totalBirds: cardsByFarm[farm.farmId]?.totalBirds ?? 0,
+            houseCount: cardsByFarm[farm.farmId]?.houseCount ?? 0,
+          }))}
+          activeFarmId={context.farmId}
+        />
+      </Panel>
 
       <Link
         href="/production/new"

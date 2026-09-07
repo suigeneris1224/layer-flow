@@ -3,14 +3,15 @@ import { Egg, LineChart, Skull, Wheat } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getAnalyticsData } from "@/lib/data/analytics";
+import { getFarmStartYear } from "@/lib/data/farms";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { EggSizeDonut, LayingRateChart } from "@/components/charts/lazy";
-import { RangePicker } from "@/components/reports/range-picker";
-import { listRecentMonths, listRecentYears, resolveReportRange } from "@/lib/domain/reports";
+import { ReportRangeSelect } from "@/components/reports/report-range-select";
+import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
 import { farmToday, formatKg, formatNumber, formatPercent } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Analytics" };
@@ -40,7 +41,10 @@ export default async function AnalyticsPage({
   const today = farmToday(context.timezone);
   const { range: rangeParam } = await searchParams;
   const range = resolveReportRange(rangeParam, today);
-  const data = await getAnalyticsData(context, range);
+  const [data, startYear] = await Promise.all([
+    getAnalyticsData(context, range),
+    getFarmStartYear(context.farmId),
+  ]);
   const hasProduction = data.totals.totalEggs > 0 || data.totals.totalMortality > 0;
 
   return (
@@ -49,11 +53,10 @@ export default async function AnalyticsPage({
         title="Analytics"
         description="Laying rate, egg sizes, and how your flocks compare."
         action={
-          <RangePicker
+          <ReportRangeSelect
             basePath="/analytics"
             value={range.value}
-            months={listRecentMonths(today)}
-            years={listRecentYears(today)}
+            years={listYearsSince(startYear, today)}
           />
         }
       />

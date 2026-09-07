@@ -49,10 +49,11 @@ export default async function NewProductionPage({
       .eq("is_active", true)
       .order("sort_order"),
     // Pre-fill the feed price with whatever they paid last, so the common case
-    // is one number instead of two.
+    // is one number instead of two. sack_size_kg/sack_price come along so a
+    // farmer who entered "by sack" last time sees that mode again.
     supabase
       .from("feed_usage")
-      .select("cost_per_kg")
+      .select("cost_per_kg, sack_size_kg, sack_price")
       .eq("farm_id", context.farmId)
       .order("usage_date", { ascending: false })
       .limit(1)
@@ -98,6 +99,8 @@ export default async function NewProductionPage({
         initialFlockId={initialFlockId}
         initialDate={initialDate}
         lastFeedCostPerKg={Number(lastFeedResult.data?.cost_per_kg ?? 0)}
+        lastFeedSackSizeKg={Number(lastFeedResult.data?.sack_size_kg ?? 0)}
+        lastFeedSackPrice={Number(lastFeedResult.data?.sack_price ?? 0)}
         currency={context.currency}
         offlineEnabled={canAccess(
           { plan: context.plan, status: context.subscriptionStatus },

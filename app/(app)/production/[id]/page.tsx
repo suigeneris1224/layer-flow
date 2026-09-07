@@ -109,6 +109,12 @@ export default async function ProductionDayPage({
           {day.feed ? (
             <>
               <Row label="Feed used" value={formatKg(day.feed.quantityKg)} />
+              {day.feed.sackSizeKg && day.feed.sackPrice ? (
+                <Row
+                  label="Feed price"
+                  value={`${formatCurrency(day.feed.sackPrice, context.currency)} / ${formatKg(day.feed.sackSizeKg)} sack`}
+                />
+              ) : null}
               <Row
                 label="Feed cost"
                 value={formatCurrency(day.feed.totalCost, context.currency)}

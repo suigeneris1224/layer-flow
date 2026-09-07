@@ -105,7 +105,11 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
       farms: 1,
       houses: 3,
       active_flocks: 5,
-      users: 2,
+      // Team management (inviting a 2nd person) is Pro-only -- see
+      // STARTER_FEATURES/PRO_FEATURES above. This must stay 1 for Starter,
+      // or the limit is unreachable: /team redirects to an upgrade prompt
+      // on canAccess("team_management") before this is ever checked.
+      users: 1,
       customers: 20,
       history_days: null,
     },

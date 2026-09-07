@@ -2,25 +2,31 @@ import type { Metadata } from "next";
 import { requireFarmContext, getUserFarms } from "@/lib/auth/session";
 import { canManageFarmSettings } from "@/lib/auth/permissions";
 import { canCreate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
-import { getFarmDetail } from "@/lib/data/farms";
+import { getFarmCardsForUser, getFarmDetail } from "@/lib/data/farms";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { FarmForm } from "./farm-form";
-import { FarmSwitcher } from "./farm-switcher";
+import { FarmCards } from "@/components/farms/farm-cards";
 
 export const metadata: Metadata = { title: "Farm settings" };
 
 export const dynamic = "force-dynamic";
 
-export default async function FarmsPage() {
+export default async function FarmsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ addFarm?: string }>;
+}) {
   const context = await requireFarmContext();
 
-  const [farms, detail] = await Promise.all([
+  const [farms, detail, { addFarm }] = await Promise.all([
     getUserFarms(),
     getFarmDetail(context.farmId),
+    searchParams,
   ]);
+  const cardsByFarm = await getFarmCardsForUser(farms.map((farm) => farm.farmId));
 
   const canEdit = canManageFarmSettings(context);
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
@@ -33,10 +39,25 @@ export default async function FarmsPage() {
     <PageShell>
       <PageHeader title="Farm settings" description="Your farm's name and location." />
 
+      <Panel title="Your farms">
+        <FarmCards
+          farms={farms.map((farm) => ({
+            farmId: farm.farmId,
+            farmName: farm.farmName,
+            role: farm.role,
+            location: cardsByFarm[farm.farmId]?.location ?? "",
+            photoUrl: cardsByFarm[farm.farmId]?.photoUrl ?? null,
+            totalBirds: cardsByFarm[farm.farmId]?.totalBirds ?? 0,
+            houseCount: cardsByFarm[farm.farmId]?.houseCount ?? 0,
+          }))}
+          activeFarmId={context.farmId}
+        />
+      </Panel>
+
       {!detail ? (
         <StatusNote tone="bad">We couldn&apos;t load this farm&apos;s details.</StatusNote>
       ) : canEdit ? (
-        <FarmForm mode="edit" initial={detail} />
+        <FarmForm mode="edit" initial={detail} photoUrl={detail.photoUrl} />
       ) : (
         <Panel title={detail.name}>
           <dl className="flex flex-col gap-2 text-sm">
@@ -59,17 +80,13 @@ export default async function FarmsPage() {
         </Panel>
       )}
 
-      {farms.length > 1 && (
-        <Panel title="Your farms">
-          <FarmSwitcher farms={farms} activeFarmId={context.farmId} />
-        </Panel>
-      )}
-
-      {canAddFarm ? (
-        <FarmForm mode="create" />
-      ) : (
-        limitPrompt && <UpgradePanel prompt={limitPrompt} />
-      )}
+      <div id="add-farm">
+        {canAddFarm ? (
+          <FarmForm mode="create" forceOpen={addFarm === "1"} />
+        ) : (
+          limitPrompt && <UpgradePanel prompt={limitPrompt} />
+        )}
+      </div>
 
     </PageShell>
   );

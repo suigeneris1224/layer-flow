@@ -227,7 +227,14 @@ export interface ProductionDay extends ProductionEntry {
   notes: string;
   sizes: ProductionSizeLine[];
   /** The feed and mortality rows the RPC wrote for this day, if any. */
-  feed: { quantityKg: number; costPerKg: number; totalCost: number } | null;
+  feed: {
+    quantityKg: number;
+    costPerKg: number;
+    /** Sack size/price behind costPerKg, when it was entered that way. Null otherwise. */
+    sackSizeKg: number | null;
+    sackPrice: number | null;
+    totalCost: number;
+  } | null;
   linkedMortality: { quantity: number; reason: string | null } | null;
 }
 
@@ -274,7 +281,7 @@ export async function getProductionDay(
       .eq("daily_production_id", productionId),
     supabase
       .from("feed_usage")
-      .select("quantity_kg, cost_per_kg, total_cost")
+      .select("quantity_kg, cost_per_kg, sack_size_kg, sack_price, total_cost")
       .eq("daily_production_id", productionId)
       .maybeSingle(),
     supabase
@@ -302,6 +309,8 @@ export async function getProductionDay(
     ? {
         quantityKg: Number(feedResult.data.quantity_kg ?? 0),
         costPerKg: Number(feedResult.data.cost_per_kg ?? 0),
+        sackSizeKg: feedResult.data.sack_size_kg,
+        sackPrice: feedResult.data.sack_price,
         totalCost: Number(feedResult.data.total_cost ?? 0),
       }
     : null;

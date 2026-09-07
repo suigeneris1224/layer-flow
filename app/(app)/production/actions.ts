@@ -24,6 +24,8 @@ export interface ExistingProduction {
   notes: string;
   feedKg: number;
   feedCostPerKg: number;
+  feedSackSizeKg: number;
+  feedSackPrice: number;
   /** Quantity per egg size id. Sizes with no row are simply absent. */
   sizes: Record<string, number>;
 }
@@ -69,7 +71,7 @@ export async function loadProductionAction(
         .eq("daily_production_id", production.id),
       supabase
         .from("feed_usage")
-        .select("quantity_kg, cost_per_kg")
+        .select("quantity_kg, cost_per_kg, sack_size_kg, sack_price")
         .eq("daily_production_id", production.id)
         .maybeSingle(),
     ]);
@@ -90,6 +92,8 @@ export async function loadProductionAction(
         notes: production.notes ?? "",
         feedKg: Number(feedResult.data?.quantity_kg ?? 0),
         feedCostPerKg: Number(feedResult.data?.cost_per_kg ?? 0),
+        feedSackSizeKg: Number(feedResult.data?.sack_size_kg ?? 0),
+        feedSackPrice: Number(feedResult.data?.sack_price ?? 0),
         sizes,
       },
     };
@@ -175,6 +179,14 @@ export async function recordProductionAction(
           : Number(values.averageEggWeight),
       p_feed_kg: values.feedKg,
       p_feed_cost_per_kg: values.feedCostPerKg,
+      p_sack_size_kg:
+        values.sackSizeKg === "" || values.sackSizeKg === undefined
+          ? undefined
+          : Number(values.sackSizeKg),
+      p_sack_price:
+        values.sackPrice === "" || values.sackPrice === undefined
+          ? undefined
+          : Number(values.sackPrice),
       p_notes: values.notes || undefined,
       p_sizes: values.sizes
         .filter((size) => size.quantity > 0)

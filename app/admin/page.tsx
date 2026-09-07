@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Building2, Mail } from "lucide-react";
 import { AdminAccountRow } from "./admin-account-row";
 import { FarmSearch } from "./farm-search";
+import { BillingPeriodFilter } from "./billing-period-filter";
 import { AdminPagination } from "./pagination";
 import { BetaPanel } from "./beta-panel";
 import { SupportPanel } from "./support-panel";
@@ -31,9 +32,9 @@ function daysRemaining(end: string): number {
 export default async function AdminSubscriptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; period?: string }>;
 }) {
-  const { q = "", page: pageParam } = await searchParams;
+  const { q = "", page: pageParam, period = "all" } = await searchParams;
   const [rows, betaSettings, supportRequests] = await Promise.all([
     getAllSubscriptions(),
     getBetaSettings(),
@@ -44,25 +45,45 @@ export default async function AdminSubscriptionsPage({
     PLAN_ORDER.map((id) => [id, rows.filter((row) => row.plan === id).length])
   ) as Record<string, number>;
 
+  const annualRows = rows.filter((row) => row.billingPeriod === "ANNUAL");
+  const activeOrPastDue = (row: (typeof rows)[number]) =>
+    row.status === "ACTIVE" || row.status === "PAST_DUE";
+
   // Annual accounts are normalized to a monthly-equivalent (annual / 12) so
   // this stays comparable across both cadences rather than understating
   // annual revenue by its full 12x.
-  const monthlyEstimate = rows
-    .filter((row) => row.status === "ACTIVE" || row.status === "PAST_DUE")
-    .reduce((sum, row) => {
-      const plan = PLANS[row.plan];
-      const monthlyEquivalent =
-        row.billingPeriod === "ANNUAL" ? plan.priceCentavosAnnual / 12 : plan.priceCentavosMonthly;
-      return sum + monthlyEquivalent;
-    }, 0);
+  const monthlyEstimate = rows.filter(activeOrPastDue).reduce((sum, row) => {
+    const plan = PLANS[row.plan];
+    const monthlyEquivalent =
+      row.billingPeriod === "ANNUAL" ? plan.priceCentavosAnnual / 12 : plan.priceCentavosMonthly;
+    return sum + monthlyEquivalent;
+  }, 0);
+
+  // The actual cash committed by annual accounts, not normalized -- distinct
+  // from monthlyEstimate above, which flattens it to a monthly-equivalent.
+  const annualRevenueBooked = annualRows
+    .filter(activeOrPastDue)
+    .reduce((sum, row) => sum + PLANS[row.plan].priceCentavosAnnual, 0);
 
   const expiringSoon = rows.filter(
     (row) => row.currentPeriodEnd !== null && daysRemaining(row.currentPeriodEnd) <= 7 && daysRemaining(row.currentPeriodEnd) >= 0
   ).length;
 
+  // A longer look-ahead than the 7-day window above: an annual renewal is a
+  // once-a-year, higher-stakes event worth surfacing with more lead time.
+  const annualRenewingSoon = annualRows.filter(
+    (row) => row.currentPeriodEnd !== null && daysRemaining(row.currentPeriodEnd) <= 30 && daysRemaining(row.currentPeriodEnd) >= 0
+  ).length;
+
   // Filtered against every farm, not just the current page -- pagination
   // slices what's left over after this, never before it.
-  const filtered = searchFarms(rows, q);
+  const periodFiltered =
+    period === "monthly"
+      ? rows.filter((row) => row.billingPeriod === "MONTHLY")
+      : period === "annual"
+        ? annualRows
+        : rows;
+  const filtered = searchFarms(periodFiltered, q);
   const { items: pageRows, page, totalPages, totalItems } = paginate(
     filtered,
     Number(pageParam) || 1,
@@ -72,6 +93,7 @@ export default async function AdminSubscriptionsPage({
   const pageHref = (targetPage: number): Route => {
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
+    if (period !== "all") params.set("period", period);
     if (targetPage > 1) params.set("page", String(targetPage));
     const query = params.toString();
     return (query ? `/admin?${query}` : "/admin") as Route;
@@ -126,18 +148,57 @@ export default async function AdminSubscriptionsPage({
         </Panel>
       </div>
 
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground">Annual plans</h2>
+        <div className="mt-2 grid grid-cols-3 gap-3">
+          <Panel title="Annual accounts" bodyClassName="p-4">
+            <p className="text-2xl font-bold tabular">{annualRows.length}</p>
+            <p className="text-xs text-muted-foreground">
+              of {rows.length} total ({rows.length > 0 ? Math.round((annualRows.length / rows.length) * 100) : 0}%)
+            </p>
+          </Panel>
+          <Panel
+            title={
+              <h2 className="flex items-center gap-1 text-sm font-semibold">
+                Annual revenue booked
+                <InfoTip label="About annual revenue booked">
+                  Sum of the full annual price for each ACTIVE or PAST_DUE account on annual
+                  billing -- the actual amount committed for the year, not spread out monthly
+                  like &quot;Est. monthly&quot; above.
+                </InfoTip>
+              </h2>
+            }
+            bodyClassName="p-4"
+          >
+            <p className="text-2xl font-bold tabular">{formatCurrency(annualRevenueBooked / 100)}</p>
+            <p className="text-xs text-muted-foreground">active + past due, no proration</p>
+          </Panel>
+          <Panel title="Renewing in 30 days" bodyClassName="p-4">
+            <p className="text-2xl font-bold tabular">{annualRenewingSoon}</p>
+            <p className="text-xs text-muted-foreground">annual accounts</p>
+          </Panel>
+        </div>
+      </div>
+
       {rows.length === 0 ? (
         <EmptyState icon={Building2} title="No accounts yet" message="Nothing to monitor yet." />
       ) : (
         <>
-          <FarmSearch initialQuery={q} />
+          <div className="flex flex-wrap items-center gap-2">
+            <FarmSearch initialQuery={q} period={period} />
+            <BillingPeriodFilter period={period} q={q} />
+          </div>
 
           <Panel title="All accounts" bodyClassName="p-0">
           {filtered.length === 0 ? (
             <EmptyState
               icon={Building2}
               title="No matching accounts"
-              message={`No farm name or owner email matches "${q}".`}
+              message={
+                q
+                  ? `No farm name or owner email matches "${q}".`
+                  : "No accounts on this billing period."
+              }
             />
           ) : (
             <>

@@ -25,6 +25,13 @@ const signupSchema = z.object({
   fullName: z.string().trim().min(1, "Enter your name").max(120),
   email: emailField,
   password: passwordField,
+  // Unchecked checkboxes are simply absent from FormData (null, not "false"),
+  // so an unchecked box fails this the same way a checked-but-tampered value
+  // would -- the errorMap below is what turns that into a real message
+  // rather than zod's generic "invalid literal" text.
+  agreeToTerms: z.literal("true", {
+    errorMap: () => ({ message: "You must agree to the Terms & Conditions and Privacy Policy" }),
+  }),
 });
 
 const loginSchema = z.object({
@@ -61,6 +68,7 @@ export async function signUpAction(
     fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
+    agreeToTerms: formData.get("agreeToTerms"),
   });
 
   if (!parsed.success) {

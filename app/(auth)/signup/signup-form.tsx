@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusNote } from "@/components/ui/states";
 import { signUpAction, type AuthState } from "@/app/auth/actions";
 
@@ -59,6 +60,28 @@ export function SignupForm({ next }: { next: string }) {
           aria-invalid={Boolean(fieldErrors?.password)}
         />
       </Field>
+
+      <Checkbox
+        id="agreeToTerms"
+        name="agreeToTerms"
+        value="true"
+        required
+        label={
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" className="font-medium text-primary hover:underline">
+              Terms &amp; Conditions
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>
+          </span>
+        }
+      />
+      {fieldErrors?.agreeToTerms && (
+        <p className="-mt-2 text-xs text-destructive">{fieldErrors.agreeToTerms}</p>
+      )}
 
       <Button type="submit" size="lg" block loading={pending}>
         {pending ? "Creating your account…" : "Create account"}

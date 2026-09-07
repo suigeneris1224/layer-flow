@@ -19,7 +19,14 @@ import { Input } from "@/components/ui/field";
  * fires this on every keystroke; `replace` (not `push`) so typing doesn't
  * fill browser history with one entry per keystroke.
  */
-export function FarmSearch({ initialQuery }: { initialQuery: string }) {
+export function FarmSearch({
+  initialQuery,
+  period,
+}: {
+  initialQuery: string;
+  /** Preserved as-is across a search edit -- see BillingPeriodFilter, which sets it. */
+  period: string;
+}) {
   const router = useRouter();
   const [value, setValue] = useState(initialQuery);
   const isFirstRender = useRef(true);
@@ -33,6 +40,7 @@ export function FarmSearch({ initialQuery }: { initialQuery: string }) {
     const timeout = setTimeout(() => {
       const params = new URLSearchParams();
       if (value.trim()) params.set("q", value.trim());
+      if (period !== "all") params.set("period", period);
       const query = params.toString();
       router.replace((query ? `/admin?${query}` : "/admin") as Route);
     }, 300);

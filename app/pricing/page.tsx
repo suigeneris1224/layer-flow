@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Check, Minus } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { PublicFooter } from "@/components/marketing/public-footer";
-import { cn } from "@/lib/utils";
+import { PricingCards } from "@/components/pricing/pricing-cards";
 import {
   FEATURE_LABELS,
   LIMIT_LABELS,
   PLANS,
   PLAN_ORDER,
-  formatPlanPrice,
+  describeLimit,
   type Feature,
   type LimitKey,
 } from "@/lib/subscriptions/plans";
@@ -41,13 +39,6 @@ const FEATURE_ROWS: Feature[] = [
   "priority_support",
 ];
 
-function describeLimit(key: LimitKey, value: number | null): string {
-  if (value === null) return "Unlimited";
-  if (key === "history_days") return `${value} days`;
-  if (value === 0) return "—";
-  return String(value);
-}
-
 export default function PricingPage() {
   return (
     <div className="flex min-h-dvh flex-col">
@@ -63,64 +54,7 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <section aria-label="Plans" className="grid gap-4 lg:grid-cols-3">
-          {PLAN_ORDER.map((id) => {
-            const plan = PLANS[id];
-            const featured = Boolean(plan.highlight);
-
-            return (
-              <div
-                key={id}
-                className={cn(
-                  "flex flex-col rounded-lg border bg-surface p-5",
-                  featured ? "border-primary shadow-card ring-1 ring-primary" : "border-border"
-                )}
-              >
-                {plan.highlight && (
-                  <span className="mb-2 self-start rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">
-                    {plan.highlight}
-                  </span>
-                )}
-
-                <h2 className="text-xl font-semibold">{plan.name}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
-
-                <p className="mt-4">
-                  <span className="text-3xl font-bold tabular">
-                    {formatPlanPrice(plan)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">/month</span>
-                </p>
-
-                <p className="mt-3 text-sm text-muted-foreground">{plan.audience}</p>
-
-                <Link
-                  href="/signup"
-                  className={cn(
-                    buttonVariants({ variant: featured ? "primary" : "outline", block: true }),
-                    "mt-5"
-                  )}
-                >
-                  {id === "FREE" ? "Start free" : `Choose ${plan.name}`}
-                </Link>
-
-                <ul className="mt-5 flex flex-col gap-1.5 text-sm">
-                  {LIMIT_ROWS.filter((key) => plan.limits[key] !== 0).map((key) => (
-                    <li key={key} className="flex items-baseline gap-2">
-                      <Check className="size-3.5 shrink-0 translate-y-0.5 text-primary" aria-hidden />
-                      <span className="tabular">
-                        {describeLimit(key, plan.limits[key])}{" "}
-                        {plan.limits[key] === 1
-                          ? LIMIT_LABELS[key].singular
-                          : LIMIT_LABELS[key].plural}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </section>
+        <PricingCards />
 
         <section aria-label="Plan comparison" className="mt-10">
           <h2 className="text-xl font-semibold">Compare plans</h2>

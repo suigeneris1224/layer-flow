@@ -44,9 +44,17 @@ export default async function AdminSubscriptionsPage({
     PLAN_ORDER.map((id) => [id, rows.filter((row) => row.plan === id).length])
   ) as Record<string, number>;
 
+  // Annual accounts are normalized to a monthly-equivalent (annual / 12) so
+  // this stays comparable across both cadences rather than understating
+  // annual revenue by its full 12x.
   const monthlyEstimate = rows
     .filter((row) => row.status === "ACTIVE" || row.status === "PAST_DUE")
-    .reduce((sum, row) => sum + PLANS[row.plan].priceCentavos, 0);
+    .reduce((sum, row) => {
+      const plan = PLANS[row.plan];
+      const monthlyEquivalent =
+        row.billingPeriod === "ANNUAL" ? plan.priceCentavosAnnual / 12 : plan.priceCentavosMonthly;
+      return sum + monthlyEquivalent;
+    }, 0);
 
   const expiringSoon = rows.filter(
     (row) => row.currentPeriodEnd !== null && daysRemaining(row.currentPeriodEnd) <= 7 && daysRemaining(row.currentPeriodEnd) >= 0
@@ -141,6 +149,7 @@ export default async function AdminSubscriptionsPage({
                       <th scope="col" className="p-3 text-left font-medium">Farms</th>
                       <th scope="col" className="p-3 text-left font-medium">Owner</th>
                       <th scope="col" className="p-3 text-left font-medium">Plan</th>
+                      <th scope="col" className="p-3 text-left font-medium">Billing</th>
                       <th scope="col" className="p-3 text-left font-medium">Status</th>
                       <th scope="col" className="p-3 text-right font-medium">Renews / expires</th>
                       <th scope="col" className="p-3 text-right font-medium">Days left</th>

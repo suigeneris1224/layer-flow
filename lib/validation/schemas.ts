@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
 import { PLAN_ORDER } from "@/lib/subscriptions/plans";
-import type { ExpenseCategory, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+import type {
+  BillingPeriod,
+  ExpenseCategory,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from "@/lib/types/database";
 
 const SUBSCRIPTION_STATUSES: SubscriptionStatus[] = [
   "ACTIVE",
@@ -10,6 +15,8 @@ const SUBSCRIPTION_STATUSES: SubscriptionStatus[] = [
   "CANCELED",
   "EXPIRED",
 ];
+
+const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
 
 /**
  * Shared input schemas.
@@ -264,6 +271,11 @@ export const devSetSubscriptionSchema = z.object({
   status: z.enum(SUBSCRIPTION_STATUSES as [SubscriptionStatus, ...SubscriptionStatus[]], {
     errorMap: () => ({ message: "Choose a status" }),
   }),
+  billingPeriod: z
+    .enum(BILLING_PERIODS as [BillingPeriod, ...BillingPeriod[]], {
+      errorMap: () => ({ message: "Choose a billing period" }),
+    })
+    .default("MONTHLY"),
 });
 
 export const supportRequestSchema = z.object({

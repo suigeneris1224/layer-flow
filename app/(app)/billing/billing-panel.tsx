@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
-import type { SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionStatus } from "@/lib/types/database";
 import { emailReceiptAction, sendPastDueReminderAction } from "./actions";
 
 /**
@@ -19,11 +19,13 @@ import { emailReceiptAction, sendPastDueReminderAction } from "./actions";
 export function BillingPanel({
   planName,
   price,
+  billingPeriod,
   status,
   currentPeriodEnd,
 }: {
   planName: string;
   price: string;
+  billingPeriod: BillingPeriod;
   status: SubscriptionStatus;
   currentPeriodEnd: string | null;
 }) {
@@ -55,8 +57,12 @@ export function BillingPanel({
         <div className="flex justify-between gap-3">
           <dt className="text-muted-foreground">Plan</dt>
           <dd className="font-medium">
-            {planName} — {price} / month
+            {planName} — {price} / {billingPeriod === "ANNUAL" ? "year" : "month"}
           </dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">Billing</dt>
+          <dd className="font-medium">{billingPeriod === "ANNUAL" ? "Annual" : "Monthly"}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-muted-foreground">Status</dt>

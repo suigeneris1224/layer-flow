@@ -1,6 +1,6 @@
 import { PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
 import { formatDate } from "@/lib/format";
-import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
 /**
  * Subscription email copy.
@@ -20,8 +20,13 @@ export interface SubscriptionEmailContext {
   farmNames: string[];
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
+  billingPeriod: BillingPeriod;
   /** ISO timestamp, or null when no billing period has been recorded yet. */
   currentPeriodEnd: string | null;
+}
+
+function periodNoun(billingPeriod: BillingPeriod): string {
+  return billingPeriod === "ANNUAL" ? "year" : "month";
 }
 
 export interface BuiltEmail {
@@ -55,7 +60,7 @@ export function buildReceiptEmail(ctx: SubscriptionEmailContext): BuiltEmail {
   const farms = formatFarmList(ctx.farmNames);
   const { html, text } = wrap([
     `Here's a summary of your LayerFlow subscription, covering ${farms}:`,
-    `Plan: ${plan.name} (${formatPlanPrice(plan)} / month)`,
+    `Plan: ${plan.name} (${formatPlanPrice(plan, ctx.billingPeriod)} / ${periodNoun(ctx.billingPeriod)})`,
     `Status: ${ctx.status}`,
     renewalLine(ctx.currentPeriodEnd),
     `This is a summary of your LayerFlow subscription, not an official tax invoice.`,
@@ -68,7 +73,7 @@ export function buildPastDueReminderEmail(ctx: SubscriptionEmailContext): BuiltE
   const plan = PLANS[ctx.plan];
   const farms = formatFarmList(ctx.farmNames);
   const { html, text } = wrap([
-    `We weren't able to process the last payment for your LayerFlow account covering ${farms} (${plan.name}, ${formatPlanPrice(plan)} / month).`,
+    `We weren't able to process the last payment for your LayerFlow account covering ${farms} (${plan.name}, ${formatPlanPrice(plan, ctx.billingPeriod)} / ${periodNoun(ctx.billingPeriod)}).`,
     `Your farms keep full access while this is sorted out -- nothing has been switched off.`,
     `Please update your payment details when you get a chance.`,
   ]);
@@ -83,7 +88,7 @@ export function buildRenewalReminderEmail(
   const plan = PLANS[ctx.plan];
   const farms = formatFarmList(ctx.farmNames);
   const { html, text } = wrap([
-    `Your ${plan.name} plan (${formatPlanPrice(plan)} / month), covering ${farms}, renews in ${daysUntilRenewal} day${daysUntilRenewal === 1 ? "" : "s"}.`,
+    `Your ${plan.name} plan (${formatPlanPrice(plan, ctx.billingPeriod)} / ${periodNoun(ctx.billingPeriod)}), covering ${farms}, renews in ${daysUntilRenewal} day${daysUntilRenewal === 1 ? "" : "s"}.`,
     renewalLine(ctx.currentPeriodEnd),
     `No action is needed unless your payment details have changed.`,
   ]);

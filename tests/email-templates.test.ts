@@ -13,6 +13,7 @@ function ctx(overrides: Partial<SubscriptionEmailContext> = {}): SubscriptionEma
     farmNames: ["Sunrise Layers"],
     plan: "PRO",
     status: "ACTIVE",
+    billingPeriod: "MONTHLY",
     currentPeriodEnd: "2026-09-15T00:00:00.000Z",
     ...overrides,
   };
@@ -78,6 +79,21 @@ describe("farm name list formatting", () => {
     expect(email.text).toContain(
       "covering Sunrise Layers, Golden Egg Farm, and Bantay Poultry"
     );
+  });
+});
+
+describe("annual billing period", () => {
+  it("shows the annual price and 'year' instead of 'month'", () => {
+    const email = buildReceiptEmail(ctx({ billingPeriod: "ANNUAL" }));
+    expect(email.text).toContain(formatPlanPrice(PLANS.PRO, "ANNUAL"));
+    expect(email.text).toContain("/ year");
+    expect(email.text).not.toContain(formatPlanPrice(PLANS.PRO, "MONTHLY"));
+  });
+
+  it("uses the monthly price and 'month' by default", () => {
+    const email = buildReceiptEmail(ctx({ billingPeriod: "MONTHLY" }));
+    expect(email.text).toContain(formatPlanPrice(PLANS.PRO, "MONTHLY"));
+    expect(email.text).toContain("/ month");
   });
 });
 

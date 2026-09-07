@@ -3,7 +3,7 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUDIT_ACTIONS } from "@/lib/data/audit";
 import { logger } from "@/lib/observability/logger";
-import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
 /**
  * Cross-tenant reads for the platform-admin monitoring page
@@ -21,6 +21,7 @@ export interface AdminAccountRow {
   farmNames: string[];
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
+  billingPeriod: BillingPeriod;
   currentPeriodEnd: string | null;
   createdAt: string;
 }
@@ -29,6 +30,7 @@ interface SubscriptionRow {
   owner_id: string;
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
+  billing_period: BillingPeriod;
   current_period_end: string | null;
   created_at: string;
 }
@@ -51,7 +53,9 @@ export async function getAllSubscriptions(): Promise<AdminAccountRow[]> {
   const admin = createSupabaseAdminClient();
 
   const [subscriptionsResult, farmsResult, usersResult] = await Promise.all([
-    admin.from("subscriptions").select("owner_id, plan, status, current_period_end, created_at"),
+    admin
+      .from("subscriptions")
+      .select("owner_id, plan, status, billing_period, current_period_end, created_at"),
     admin.from("farms").select("owner_id, name").order("created_at", { ascending: true }),
     admin.auth.admin.listUsers(),
   ]);
@@ -85,6 +89,7 @@ export async function getAllSubscriptions(): Promise<AdminAccountRow[]> {
     farmNames: farmNamesByOwner.get(row.owner_id) ?? [],
     plan: row.plan,
     status: row.status,
+    billingPeriod: row.billing_period,
     currentPeriodEnd: row.current_period_end,
     createdAt: row.created_at,
   }));

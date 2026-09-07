@@ -29,6 +29,7 @@ export type PaymentStatus = Public["Enums"]["payment_status"];
 export type ExpenseCategory = Public["Enums"]["expense_category"];
 export type SubscriptionPlan = Public["Enums"]["subscription_plan"];
 export type SubscriptionStatus = Public["Enums"]["subscription_status"];
+export type BillingPeriod = Public["Enums"]["billing_period"];
 
 // ---------------------------------------------------------------------------
 // Rows

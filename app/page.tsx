@@ -28,9 +28,9 @@ import { DashboardMockup } from "@/components/marketing/dashboard-mockup";
 import { MobileMockup } from "@/components/marketing/mobile-mockup";
 import { Reveal } from "@/components/marketing/reveal";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
+import { LandingPlanCards } from "@/components/pricing/landing-plan-cards";
 import { layingRate, operatingProfit, sellableEggs, eggsToTrays, costPerEgg } from "@/lib/domain/calculations";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
-import { PLANS, PLAN_ORDER, FEATURE_LABELS, formatPlanPrice, type Feature } from "@/lib/subscriptions/plans";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -153,12 +153,6 @@ const ALERT_TONE = {
   good: { wash: "bg-[hsl(var(--status-good))]/10", text: "text-[hsl(var(--status-good))]" },
   warn: { wash: "bg-[hsl(var(--status-warn))]/10", text: "text-[hsl(var(--status-warn))]" },
   bad: { wash: "bg-[hsl(var(--status-bad))]/10", text: "text-[hsl(var(--status-bad))]" },
-};
-
-const PLAN_FEATURE_ROWS: Record<string, Feature[]> = {
-  FREE: ["production_charts"],
-  STARTER: ["egg_sales", "full_expenses", "egg_size_analytics", "alerts", "reports"],
-  PRO: ["team_management", "multi_farm", "cross_farm_reporting", "priority_support"],
 };
 
 const FAQ_ITEMS = [
@@ -590,61 +584,9 @@ export default function LandingPage() {
               <p className="mt-1 text-muted-foreground">Start free. Move up when your farm does.</p>
             </div>
 
-            <div className="mt-8 grid gap-4 lg:grid-cols-3">
-              {PLAN_ORDER.map((id) => {
-                const plan = PLANS[id];
-                const featured = Boolean(plan.highlight);
-
-                return (
-                  <div
-                    key={id}
-                    className={cn(
-                      "flex flex-col rounded-lg border bg-surface p-5",
-                      featured ? "border-primary shadow-card ring-1 ring-primary" : "border-border"
-                    )}
-                  >
-                    {plan.highlight && (
-                      <span className="mb-2 self-start rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">
-                        {plan.highlight}
-                      </span>
-                    )}
-
-                    <h3 className="text-lg font-semibold">{plan.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
-
-                    <p className="mt-3">
-                      <span className="text-2xl font-bold tabular">{formatPlanPrice(plan)}</span>
-                      <span className="text-sm text-muted-foreground">/month</span>
-                    </p>
-
-                    <Link
-                      href="/signup"
-                      className={cn(
-                        buttonVariants({ variant: featured ? "primary" : "outline", block: true }),
-                        "mt-5"
-                      )}
-                    >
-                      {id === "FREE" ? "Start free" : `Choose ${plan.name}`}
-                    </Link>
-
-                    <ul className="mt-5 flex flex-col gap-1.5 text-sm">
-                      {PLAN_FEATURE_ROWS[id]?.map((feature) => (
-                        <li key={feature} className="flex items-baseline gap-2">
-                          <Check className="size-3.5 shrink-0 translate-y-0.5 text-primary" aria-hidden />
-                          <span>{FEATURE_LABELS[feature]}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+            <div className="mt-8">
+              <LandingPlanCards />
             </div>
-
-            <p className="mt-6 text-center text-sm">
-              <Link href="/pricing" className="font-medium text-primary hover:underline">
-                See full plan comparison
-              </Link>
-            </p>
           </Reveal>
         </section>
 

@@ -10,7 +10,7 @@ import {
 } from "@/lib/email/templates";
 import { serverEnv } from "@/lib/config/env";
 import { logger } from "@/lib/observability/logger";
-import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
 /**
  * Daily subscription-email sweep: PAST_DUE reminders and upcoming-renewal
@@ -35,6 +35,7 @@ interface SubscriptionRow {
   owner_id: string;
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
+  billing_period: BillingPeriod;
   current_period_end: string | null;
 }
 
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
 
   const { data: pastDueRows, error: pastDueError } = await admin
     .from("subscriptions")
-    .select("owner_id, plan, status, current_period_end")
+    .select("owner_id, plan, status, billing_period, current_period_end")
     .eq("status", "PAST_DUE")
     .is("past_due_reminder_sent_at", null);
 
@@ -72,6 +73,7 @@ export async function GET(request: Request) {
         farmNames,
         plan: row.plan,
         status: row.status,
+        billingPeriod: row.billing_period,
         currentPeriodEnd: row.current_period_end,
       });
 
@@ -126,7 +128,7 @@ export async function GET(request: Request) {
 
   const { data: renewalRows, error: renewalError } = await admin
     .from("subscriptions")
-    .select("owner_id, plan, status, current_period_end")
+    .select("owner_id, plan, status, billing_period, current_period_end")
     .gte("current_period_end", dayStart.toISOString())
     .lte("current_period_end", dayEnd.toISOString())
     .is("renewal_reminder_sent_at", null)
@@ -152,6 +154,7 @@ export async function GET(request: Request) {
           farmNames,
           plan: row.plan,
           status: row.status,
+          billingPeriod: row.billing_period,
           currentPeriodEnd: row.current_period_end,
         },
         SUBSCRIPTION_REMINDER_DAYS

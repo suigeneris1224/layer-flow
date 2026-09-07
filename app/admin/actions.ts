@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
+import { BILLING_PERIOD_DAYS } from "@/lib/subscriptions/plans";
 import {
   addBetaTesterSchema,
   devSetSubscriptionSchema,
@@ -56,13 +57,14 @@ export async function adminSetSubscriptionAction(
     // columns the same way that action does.
     const now = new Date();
     const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
+    periodEnd.setDate(periodEnd.getDate() + BILLING_PERIOD_DAYS[parsed.data.billingPeriod]);
 
     const { error } = await admin
       .from("subscriptions")
       .update({
         plan: parsed.data.plan,
         status: parsed.data.status,
+        billing_period: parsed.data.billingPeriod,
         current_period_start: now.toISOString(),
         current_period_end: periodEnd.toISOString(),
         past_due_reminder_sent_at: null,
@@ -79,7 +81,12 @@ export async function adminSetSubscriptionAction(
         action: AUDIT_ACTIONS.PLAN_CHANGED,
         entityType: "subscription",
         entityId: ownerId,
-        metadata: { plan: parsed.data.plan, status: parsed.data.status, trigger: "admin_override" },
+        metadata: {
+          plan: parsed.data.plan,
+          status: parsed.data.status,
+          billingPeriod: parsed.data.billingPeriod,
+          trigger: "admin_override",
+        },
       },
       admin
     );

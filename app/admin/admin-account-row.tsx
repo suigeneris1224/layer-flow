@@ -9,10 +9,11 @@ import { StatusNote } from "@/components/ui/states";
 import { PLAN_ORDER, PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import { adminSetSubscriptionAction } from "./actions";
 
 const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED", "EXPIRED"];
+const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
 
 const STATUS_TONE: Record<SubscriptionStatus, string> = {
   ACTIVE: "bg-[hsl(var(--status-good))]/15 text-[hsl(var(--status-good))]",
@@ -34,6 +35,7 @@ export interface AdminAccountRowData {
   farmNames: string[];
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
+  billingPeriod: BillingPeriod;
   currentPeriodEnd: string | null;
 }
 
@@ -50,6 +52,7 @@ export function AdminAccountRow({ row }: { row: AdminAccountRowData }) {
   const [pending, startTransition] = useTransition();
   const [plan, setPlan] = useState<SubscriptionPlan>(row.plan);
   const [status, setStatus] = useState<SubscriptionStatus>(row.status);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(row.billingPeriod);
   const [error, setError] = useState<string | null>(null);
 
   // This component never unmounts across router.refresh() -- it just
@@ -59,9 +62,10 @@ export function AdminAccountRow({ row }: { row: AdminAccountRowData }) {
   useEffect(() => {
     setPlan(row.plan);
     setStatus(row.status);
-  }, [row.plan, row.status]);
+    setBillingPeriod(row.billingPeriod);
+  }, [row.plan, row.status, row.billingPeriod]);
 
-  const dirty = plan !== row.plan || status !== row.status;
+  const dirty = plan !== row.plan || status !== row.status || billingPeriod !== row.billingPeriod;
   const days = row.currentPeriodEnd ? daysRemaining(row.currentPeriodEnd) : null;
   const farmLabel = row.farmNames.length > 0 ? row.farmNames.join(", ") : "No farms";
 
@@ -69,13 +73,14 @@ export function AdminAccountRow({ row }: { row: AdminAccountRowData }) {
     setError(null);
 
     const confirmed = window.confirm(
-      `Set ${row.ownerEmail ?? "this account"} to ${PLANS[plan].name} / ${status}? ` +
+      `Set ${row.ownerEmail ?? "this account"} to ${PLANS[plan].name} / ${status} ` +
+        `(${billingPeriod === "ANNUAL" ? "annual" : "monthly"})? ` +
         `This affects every farm on the account (${farmLabel}) immediately.`
     );
     if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await adminSetSubscriptionAction(row.ownerId, { plan, status });
+      const result = await adminSetSubscriptionAction(row.ownerId, { plan, status, billingPeriod });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -100,7 +105,22 @@ export function AdminAccountRow({ row }: { row: AdminAccountRowData }) {
         >
           {PLAN_ORDER.map((id) => (
             <option key={id} value={id}>
-              {PLANS[id].name} — {formatPlanPrice(PLANS[id])}
+              {PLANS[id].name} — {formatPlanPrice(PLANS[id], billingPeriod)}
+            </option>
+          ))}
+        </Select>
+      </td>
+
+      <td className="p-3 text-left">
+        <Select
+          fit
+          aria-label={`Billing period for ${row.ownerEmail ?? row.ownerId}`}
+          value={billingPeriod}
+          onChange={(event) => setBillingPeriod(event.target.value as BillingPeriod)}
+        >
+          {BILLING_PERIODS.map((value) => (
+            <option key={value} value={value}>
+              {value === "ANNUAL" ? "Annual" : "Monthly"}
             </option>
           ))}
         </Select>

@@ -8,6 +8,7 @@ import { isProduction } from "@/lib/config/env";
 import { getFarmNamesForOwner } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getFarmOwnerEmail } from "@/lib/data/billing-contacts";
+import { BILLING_PERIOD_DAYS } from "@/lib/subscriptions/plans";
 import { sendEmail } from "@/lib/email/client";
 import { buildPastDueReminderEmail, buildReceiptEmail } from "@/lib/email/templates";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
@@ -32,7 +33,7 @@ export async function emailReceiptAction(): Promise<ActionResult> {
   if (!canManageBilling(context)) return failure("Only the account owner can request a receipt.");
 
   try {
-    const [{ currentPeriodEnd }, farmNames] = await Promise.all([
+    const [{ currentPeriodEnd, billingPeriod }, farmNames] = await Promise.all([
       getSubscriptionPeriod(context.ownerId),
       getFarmNamesForOwner(context.ownerId),
     ]);
@@ -40,6 +41,7 @@ export async function emailReceiptAction(): Promise<ActionResult> {
       farmNames,
       plan: context.plan,
       status: context.subscriptionStatus,
+      billingPeriod,
       currentPeriodEnd,
     });
 
@@ -75,7 +77,7 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
   if (context.subscriptionStatus !== "PAST_DUE") return failure("This account is not past due.");
 
   try {
-    const [{ currentPeriodEnd }, farmNames, ownerEmail] = await Promise.all([
+    const [{ currentPeriodEnd, billingPeriod }, farmNames, ownerEmail] = await Promise.all([
       getSubscriptionPeriod(context.ownerId),
       getFarmNamesForOwner(context.ownerId),
       getFarmOwnerEmail(context.ownerId),
@@ -86,6 +88,7 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
       farmNames,
       plan: context.plan,
       status: context.subscriptionStatus,
+      billingPeriod,
       currentPeriodEnd,
     });
 
@@ -149,7 +152,7 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
   try {
     const now = new Date();
     const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
+    periodEnd.setDate(periodEnd.getDate() + BILLING_PERIOD_DAYS[parsed.data.billingPeriod]);
 
     const admin = createSupabaseAdminClient();
     const { error } = await admin
@@ -157,6 +160,7 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
       .update({
         plan: parsed.data.plan,
         status: parsed.data.status,
+        billing_period: parsed.data.billingPeriod,
         current_period_start: now.toISOString(),
         current_period_end: periodEnd.toISOString(),
         past_due_reminder_sent_at: null,
@@ -172,7 +176,11 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
       action: AUDIT_ACTIONS.PLAN_CHANGED,
       entityType: "subscription",
       entityId: context.farmId,
-      metadata: { plan: parsed.data.plan, status: parsed.data.status },
+      metadata: {
+        plan: parsed.data.plan,
+        status: parsed.data.status,
+        billingPeriod: parsed.data.billingPeriod,
+      },
     });
 
     revalidatePath("/", "layout");

@@ -1,4 +1,6 @@
-import type { SubscriptionPlan } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan } from "@/lib/types/database";
+
+export type { BillingPeriod };
 
 /**
  * Plan definitions -- the single place pricing, limits and entitlements live.
@@ -41,7 +43,9 @@ export interface PlanDefinition {
   id: SubscriptionPlan;
   name: string;
   /** Monthly price in PHP centavos, to keep money off floating point. */
-  priceCentavos: number;
+  priceCentavosMonthly: number;
+  /** Annual price in PHP centavos -- billed once a year, at a discount vs. 12x monthly. */
+  priceCentavosAnnual: number;
   tagline: string;
   audience: string;
   highlight?: string;
@@ -79,7 +83,8 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   FREE: {
     id: "FREE",
     name: "Free",
-    priceCentavos: 0,
+    priceCentavosMonthly: 0,
+    priceCentavosAnnual: 0,
     tagline: "Track your daily eggs, free forever.",
     audience: "A single small flock you want to start recording properly.",
     limits: {
@@ -95,7 +100,9 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   STARTER: {
     id: "STARTER",
     name: "Starter",
-    priceCentavos: 34_900,
+    priceCentavosMonthly: 34_900,
+    // ~17% off 12x monthly (34_900 * 12 = 418_800).
+    priceCentavosAnnual: 349_000,
     tagline: "Sell eggs and see what you actually earn.",
     audience: "A working farm selling eggs and watching its costs.",
     highlight: "Most popular",
@@ -116,7 +123,9 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   PRO: {
     id: "PRO",
     name: "Pro",
-    priceCentavos: 89_900,
+    priceCentavosMonthly: 89_900,
+    // ~17% off 12x monthly (89_900 * 12 = 1_078_800).
+    priceCentavosAnnual: 899_000,
     tagline: "Run several farms with a team.",
     audience: "Multiple farms or houses, with staff recording data.",
     limits: {
@@ -154,9 +163,40 @@ export function nextPlanForLimit(
   );
 }
 
-export function formatPlanPrice(plan: PlanDefinition): string {
-  if (plan.priceCentavos === 0) return "₱0";
-  return `₱${(plan.priceCentavos / 100).toLocaleString("en-PH")}`;
+export function priceCentavosFor(plan: PlanDefinition, period: BillingPeriod): number {
+  return period === "ANNUAL" ? plan.priceCentavosAnnual : plan.priceCentavosMonthly;
+}
+
+export function formatPlanPrice(plan: PlanDefinition, period: BillingPeriod = "MONTHLY"): string {
+  const centavos = priceCentavosFor(plan, period);
+  if (centavos === 0) return "₱0";
+  return `₱${(centavos / 100).toLocaleString("en-PH")}`;
+}
+
+/** Mock-billing period length, for simulating a current_period_end since there's no real checkout yet. */
+export const BILLING_PERIOD_DAYS: Record<BillingPeriod, number> = {
+  MONTHLY: 30,
+  ANNUAL: 365,
+};
+
+/**
+ * How much cheaper the annual price is than paying monthly for a year,
+ * rounded to the nearest whole percent. Null when there's nothing to save
+ * (Free, or a plan with no annual discount configured).
+ */
+export function annualSavingsPercent(plan: PlanDefinition): number | null {
+  if (plan.priceCentavosMonthly === 0 || plan.priceCentavosAnnual === 0) return null;
+  const fullYearAtMonthlyRate = plan.priceCentavosMonthly * 12;
+  if (plan.priceCentavosAnnual >= fullYearAtMonthlyRate) return null;
+  return Math.round((1 - plan.priceCentavosAnnual / fullYearAtMonthlyRate) * 100);
+}
+
+/** "Unlimited" / "30 days" / "—" (a zero limit) / a plain count, for the pricing page. */
+export function describeLimit(key: LimitKey, value: number | null): string {
+  if (value === null) return "Unlimited";
+  if (key === "history_days") return `${value} days`;
+  if (value === 0) return "—";
+  return String(value);
 }
 
 export const LIMIT_LABELS: Record<LimitKey, { singular: string; plural: string }> = {

@@ -8,10 +8,11 @@ import { Panel } from "@/components/ui/panel";
 import { Field, Select } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { PLAN_ORDER, PLANS } from "@/lib/subscriptions/plans";
-import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import { devSetSubscriptionAction } from "./actions";
 
 const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED", "EXPIRED"];
+const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
 
 /**
  * Development-only: flip the account's plan/status without real billing.
@@ -27,14 +28,17 @@ const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCE
 export function DevPlanSwitcher({
   currentPlan,
   currentStatus,
+  currentBillingPeriod,
 }: {
   currentPlan: SubscriptionPlan;
   currentStatus: SubscriptionStatus;
+  currentBillingPeriod: BillingPeriod;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [plan, setPlan] = useState<SubscriptionPlan>(currentPlan);
   const [status, setStatus] = useState<SubscriptionStatus>(currentStatus);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(currentBillingPeriod);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -45,7 +49,8 @@ export function DevPlanSwitcher({
   useEffect(() => {
     setPlan(currentPlan);
     setStatus(currentStatus);
-  }, [currentPlan, currentStatus]);
+    setBillingPeriod(currentBillingPeriod);
+  }, [currentPlan, currentStatus, currentBillingPeriod]);
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -53,7 +58,7 @@ export function DevPlanSwitcher({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await devSetSubscriptionAction({ plan, status });
+      const result = await devSetSubscriptionAction({ plan, status, billingPeriod });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -74,7 +79,7 @@ export function DevPlanSwitcher({
         {error && <StatusNote tone="bad">{error}</StatusNote>}
         {success && <StatusNote tone="good">{success}</StatusNote>}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Field label="Plan" htmlFor="dev-plan">
             <Select
               id="dev-plan"
@@ -84,6 +89,20 @@ export function DevPlanSwitcher({
               {PLAN_ORDER.map((id) => (
                 <option key={id} value={id}>
                   {PLANS[id].name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Billing" htmlFor="dev-billing-period">
+            <Select
+              id="dev-billing-period"
+              value={billingPeriod}
+              onChange={(event) => setBillingPeriod(event.target.value as BillingPeriod)}
+            >
+              {BILLING_PERIODS.map((value) => (
+                <option key={value} value={value}>
+                  {value === "ANNUAL" ? "Annual" : "Monthly"}
                 </option>
               ))}
             </Select>

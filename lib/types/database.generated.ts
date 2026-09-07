@@ -1069,6 +1069,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_period: Database["public"]["Enums"]["billing_period"]
           billing_provider: string | null
           created_at: string
           current_period_end: string | null
@@ -1084,6 +1085,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_period?: Database["public"]["Enums"]["billing_period"]
           billing_provider?: string | null
           created_at?: string
           current_period_end?: string | null
@@ -1099,6 +1101,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_period?: Database["public"]["Enums"]["billing_period"]
           billing_provider?: string | null
           created_at?: string
           current_period_end?: string | null
@@ -1308,6 +1311,7 @@ export type Database = {
       }
     }
     Enums: {
+      billing_period: "MONTHLY" | "ANNUAL"
       expense_category:
         | "FEED"
         | "CHICKS"
@@ -1456,6 +1460,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      billing_period: ["MONTHLY", "ANNUAL"],
       expense_category: [
         "FEED",
         "CHICKS",

@@ -29,7 +29,7 @@ export default async function BillingPage() {
     );
   }
 
-  const { currentPeriodEnd } = await getSubscriptionPeriod(context.ownerId);
+  const { currentPeriodEnd, billingPeriod } = await getSubscriptionPeriod(context.ownerId);
 
   return (
     <PageShell>
@@ -51,13 +51,18 @@ export default async function BillingPage() {
 
       <BillingPanel
         planName={PLANS[context.plan].name}
-        price={formatPlanPrice(PLANS[context.plan])}
+        price={formatPlanPrice(PLANS[context.plan], billingPeriod)}
+        billingPeriod={billingPeriod}
         status={context.subscriptionStatus}
         currentPeriodEnd={currentPeriodEnd}
       />
 
       {!isProduction && (
-        <DevPlanSwitcher currentPlan={context.plan} currentStatus={context.subscriptionStatus} />
+        <DevPlanSwitcher
+          currentPlan={context.plan}
+          currentStatus={context.subscriptionStatus}
+          currentBillingPeriod={billingPeriod}
+        />
       )}
     </PageShell>
   );

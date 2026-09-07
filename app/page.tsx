@@ -314,6 +314,12 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+
+            <p className="mt-8 text-sm">
+              <Link href="/how-it-works" className="font-medium text-primary hover:underline">
+                See the full walkthrough →
+              </Link>
+            </p>
           </Reveal>
         </section>
 
@@ -364,6 +370,12 @@ export default function LandingPage() {
                 <FeatureCard key={feature.title} {...feature} />
               ))}
             </div>
+
+            <p className="mt-8 text-sm">
+              <Link href="/features" className="font-medium text-primary hover:underline">
+                See all features →
+              </Link>
+            </p>
           </Reveal>
         </section>
 
@@ -593,7 +605,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* FAQ */}
         {/* ================================================================ */}
-        <section className="border-t border-border bg-muted/30">
+        <section id="faq" className="border-t border-border bg-muted/30">
           <div className="mx-auto w-full max-w-3xl px-4 py-14">
             <Reveal>
               <h2 className="text-center text-2xl font-bold tracking-tight">
@@ -602,6 +614,11 @@ export default function LandingPage() {
               <div className="mt-8">
                 <FaqAccordion items={FAQ_ITEMS} />
               </div>
+              <p className="mt-8 text-center text-sm">
+                <Link href="/faq" className="font-medium text-primary hover:underline">
+                  See the full FAQ →
+                </Link>
+              </p>
             </Reveal>
           </div>
         </section>

@@ -75,6 +75,19 @@
     --chart-4: 262 62% 60%;
     --chart-5: 174 62% 42%;
     --chart-grid: 214 20% 93%;
+
+    /* The public footer's dark green band. Same hue (142) as --primary/--brand
+       below, just darkened into a background instead of a button fill, so the
+       footer reads as the same brand green as "Start free" rather than an
+       off-family teal. Identical in both themes on purpose -- it's a fixed
+       brand statement, not something that should flip with the site's
+       light/dark toggle. Lightness gaps mirror the ones the .dark theme
+       already uses at a similar background (8-11%), which is what keeps text
+       on it readable. */
+    --footer-background: 142 32% 11%;
+    --footer-foreground: 142 20% 95%;
+    --footer-muted-foreground: 142 10% 72%;
+    --footer-border: 142 20% 22%;
   }
 
   .dark {
@@ -121,6 +134,12 @@
     --chart-4: 262 62% 68%;
     --chart-5: 174 58% 50%;
     --chart-grid: 222 20% 20%;
+
+    /* Same fixed dark green as :root -- see the comment there. */
+    --footer-background: 142 32% 11%;
+    --footer-foreground: 142 20% 95%;
+    --footer-muted-foreground: 142 10% 72%;
+    --footer-border: 142 20% 22%;
   }
 
   * {

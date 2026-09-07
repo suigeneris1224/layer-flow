@@ -46,6 +46,10 @@ const config: Config = {
           violet: "hsl(var(--chip-violet))",
           "violet-fg": "hsl(var(--chip-violet-fg))",
         },
+        "footer-bg": "hsl(var(--footer-background))",
+        "footer-foreground": "hsl(var(--footer-foreground))",
+        "footer-muted-foreground": "hsl(var(--footer-muted-foreground))",
+        "footer-border": "hsl(var(--footer-border))",
       },
       borderRadius: {
         sm: "6px",

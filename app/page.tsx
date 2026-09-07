@@ -641,7 +641,7 @@ export default function LandingPage() {
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
                 <Link
-                  href="#how-it-works"
+                  href="/how-it-works"
                   className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
                 >
                   Explore the dashboard

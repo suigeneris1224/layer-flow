@@ -28,8 +28,7 @@ export function PublicFooter() {
         <div className="[&>div]:items-start">
           <Brand />
           <p className="mt-3 text-sm text-muted-foreground">
-            A modern farm management platform designed for Philippine layer farmers, with local
-            pricing and time settings.
+            A modern farm management platform designed for Philippine layer farmers, in one dashboard. Track your flock, feed, and finances with ease.
           </p>
         </div>
 

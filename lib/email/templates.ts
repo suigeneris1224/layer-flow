@@ -16,7 +16,8 @@ import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database"
 export const SUBSCRIPTION_REMINDER_DAYS = 3;
 
 export interface SubscriptionEmailContext {
-  farmName: string;
+  /** Every farm this account owns -- subscriptions are account-wide, not per farm. */
+  farmNames: string[];
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   /** ISO timestamp, or null when no billing period has been recorded yet. */
@@ -35,7 +36,15 @@ function renewalLine(currentPeriodEnd: string | null): string {
     : "Renewal date not yet set.";
 }
 
-function wrap(farmName: string, bodyLines: string[]): { html: string; text: string } {
+/** "Farm A" / "Farm A and Farm B" / "Farm A, Farm B, and Farm C" -- for account-wide email copy. */
+function formatFarmList(names: string[]): string {
+  if (names.length === 0) return "your farm";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+function wrap(bodyLines: string[]): { html: string; text: string } {
   const text = [`Hi,`, "", ...bodyLines, "", "-- LayerFlow"].join("\n");
   const html = `<p>Hi,</p>${bodyLines.map((line) => `<p>${line}</p>`).join("")}<p>-- LayerFlow</p>`;
   return { html, text };
@@ -43,8 +52,9 @@ function wrap(farmName: string, bodyLines: string[]): { html: string; text: stri
 
 export function buildReceiptEmail(ctx: SubscriptionEmailContext): BuiltEmail {
   const plan = PLANS[ctx.plan];
-  const { html, text } = wrap(ctx.farmName, [
-    `Here's a summary of ${ctx.farmName}'s LayerFlow subscription:`,
+  const farms = formatFarmList(ctx.farmNames);
+  const { html, text } = wrap([
+    `Here's a summary of your LayerFlow subscription, covering ${farms}:`,
     `Plan: ${plan.name} (${formatPlanPrice(plan)} / month)`,
     `Status: ${ctx.status}`,
     renewalLine(ctx.currentPeriodEnd),
@@ -56,13 +66,14 @@ export function buildReceiptEmail(ctx: SubscriptionEmailContext): BuiltEmail {
 
 export function buildPastDueReminderEmail(ctx: SubscriptionEmailContext): BuiltEmail {
   const plan = PLANS[ctx.plan];
-  const { html, text } = wrap(ctx.farmName, [
-    `We weren't able to process the last payment for ${ctx.farmName} (${plan.name}, ${formatPlanPrice(plan)} / month).`,
-    `Your farm keeps full access while this is sorted out -- nothing has been switched off.`,
+  const farms = formatFarmList(ctx.farmNames);
+  const { html, text } = wrap([
+    `We weren't able to process the last payment for your LayerFlow account covering ${farms} (${plan.name}, ${formatPlanPrice(plan)} / month).`,
+    `Your farms keep full access while this is sorted out -- nothing has been switched off.`,
     `Please update your payment details when you get a chance.`,
   ]);
 
-  return { subject: `Payment reminder for ${ctx.farmName}`, html, text };
+  return { subject: `Payment reminder for ${farms}`, html, text };
 }
 
 export function buildRenewalReminderEmail(
@@ -70,8 +81,9 @@ export function buildRenewalReminderEmail(
   daysUntilRenewal: number
 ): BuiltEmail {
   const plan = PLANS[ctx.plan];
-  const { html, text } = wrap(ctx.farmName, [
-    `${ctx.farmName}'s ${plan.name} plan (${formatPlanPrice(plan)} / month) renews in ${daysUntilRenewal} day${daysUntilRenewal === 1 ? "" : "s"}.`,
+  const farms = formatFarmList(ctx.farmNames);
+  const { html, text } = wrap([
+    `Your ${plan.name} plan (${formatPlanPrice(plan)} / month), covering ${farms}, renews in ${daysUntilRenewal} day${daysUntilRenewal === 1 ? "" : "s"}.`,
     renewalLine(ctx.currentPeriodEnd),
     `No action is needed unless your payment details have changed.`,
   ]);

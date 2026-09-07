@@ -14,23 +14,23 @@ import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database"
  * it goes through the service-role client rather than the ordinary one.
  */
 
-export interface AdminFarmRow {
-  farmId: string;
-  farmName: string;
+export interface AdminAccountRow {
+  ownerId: string;
   ownerEmail: string | null;
+  /** Every farm this account owns -- subscriptions are account-wide, not per farm. */
+  farmNames: string[];
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   currentPeriodEnd: string | null;
   createdAt: string;
 }
 
-interface SubscriptionJoinRow {
-  farm_id: string;
+interface SubscriptionRow {
+  owner_id: string;
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   current_period_end: string | null;
   created_at: string;
-  farms: { id: string; name: string; owner_id: string } | { id: string; name: string; owner_id: string }[] | null;
 }
 
 function one<T>(value: T | T[] | null): T | null {
@@ -39,26 +39,29 @@ function one<T>(value: T | T[] | null): T | null {
 }
 
 /**
- * Every farm's subscription, soonest-expiring first (nulls -- no period set
- * yet -- last, since there's nothing to act on there).
+ * Every account's subscription, soonest-expiring first (nulls -- no period
+ * set yet -- last, since there's nothing to act on there).
  *
- * Owner emails come from one `listUsers()` call rather than one
- * `getUserById()` per farm (the pattern lib/data/billing-contacts.ts uses for
- * a single farm) -- fine for one farm, wasteful for every farm at once.
+ * One row per owner, not per farm -- subscriptions are account-wide. Owner
+ * emails come from one `listUsers()` call rather than one `getUserById()` per
+ * row (the pattern lib/data/billing-contacts.ts uses for a single farm) --
+ * fine for one account, wasteful for every account at once.
  */
-export async function getAllSubscriptions(): Promise<AdminFarmRow[]> {
+export async function getAllSubscriptions(): Promise<AdminAccountRow[]> {
   const admin = createSupabaseAdminClient();
 
-  const [subscriptionsResult, usersResult] = await Promise.all([
-    admin
-      .from("subscriptions")
-      .select("farm_id, plan, status, current_period_end, created_at, farms!inner(id, name, owner_id)"),
+  const [subscriptionsResult, farmsResult, usersResult] = await Promise.all([
+    admin.from("subscriptions").select("owner_id, plan, status, current_period_end, created_at"),
+    admin.from("farms").select("owner_id, name").order("created_at", { ascending: true }),
     admin.auth.admin.listUsers(),
   ]);
 
   if (subscriptionsResult.error) {
     logger.error("admin subscriptions lookup failed", { reason: subscriptionsResult.error.message });
     return [];
+  }
+  if (farmsResult.error) {
+    logger.error("admin farms lookup failed", { reason: farmsResult.error.message });
   }
   if (usersResult.error) {
     logger.error("admin user list lookup failed", { reason: usersResult.error.message });
@@ -69,18 +72,22 @@ export async function getAllSubscriptions(): Promise<AdminFarmRow[]> {
   // LayerFlow actually has that many accounts.
   const emailById = new Map(usersResult.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
 
-  const rows = ((subscriptionsResult.data ?? []) as unknown as SubscriptionJoinRow[]).map((row) => {
-    const farm = one(row.farms);
-    return {
-      farmId: row.farm_id,
-      farmName: farm?.name ?? "Unknown farm",
-      ownerEmail: farm ? (emailById.get(farm.owner_id) ?? null) : null,
-      plan: row.plan,
-      status: row.status,
-      currentPeriodEnd: row.current_period_end,
-      createdAt: row.created_at,
-    };
-  });
+  const farmNamesByOwner = new Map<string, string[]>();
+  for (const farm of farmsResult.data ?? []) {
+    const names = farmNamesByOwner.get(farm.owner_id) ?? [];
+    names.push(farm.name);
+    farmNamesByOwner.set(farm.owner_id, names);
+  }
+
+  const rows = ((subscriptionsResult.data ?? []) as SubscriptionRow[]).map((row) => ({
+    ownerId: row.owner_id,
+    ownerEmail: emailById.get(row.owner_id) ?? null,
+    farmNames: farmNamesByOwner.get(row.owner_id) ?? [],
+    plan: row.plan,
+    status: row.status,
+    currentPeriodEnd: row.current_period_end,
+    createdAt: row.created_at,
+  }));
 
   return rows.sort((a, b) => {
     if (a.currentPeriodEnd === null) return 1;

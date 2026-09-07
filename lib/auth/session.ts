@@ -18,6 +18,8 @@ export interface SessionUser {
 export interface FarmContext {
   farmId: string;
   farmName: string;
+  /** The account this farm belongs to -- subscriptions.owner_id, not farm_id: plan is account-wide. */
+  ownerId: string;
   currency: string;
   timezone: string;
   role: FarmRole;
@@ -70,15 +72,19 @@ export const getUserFarms = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("farm_members")
-    .select("role, farms!inner(id, name, currency, timezone)")
+    .select("role, farms!inner(id, name, currency, timezone, owner_id)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
-  type Joined = { role: FarmRole; farms: { id: string; name: string; currency: string; timezone: string } };
+  type Joined = {
+    role: FarmRole;
+    farms: { id: string; name: string; currency: string; timezone: string; owner_id: string };
+  };
 
   return ((data ?? []) as unknown as Joined[]).map((row) => ({
     farmId: row.farms.id,
     farmName: row.farms.name,
+    ownerId: row.farms.owner_id,
     currency: row.farms.currency,
     timezone: row.farms.timezone,
     role: row.role,
@@ -104,7 +110,7 @@ export const getFarmContext = cache(async (): Promise<FarmContext | null> => {
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select("plan, status")
-    .eq("farm_id", selected.farmId)
+    .eq("owner_id", selected.ownerId)
     .maybeSingle();
 
   let plan: SubscriptionPlan = subscription?.plan ?? "FREE";

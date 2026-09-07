@@ -1,7 +1,9 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/observability/logger";
+import type { Database } from "@/lib/types/database";
 
 /**
  * Reading and counting farms.
@@ -10,6 +12,35 @@ import { logger } from "@/lib/observability/logger";
  * belongs to" for the picker; this module covers the single-farm detail view
  * and the plan-limit count, neither of which existed outside onboarding.
  */
+
+/**
+ * Every farm this account owns, by name -- for subscription emails, which are
+ * account-wide (lib/email/templates.ts) rather than tied to one farm.
+ *
+ * Optional `client` (mirrors recordAuditLog's pattern) so both a
+ * request-scoped caller (billing actions -- RLS allows it, the owner is a
+ * member of their own farms) and the subscription-emails cron (service-role
+ * client, no session) can reuse this.
+ */
+export async function getFarmNamesForOwner(
+  ownerId: string,
+  client?: SupabaseClient<Database>
+): Promise<string[]> {
+  const supabase = client ?? (await createSupabaseServerClient());
+
+  const { data, error } = await supabase
+    .from("farms")
+    .select("name")
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    logger.error("farm names for owner lookup failed", { reason: error.message });
+    return [];
+  }
+
+  return (data ?? []).map((row) => row.name);
+}
 
 export interface FarmDetail {
   id: string;

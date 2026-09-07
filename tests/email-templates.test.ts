@@ -10,7 +10,7 @@ import { PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
 
 function ctx(overrides: Partial<SubscriptionEmailContext> = {}): SubscriptionEmailContext {
   return {
-    farmName: "Sunrise Layers",
+    farmNames: ["Sunrise Layers"],
     plan: "PRO",
     status: "ACTIVE",
     currentPeriodEnd: "2026-09-15T00:00:00.000Z",
@@ -56,7 +56,28 @@ describe("buildPastDueReminderEmail", () => {
     for (const word of ["suspended", "locked out", "disabled", "cancelled your"]) {
       expect(email.text.toLowerCase()).not.toContain(word);
     }
-    expect(email.text).toContain("keeps full access");
+    expect(email.text).toContain("keep full access");
+  });
+});
+
+describe("farm name list formatting", () => {
+  it("names a single farm plainly", () => {
+    const email = buildReceiptEmail(ctx({ farmNames: ["Sunrise Layers"] }));
+    expect(email.text).toContain("covering Sunrise Layers");
+  });
+
+  it("joins two farms with 'and'", () => {
+    const email = buildReceiptEmail(ctx({ farmNames: ["Sunrise Layers", "Golden Egg Farm"] }));
+    expect(email.text).toContain("covering Sunrise Layers and Golden Egg Farm");
+  });
+
+  it("joins three or more farms with commas and a trailing 'and'", () => {
+    const email = buildReceiptEmail(
+      ctx({ farmNames: ["Sunrise Layers", "Golden Egg Farm", "Bantay Poultry"] })
+    );
+    expect(email.text).toContain(
+      "covering Sunrise Layers, Golden Egg Farm, and Bantay Poultry"
+    );
   });
 });
 

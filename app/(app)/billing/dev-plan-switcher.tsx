@@ -14,7 +14,10 @@ import { devSetSubscriptionAction } from "./actions";
 const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED", "EXPIRED"];
 
 /**
- * Development-only: flip the active farm's plan/status without real billing.
+ * Development-only: flip the account's plan/status without real billing.
+ *
+ * Subscriptions are account-wide, so this affects every farm the signed-in
+ * owner has, not just the one currently open.
  *
  * The page that renders this already checks `isProduction`, so this component
  * never ships to a live site -- but the styling still marks it as scaffolding
@@ -65,7 +68,7 @@ export function DevPlanSwitcher({
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <StatusNote tone="warn">
           Visible in development only — never shown in production. Sets the plan directly,
-          bypassing billing.
+          bypassing billing, for every farm on this account.
         </StatusNote>
 
         {error && <StatusNote tone="bad">{error}</StatusNote>}

@@ -5,7 +5,7 @@ import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isProduction } from "@/lib/config/env";
-import { getFarmDetail } from "@/lib/data/farms";
+import { getFarmNamesForOwner } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getFarmOwnerEmail } from "@/lib/data/billing-contacts";
 import { sendEmail } from "@/lib/email/client";
@@ -29,12 +29,15 @@ export async function emailReceiptAction(): Promise<ActionResult> {
   const context = await getFarmContext();
 
   if (!context) return failure("Set up your farm first.");
-  if (!canManageBilling(context)) return failure("Only the farm owner can request a receipt.");
+  if (!canManageBilling(context)) return failure("Only the account owner can request a receipt.");
 
   try {
-    const { currentPeriodEnd } = await getSubscriptionPeriod(context.farmId);
+    const [{ currentPeriodEnd }, farmNames] = await Promise.all([
+      getSubscriptionPeriod(context.ownerId),
+      getFarmNamesForOwner(context.ownerId),
+    ]);
     const email = buildReceiptEmail({
-      farmName: context.farmName,
+      farmNames,
       plan: context.plan,
       status: context.subscriptionStatus,
       currentPeriodEnd,
@@ -68,21 +71,19 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
   const context = await getFarmContext();
 
   if (!context) return failure("Set up your farm first.");
-  if (!canManageBilling(context)) return failure("Only the farm owner can send this.");
-  if (context.subscriptionStatus !== "PAST_DUE") return failure("This farm is not past due.");
+  if (!canManageBilling(context)) return failure("Only the account owner can send this.");
+  if (context.subscriptionStatus !== "PAST_DUE") return failure("This account is not past due.");
 
   try {
-    const [detail, { currentPeriodEnd }] = await Promise.all([
-      getFarmDetail(context.farmId),
-      getSubscriptionPeriod(context.farmId),
+    const [{ currentPeriodEnd }, farmNames, ownerEmail] = await Promise.all([
+      getSubscriptionPeriod(context.ownerId),
+      getFarmNamesForOwner(context.ownerId),
+      getFarmOwnerEmail(context.ownerId),
     ]);
-    if (!detail) return failure("We couldn't load this farm's details.");
-
-    const ownerEmail = await getFarmOwnerEmail(detail.ownerId);
-    if (!ownerEmail) return failure("We couldn't find an owner email for this farm.");
+    if (!ownerEmail) return failure("We couldn't find an owner email for this account.");
 
     const email = buildPastDueReminderEmail({
-      farmName: context.farmName,
+      farmNames,
       plan: context.plan,
       status: context.subscriptionStatus,
       currentPeriodEnd,
@@ -112,7 +113,10 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
 }
 
 /**
- * Development-only: set the active farm's plan/status directly.
+ * Development-only: set the account's plan/status directly.
+ *
+ * Subscriptions are account-wide (keyed by `owner_id`), so this affects every
+ * farm the caller owns, not just the one currently open.
  *
  * `subscriptions` has no write policy for `authenticated` -- only a
  * service-role client (billing webhooks, normally) can write it -- so this is
@@ -134,7 +138,7 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
 
   if (!context) return failure("Set up your farm first.");
   if (!canManageBilling(context)) {
-    return failure("Only the farm owner can change the plan.");
+    return failure("Only the account owner can change the plan.");
   }
 
   const parsed = devSetSubscriptionSchema.safeParse(input);
@@ -158,7 +162,7 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
         past_due_reminder_sent_at: null,
         renewal_reminder_sent_at: null,
       })
-      .eq("farm_id", context.farmId);
+      .eq("owner_id", context.ownerId);
 
     if (error) return describeDatabaseError(error, "devSetSubscriptionAction");
 

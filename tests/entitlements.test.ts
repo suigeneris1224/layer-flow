@@ -143,7 +143,7 @@ describe("history window", () => {
 
 describe("role permissions", () => {
   const as = (role: FarmContext["role"]): FarmContext => ({
-    farmId: "f", farmName: "Farm", currency: "PHP", timezone: "Asia/Manila",
+    farmId: "f", farmName: "Farm", ownerId: "u1", currency: "PHP", timezone: "Asia/Manila",
     role, plan: "PRO", subscriptionStatus: "ACTIVE", isBetaOverride: false,
   });
 

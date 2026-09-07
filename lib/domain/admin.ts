@@ -12,11 +12,11 @@
 export const ADMIN_PAGE_SIZE = 20;
 
 export interface SearchableFarm {
-  farmName: string;
+  farmNames: string[];
   ownerEmail: string | null;
 }
 
-/** Case-insensitive substring match against farm name or owner email. Empty query matches everything. */
+/** Case-insensitive substring match against any owned farm's name or the owner's email. Empty query matches everything. */
 export function searchFarms<T extends SearchableFarm>(
   rows: readonly T[],
   query: string
@@ -26,7 +26,7 @@ export function searchFarms<T extends SearchableFarm>(
 
   return rows.filter(
     (row) =>
-      row.farmName.toLowerCase().includes(q) ||
+      row.farmNames.some((name) => name.toLowerCase().includes(q)) ||
       (row.ownerEmail?.toLowerCase().includes(q) ?? false)
   );
 }

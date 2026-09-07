@@ -12,7 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Building2, Mail } from "lucide-react";
-import { AdminFarmRow } from "./admin-farm-row";
+import { AdminAccountRow } from "./admin-account-row";
 import { FarmSearch } from "./farm-search";
 import { AdminPagination } from "./pagination";
 import { BetaPanel } from "./beta-panel";
@@ -73,7 +73,7 @@ export default async function AdminSubscriptionsPage({
     <PageShell>
       <PageHeader
         title="Subscriptions"
-        description="Every farm on the platform, soonest-expiring first."
+        description="Every account on the platform, soonest-expiring first."
         action={
           <Link href="/admin/emails" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
             <Mail className="size-4" aria-hidden />
@@ -90,7 +90,7 @@ export default async function AdminSubscriptionsPage({
         {PLAN_ORDER.map((id) => (
           <Panel key={id} title={PLANS[id].name} bodyClassName="p-4">
             <p className="text-2xl font-bold tabular">{countByPlan[id] ?? 0}</p>
-            <p className="text-xs text-muted-foreground">farms</p>
+            <p className="text-xs text-muted-foreground">accounts</p>
           </Panel>
         ))}
         <Panel
@@ -98,9 +98,10 @@ export default async function AdminSubscriptionsPage({
             <h2 className="flex items-center gap-1 text-sm font-semibold">
               Est. monthly
               <InfoTip label="About est. monthly">
-                Sum of each ACTIVE or PAST_DUE farm&apos;s plan price. No proration — a farm that
-                upgraded mid-period is counted at its current plan price for the full month, not a
-                blended rate. Treat this as a rough estimate, not a real revenue figure.
+                Sum of each ACTIVE or PAST_DUE account&apos;s plan price. No proration — an
+                account that upgraded mid-period is counted at its current plan price for the
+                full month, not a blended rate. Treat this as a rough estimate, not a real
+                revenue figure.
               </InfoTip>
             </h2>
           }
@@ -113,31 +114,31 @@ export default async function AdminSubscriptionsPage({
         </Panel>
         <Panel title="Expiring in 7 days" bodyClassName="p-4">
           <p className="text-2xl font-bold tabular">{expiringSoon}</p>
-          <p className="text-xs text-muted-foreground">farms</p>
+          <p className="text-xs text-muted-foreground">accounts</p>
         </Panel>
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState icon={Building2} title="No farms yet" message="Nothing to monitor yet." />
+        <EmptyState icon={Building2} title="No accounts yet" message="Nothing to monitor yet." />
       ) : (
         <>
           <FarmSearch initialQuery={q} />
 
-          <Panel title="All farms" bodyClassName="p-0">
+          <Panel title="All accounts" bodyClassName="p-0">
           {filtered.length === 0 ? (
             <EmptyState
               icon={Building2}
-              title="No matching farms"
+              title="No matching accounts"
               message={`No farm name or owner email matches "${q}".`}
             />
           ) : (
             <>
               <div className="scroll-x">
                 <table className="w-full min-w-[48rem] border-collapse text-sm">
-                  <caption className="sr-only">Every farm&apos;s subscription, soonest-expiring first</caption>
+                  <caption className="sr-only">Every account&apos;s subscription, soonest-expiring first</caption>
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
-                      <th scope="col" className="p-3 text-left font-medium">Farm</th>
+                      <th scope="col" className="p-3 text-left font-medium">Farms</th>
                       <th scope="col" className="p-3 text-left font-medium">Owner</th>
                       <th scope="col" className="p-3 text-left font-medium">Plan</th>
                       <th scope="col" className="p-3 text-left font-medium">Status</th>
@@ -148,7 +149,7 @@ export default async function AdminSubscriptionsPage({
                   </thead>
                   <tbody>
                     {pageRows.map((row) => (
-                      <AdminFarmRow key={row.farmId} row={row} />
+                      <AdminAccountRow key={row.ownerId} row={row} />
                     ))}
                   </tbody>
                 </table>
@@ -158,7 +159,7 @@ export default async function AdminSubscriptionsPage({
                 page={page}
                 totalPages={totalPages}
                 totalItems={totalItems}
-                itemLabel="farm"
+                itemLabel="account"
                 hrefForPage={pageHref}
               />
             </>

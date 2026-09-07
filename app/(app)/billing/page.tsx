@@ -29,7 +29,7 @@ export default async function BillingPage() {
     );
   }
 
-  const { currentPeriodEnd } = await getSubscriptionPeriod(context.farmId);
+  const { currentPeriodEnd } = await getSubscriptionPeriod(context.ownerId);
 
   return (
     <PageShell>

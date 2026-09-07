@@ -1073,8 +1073,8 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
-          farm_id: string
           id: string
+          owner_id: string
           past_due_reminder_sent_at: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
           provider_customer_id: string | null
@@ -1088,8 +1088,8 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
-          farm_id: string
           id?: string
+          owner_id: string
           past_due_reminder_sent_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           provider_customer_id?: string | null
@@ -1103,8 +1103,8 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
-          farm_id?: string
           id?: string
+          owner_id?: string
           past_due_reminder_sent_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           provider_customer_id?: string | null
@@ -1113,15 +1113,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: true
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       support_requests: {
         Row: {

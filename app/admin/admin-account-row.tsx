@@ -28,23 +28,24 @@ function daysRemaining(end: string): number {
   return Math.ceil(ms / (24 * 60 * 60 * 1000));
 }
 
-export interface AdminFarmRowData {
-  farmId: string;
-  farmName: string;
+export interface AdminAccountRowData {
+  ownerId: string;
   ownerEmail: string | null;
+  farmNames: string[];
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   currentPeriodEnd: string | null;
 }
 
 /**
- * One farm's row on /admin, with the plan/status cells made editable.
+ * One account's row on /admin, with the plan/status cells made editable.
  *
- * A production-safe stand-in for app/(app)/billing/dev-plan-switcher.tsx,
- * usable on any farm rather than only the caller's own -- see
- * app/admin/actions.ts's adminSetSubscriptionAction.
+ * Subscriptions are account-wide: saving here changes the plan for every farm
+ * this account owns at once, not just one of them -- see
+ * app/(app)/billing/dev-plan-switcher.tsx for the self-service equivalent,
+ * and app/admin/actions.ts's adminSetSubscriptionAction for the write.
  */
-export function AdminFarmRow({ row }: { row: AdminFarmRowData }) {
+export function AdminAccountRow({ row }: { row: AdminAccountRowData }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [plan, setPlan] = useState<SubscriptionPlan>(row.plan);
@@ -62,17 +63,19 @@ export function AdminFarmRow({ row }: { row: AdminFarmRowData }) {
 
   const dirty = plan !== row.plan || status !== row.status;
   const days = row.currentPeriodEnd ? daysRemaining(row.currentPeriodEnd) : null;
+  const farmLabel = row.farmNames.length > 0 ? row.farmNames.join(", ") : "No farms";
 
   function onSave() {
     setError(null);
 
     const confirmed = window.confirm(
-      `Set ${row.farmName} to ${PLANS[plan].name} / ${status}? This takes effect immediately.`
+      `Set ${row.ownerEmail ?? "this account"} to ${PLANS[plan].name} / ${status}? ` +
+        `This affects every farm on the account (${farmLabel}) immediately.`
     );
     if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await adminSetSubscriptionAction(row.farmId, { plan, status });
+      const result = await adminSetSubscriptionAction(row.ownerId, { plan, status });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -83,13 +86,15 @@ export function AdminFarmRow({ row }: { row: AdminFarmRowData }) {
 
   return (
     <tr className="border-b border-border last:border-0 align-top">
-      <th scope="row" className="p-3 text-left font-medium">{row.farmName}</th>
+      <th scope="row" className="p-3 text-left font-medium">
+        {farmLabel}
+      </th>
       <td className="p-3 text-left text-muted-foreground">{row.ownerEmail ?? "—"}</td>
 
       <td className="p-3 text-left">
         <Select
           fit
-          aria-label={`Plan for ${row.farmName}`}
+          aria-label={`Plan for ${row.ownerEmail ?? row.ownerId}`}
           value={plan}
           onChange={(event) => setPlan(event.target.value as SubscriptionPlan)}
         >
@@ -104,7 +109,7 @@ export function AdminFarmRow({ row }: { row: AdminFarmRowData }) {
       <td className="p-3 text-left">
         <Select
           fit
-          aria-label={`Status for ${row.farmName}`}
+          aria-label={`Status for ${row.ownerEmail ?? row.ownerId}`}
           value={status}
           onChange={(event) => setStatus(event.target.value as SubscriptionStatus)}
         >

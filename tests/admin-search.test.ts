@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { searchFarms, paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
 
 interface Farm {
-  farmName: string;
+  farmNames: string[];
   ownerEmail: string | null;
 }
 
 const farms: Farm[] = [
-  { farmName: "Sunrise Layers", ownerEmail: "juan@example.com" },
-  { farmName: "Golden Egg Farm", ownerEmail: "maria@delacruz.ph" },
-  { farmName: "Bantay Poultry", ownerEmail: null },
+  { farmNames: ["Sunrise Layers"], ownerEmail: "juan@example.com" },
+  { farmNames: ["Golden Egg Farm"], ownerEmail: "maria@delacruz.ph" },
+  { farmNames: ["Bantay Poultry"], ownerEmail: null },
 ];
 
 describe("searchFarms", () => {
@@ -31,6 +31,11 @@ describe("searchFarms", () => {
   it("does not throw on a farm with a null owner email", () => {
     expect(searchFarms(farms, "bantay")).toEqual([farms[2]]);
     expect(searchFarms(farms, "nomatch")).toEqual([]);
+  });
+
+  it("matches an account by any of its farm names", () => {
+    const multiFarm: Farm = { farmNames: ["Coop A", "Coop B"], ownerEmail: "multi@example.com" };
+    expect(searchFarms([...farms, multiFarm], "coop b")).toEqual([multiFarm]);
   });
 
   it("does not mutate the input array", () => {

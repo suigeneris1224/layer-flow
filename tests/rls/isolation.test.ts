@@ -73,7 +73,6 @@ suite("RLS tenant isolation", () => {
     "egg_sales",
     "expenses",
     "egg_inventory_adjustments",
-    "subscriptions",
     "farm_invitations",
   ] as const;
 
@@ -237,17 +236,40 @@ suite("RLS tenant isolation", () => {
       await bob.client
         .from("subscriptions")
         .update({ plan: "PRO" })
-        .eq("farm_id", farmB.farmId);
+        .eq("owner_id", bob.id);
 
       const admin = adminClient();
       const { data } = await admin
         .from("subscriptions")
         .select("plan")
-        .eq("farm_id", farmB.farmId)
+        .eq("owner_id", bob.id)
         .single();
 
       // No client write policy exists on subscriptions, by design.
       expect(data?.plan).toBe("FREE");
+    });
+
+    it("bob cannot read alice's account-wide subscription", async () => {
+      // Subscriptions are keyed by owner_id, not farm_id -- proven separately
+      // from the generic FARM_SCOPED loop above, which no longer covers this
+      // table.
+      const { data, error } = await bob.client
+        .from("subscriptions")
+        .select("plan")
+        .eq("owner_id", alice.id);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("alice can read her own account's subscription", async () => {
+      const { data, error } = await alice.client
+        .from("subscriptions")
+        .select("plan")
+        .eq("owner_id", alice.id);
+
+      expect(error).toBeNull();
+      expect(data?.length).toBe(1);
     });
 
     it("audit log entries cannot be rewritten or deleted", async () => {
@@ -688,7 +710,10 @@ suite("RLS tenant isolation", () => {
 
       expect(first.error).toBeNull();
       expect(second.error).toBeNull();
-      expect(second.data).toBe(first.data);
+      // The RPC returns a fresh jsonb object per call ({status, id}), not the
+      // same reference -- toBe (Object.is) fails on that even when the
+      // content genuinely matches.
+      expect(second.data).toStrictEqual(first.data);
 
       const { data } = await bob.client
         .from("daily_production")

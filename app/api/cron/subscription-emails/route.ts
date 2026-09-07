@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getFarmNamesForOwner } from "@/lib/data/farms";
 import { getFarmOwnerEmail } from "@/lib/data/billing-contacts";
 import { recordAuditLog, AUDIT_ACTIONS } from "@/lib/data/audit";
 import { sendEmail } from "@/lib/email/client";
@@ -17,23 +18,24 @@ import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database"
  * "scheduled/maintenance job" case createSupabaseAdminClient()'s own doc
  * comment names as a legitimate use of the service-role client.
  *
+ * Subscriptions are account-wide (one row per `owner_id`, covering every farm
+ * that owner has), so this is naturally one email per account, not per farm --
+ * an owner with several PAST_DUE farms would have gotten several separate
+ * reminders under the old per-farm schema; there is exactly one row to sweep
+ * per owner now.
+ *
  * Idempotent by construction: each query only picks up rows whose dedup
- * column is still null, and app/(app)/farms/actions.ts's
+ * column is still null, and app/(app)/billing/actions.ts's
  * devSetSubscriptionAction clears both columns on every plan/status change --
- * a farm can be swept twice in the same window without a duplicate email.
- * One farm's failure never aborts the batch.
+ * an account can be swept twice in the same window without a duplicate email.
+ * One account's failure never aborts the batch.
  */
 
-interface FarmRow {
-  farm_id: string;
+interface SubscriptionRow {
+  owner_id: string;
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   current_period_end: string | null;
-  farms: { name: string; owner_id: string } | { name: string; owner_id: string }[];
-}
-
-function oneOf<T>(value: T | T[]): T | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 export async function GET(request: Request) {
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
 
   const { data: pastDueRows, error: pastDueError } = await admin
     .from("subscriptions")
-    .select("farm_id, plan, status, current_period_end, farms!inner(name, owner_id)")
+    .select("owner_id, plan, status, current_period_end")
     .eq("status", "PAST_DUE")
     .is("past_due_reminder_sent_at", null);
 
@@ -55,19 +57,19 @@ export async function GET(request: Request) {
     logger.error("cron past-due query failed", { reason: pastDueError.message });
   }
 
-  for (const row of (pastDueRows ?? []) as unknown as FarmRow[]) {
-    const farm = oneOf(row.farms);
-    if (!farm) continue;
-
+  for (const row of (pastDueRows ?? []) as SubscriptionRow[]) {
     try {
-      const ownerEmail = await getFarmOwnerEmail(farm.owner_id);
+      const [ownerEmail, farmNames] = await Promise.all([
+        getFarmOwnerEmail(row.owner_id),
+        getFarmNamesForOwner(row.owner_id, admin),
+      ]);
       if (!ownerEmail) {
         results.failed++;
         continue;
       }
 
       const email = buildPastDueReminderEmail({
-        farmName: farm.name,
+        farmNames,
         plan: row.plan,
         status: row.status,
         currentPeriodEnd: row.current_period_end,
@@ -87,15 +89,15 @@ export async function GET(request: Request) {
       await admin
         .from("subscriptions")
         .update({ past_due_reminder_sent_at: new Date().toISOString() })
-        .eq("farm_id", row.farm_id);
+        .eq("owner_id", row.owner_id);
 
       await recordAuditLog(
         {
-          farmId: row.farm_id,
+          farmId: null,
           userId: null,
           action: AUDIT_ACTIONS.SUBSCRIPTION_EMAIL_SENT,
           entityType: "subscription",
-          entityId: row.farm_id,
+          entityId: row.owner_id,
           metadata: { kind: "past_due_reminder", to: "owner", trigger: "cron" },
         },
         admin
@@ -105,13 +107,13 @@ export async function GET(request: Request) {
     } catch (error) {
       results.failed++;
       logger.error("cron past-due email failed", {
-        farmId: row.farm_id,
+        ownerId: row.owner_id,
         reason: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  // Farms whose current_period_end falls on the UTC calendar day exactly
+  // Accounts whose current_period_end falls on the UTC calendar day exactly
   // SUBSCRIPTION_REMINDER_DAYS from now. A day-bucket match, not exact
   // timestamp equality, since the period end carries whatever time-of-day the
   // last plan change happened at and the cron itself runs at a fixed hour.
@@ -124,7 +126,7 @@ export async function GET(request: Request) {
 
   const { data: renewalRows, error: renewalError } = await admin
     .from("subscriptions")
-    .select("farm_id, plan, status, current_period_end, farms!inner(name, owner_id)")
+    .select("owner_id, plan, status, current_period_end")
     .gte("current_period_end", dayStart.toISOString())
     .lte("current_period_end", dayEnd.toISOString())
     .is("renewal_reminder_sent_at", null)
@@ -134,12 +136,12 @@ export async function GET(request: Request) {
     logger.error("cron renewal query failed", { reason: renewalError.message });
   }
 
-  for (const row of (renewalRows ?? []) as unknown as FarmRow[]) {
-    const farm = oneOf(row.farms);
-    if (!farm) continue;
-
+  for (const row of (renewalRows ?? []) as SubscriptionRow[]) {
     try {
-      const ownerEmail = await getFarmOwnerEmail(farm.owner_id);
+      const [ownerEmail, farmNames] = await Promise.all([
+        getFarmOwnerEmail(row.owner_id),
+        getFarmNamesForOwner(row.owner_id, admin),
+      ]);
       if (!ownerEmail) {
         results.failed++;
         continue;
@@ -147,7 +149,7 @@ export async function GET(request: Request) {
 
       const email = buildRenewalReminderEmail(
         {
-          farmName: farm.name,
+          farmNames,
           plan: row.plan,
           status: row.status,
           currentPeriodEnd: row.current_period_end,
@@ -169,15 +171,15 @@ export async function GET(request: Request) {
       await admin
         .from("subscriptions")
         .update({ renewal_reminder_sent_at: new Date().toISOString() })
-        .eq("farm_id", row.farm_id);
+        .eq("owner_id", row.owner_id);
 
       await recordAuditLog(
         {
-          farmId: row.farm_id,
+          farmId: null,
           userId: null,
           action: AUDIT_ACTIONS.SUBSCRIPTION_EMAIL_SENT,
           entityType: "subscription",
-          entityId: row.farm_id,
+          entityId: row.owner_id,
           metadata: { kind: "renewal_reminder", to: "owner", trigger: "cron" },
         },
         admin
@@ -187,7 +189,7 @@ export async function GET(request: Request) {
     } catch (error) {
       results.failed++;
       logger.error("cron renewal email failed", {
-        farmId: row.farm_id,
+        ownerId: row.owner_id,
         reason: error instanceof Error ? error.message : String(error),
       });
     }

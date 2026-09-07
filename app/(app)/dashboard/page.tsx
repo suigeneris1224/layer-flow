@@ -49,7 +49,7 @@ export default async function DashboardPage({
   const [data, farms, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),
     getUserFarms(),
-    showRenewalBanner ? getSubscriptionPeriod(context.farmId) : Promise.resolve(null),
+    showRenewalBanner ? getSubscriptionPeriod(context.ownerId) : Promise.resolve(null),
   ]);
   const cardsByFarm = await getFarmCardsForUser(farms.map((farm) => farm.farmId));
 

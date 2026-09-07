@@ -21,19 +21,22 @@ const MAX_BETA_TESTERS = 5;
 
 /**
  * The production-safe equivalent of app/(app)/billing/actions.ts's
- * devSetSubscriptionAction, for a farm the caller does NOT belong to.
+ * devSetSubscriptionAction, for an account the caller does NOT belong to.
  *
- * That action is gated `!isProduction` + farm-owner-only, since it exists so
- * a developer can flip their own test farm's plan locally. This one is the
+ * That action is gated `!isProduction` + owner-only, since it exists so a
+ * developer can flip their own test account's plan locally. This one is the
  * opposite shape on purpose: it must work in production (that is the entire
- * point -- fixing a real farm's stuck subscription), gated by
+ * point -- fixing a real account's stuck subscription), gated by
  * `isPlatformAdmin` instead of farm membership. Deliberately does NOT call
  * `requirePlatformAdmin()` (lib/auth/admin.ts) -- that redirects, which is
  * right for a page and wrong for an action a client component expects a
  * `{ok:false}` result from.
+ *
+ * Subscriptions are account-wide: this changes every farm the account owns
+ * at once, keyed by `owner_id`, not `farm_id`.
  */
 export async function adminSetSubscriptionAction(
-  farmId: string,
+  ownerId: string,
   input: unknown
 ): Promise<ActionResult> {
   const user = await requireUser();
@@ -48,7 +51,7 @@ export async function adminSetSubscriptionAction(
     const admin = createSupabaseAdminClient();
 
     // Same column set as devSetSubscriptionAction: an override is
-    // conceptually "as if this farm just went through a plan/status
+    // conceptually "as if this account just went through a plan/status
     // change," so it resets the period and clears both reminder-dedup
     // columns the same way that action does.
     const now = new Date();
@@ -65,17 +68,17 @@ export async function adminSetSubscriptionAction(
         past_due_reminder_sent_at: null,
         renewal_reminder_sent_at: null,
       })
-      .eq("farm_id", farmId);
+      .eq("owner_id", ownerId);
 
     if (error) return describeDatabaseError(error, "adminSetSubscriptionAction");
 
     await recordAuditLog(
       {
-        farmId,
+        farmId: null,
         userId: user.id,
         action: AUDIT_ACTIONS.PLAN_CHANGED,
         entityType: "subscription",
-        entityId: farmId,
+        entityId: ownerId,
         metadata: { plan: parsed.data.plan, status: parsed.data.status, trigger: "admin_override" },
       },
       admin

@@ -98,6 +98,21 @@ export async function updateFlockAction(
   }
 
   try {
+    const flock = await getFlock(context.farmId, flockId);
+    if (!flock) return failure("That flock no longer exists.");
+
+    // Same rule createFlockAction uses at creation time: a start-laying date
+    // means PRODUCING, none means GROWING. Applied on every edit too, so a
+    // GROWING flock isn't stuck there forever just because the date was
+    // added later instead of at creation. A retired flock (SOLD/CLOSED) is
+    // left alone -- editing its name shouldn't silently reactivate it.
+    const isRetired = flock.status === "SOLD" || flock.status === "CLOSED";
+    const status = isRetired
+      ? flock.status
+      : parsed.data.startLayingDate
+        ? "PRODUCING"
+        : "GROWING";
+
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("flocks")
@@ -107,6 +122,7 @@ export async function updateFlockAction(
         house_id: parsed.data.houseId,
         placement_date: parsed.data.placementDate,
         start_laying_date: parsed.data.startLayingDate || null,
+        status,
         notes: parsed.data.notes || null,
       })
       .eq("id", flockId)

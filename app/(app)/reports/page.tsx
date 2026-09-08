@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BarChart3, Info, PhilippinePeso, Receipt, TrendingUp } from "lucide-react";
+import { BarChart3, PhilippinePeso, Receipt, TrendingUp } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getReportsData } from "@/lib/data/reports";
@@ -8,6 +8,7 @@ import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
+import { InfoTip } from "@/components/ui/info-tip";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { ProfitChart } from "@/components/charts/lazy";
 import { ReportRangeSelect } from "@/components/reports/report-range-select";
@@ -171,7 +172,22 @@ export default async function ReportsPage({
           )}
 
           {data.flockProfitability ? (
-            <Panel title="Profitability by flock">
+            <Panel
+              title={
+                data.flockProfitability.some((flock) => flock.id === "unassigned") ? (
+                  <h2 className="flex items-center gap-1 text-sm font-semibold">
+                    Profitability by flock
+                    <InfoTip label="About Unassigned">
+                      &quot;Unassigned&quot; covers sales and expenses recorded without picking a
+                      flock — walk-in cash sales, farm-wide costs — so this report&apos;s total
+                      still matches the farm&apos;s actual total.
+                    </InfoTip>
+                  </h2>
+                ) : (
+                  "Profitability by flock"
+                )
+              }
+            >
               {data.flockProfitability.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No revenue or cost attributed to a flock in this period yet.
@@ -192,25 +208,7 @@ export default async function ReportsPage({
                       {data.flockProfitability.map((flock) => (
                         <tr key={flock.id} className="border-b border-border last:border-0">
                           <th scope="row" className="py-2.5 text-left font-normal">
-                            {flock.id === "unassigned" ? (
-                              <span
-                                className="inline-flex items-center gap-1"
-                                title="Sales and expenses recorded without picking a flock -- walk-in cash sales, farm-wide costs -- so this report's total still matches the farm's actual total."
-                              >
-                                {flock.name}
-                                <Info
-                                  className="size-3.5 shrink-0 text-muted-foreground"
-                                  aria-hidden
-                                />
-                                <span className="sr-only">
-                                  : sales and expenses recorded without picking a flock -- walk-in
-                                  cash sales, farm-wide costs -- so this report's total still
-                                  matches the farm's actual total.
-                                </span>
-                              </span>
-                            ) : (
-                              flock.name
-                            )}
+                            {flock.name}
                           </th>
                           <td className="py-2.5 text-right tabular">
                             {formatCurrency(flock.revenue, context.currency)}

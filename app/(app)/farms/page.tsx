@@ -57,7 +57,7 @@ export default async function FarmsPage({
       {!detail ? (
         <StatusNote tone="bad">We couldn&apos;t load this farm&apos;s details.</StatusNote>
       ) : canEdit ? (
-        <FarmForm mode="edit" initial={detail} photoUrl={detail.photoUrl} />
+        <FarmForm key={detail.id} mode="edit" initial={detail} photoUrl={detail.photoUrl} />
       ) : (
         <Panel title={detail.name}>
           <dl className="flex flex-col gap-2 text-sm">

@@ -261,7 +261,7 @@ export async function getSaleFormData(
       .from("flocks")
       .select("id, name")
       .eq("farm_id", context.farmId)
-      .eq("status", "PRODUCING")
+      .in("status", ["GROWING", "PRODUCING"])
       .order("name"),
     supabase
       .from("egg_inventory_balances")

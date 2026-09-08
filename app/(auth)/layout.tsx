@@ -21,8 +21,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <main id="main" className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <Panel bodyClassName="p-6 sm:p-8">
-            <Link href="/" className="mb-6 inline-flex w-fit">
-              <Brand />
+            <Link href="/" className="mb-6 flex w-full justify-center">
+              <Brand size="lg" />
             </Link>
             {children}
           </Panel>

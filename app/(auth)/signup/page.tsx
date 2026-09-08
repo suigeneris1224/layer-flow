@@ -19,7 +19,7 @@ export default async function SignupPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
           {joining ? "Create your account" : "Start your farm"}
         </h1>

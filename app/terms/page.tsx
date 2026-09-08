@@ -238,7 +238,64 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-base font-semibold text-foreground">
-                6. Governing Law and Exclusive Jurisdiction
+                6. Refund Policy
+              </h2>
+              <ul className="mt-2 flex flex-col gap-3">
+                <li>
+                  <span className="font-medium text-foreground">Strict No-Refund General Rule:</span>{" "}
+                  Due to the digital nature of the Service and the immediate allocation of
+                  serverless compute resources (Cloudflare edge nodes and Supabase database
+                  storage partitions), all prepaid subscription fees are strictly non-refundable
+                  and non-creditable. If you stop using the Service before your current billing
+                  cycle ends, you will retain access until the end of that cycle, but no pro-rated
+                  refunds will be granted for unused calendar days. We likewise offer no refunds
+                  for subscription periods in which you entered incorrect data or experienced
+                  internal administrative farm errors.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">
+                    Limited Exceptions (Discretionary, Case-by-Case):
+                  </span>{" "}
+                  Limited exceptions may be reviewed strictly at our sole discretion under the
+                  following circumstances:
+                  <ul className="mt-2 flex flex-col gap-1.5 pl-5">
+                    <li className="list-disc">
+                      <span className="font-medium text-foreground">Confirmed double-billing:</span>{" "}
+                      If PayMongo triggers a technical duplicate charge for a single subscription
+                      renewal, we will reverse the duplicate transaction. The refund timeline
+                      depends entirely on PayMongo&apos;s settlement infrastructure and your
+                      e-wallet (GCash/Maya) or bank&apos;s clearing duration.
+                    </li>
+                    <li className="list-disc">
+                      <span className="font-medium text-foreground">Extended server downtime:</span>{" "}
+                      If our cloud infrastructure (Supabase/Cloudflare) suffers an uninterrupted
+                      total outage preventing data synchronization or platform access for more
+                      than seven (7) consecutive business days, affected active accounts may
+                      request a pro-rated extension of their service period.
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">
+                    Forfeiture on Termination for Cause:
+                  </span>{" "}
+                  If your account is permanently banned or suspended for a verified breach of
+                  these Terms — including, but not limited to, local clock-tampering, security
+                  circumvention, or malicious API exploitation — any remaining prepaid
+                  subscription balance is forfeited, and no refunds will be issued.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">Regulatory Rights:</span> Nothing
+                  in this policy is intended to circumvent the consumer protection standards set
+                  by the Department of Trade and Industry (DTI) of the Philippines. We handle all
+                  valid, legally backed consumer claims fairly and professionally.
+                </li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-base font-semibold text-foreground">
+                7. Governing Law and Exclusive Jurisdiction
               </h2>
               <p className="mt-1">
                 These Terms, along with any operational disputes or claims arising out of their

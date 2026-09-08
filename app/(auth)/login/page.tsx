@@ -23,7 +23,7 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sign in to record today&apos;s production.

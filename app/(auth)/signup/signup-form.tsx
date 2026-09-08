@@ -66,16 +66,18 @@ export function SignupForm({ next }: { next: string }) {
         name="agreeToTerms"
         value="true"
         required
+        align="start"
         label={
           <span>
-            I agree to the{" "}
+            By creating an account, you agree to the{" "}
+            <Link href="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
             <Link href="/terms" className="font-medium text-primary hover:underline">
               Terms &amp; Conditions
             </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="font-medium text-primary hover:underline">
-              Privacy Policy
-            </Link>
+            of LayerFlow
           </span>
         }
       />

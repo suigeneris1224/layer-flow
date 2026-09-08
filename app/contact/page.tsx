@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Mail } from "lucide-react";
+import { Mail, MapPin, Phone, MessageCircle } from "lucide-react";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { PublicFooter } from "@/components/marketing/public-footer";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
@@ -25,18 +25,39 @@ export default function ContactPage() {
             description="Questions about your farm, your account, or a plan — this is the fastest way to reach us."
           />
 
-          <div className="mt-6 flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
-            <p className="text-sm text-muted-foreground">
-              We&apos;re a small team, so email is the most reliable way to reach us. We read every
-              message and typically reply within a business day.
-            </p>
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className={cn(buttonVariants({ variant: "primary" }), "w-fit")}
-            >
-              <Mail className="size-4" aria-hidden />
-              {SUPPORT_EMAIL}
-            </a>
+          <div className="mt-6 grid grid-cols-1 gap-6 rounded-lg border border-border bg-surface p-5 sm:grid-cols-2 sm:divide-x sm:divide-border sm:gap-0">
+            <div className="flex flex-col gap-4 sm:pr-6">
+              <p className="text-sm text-muted-foreground">
+                We&apos;re a small team, so email is the most reliable way to reach us. We read
+                every message and typically reply within a business day.
+              </p>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className={cn(buttonVariants({ variant: "primary" }), "w-fit")}
+              >
+                <Mail className="size-4" aria-hidden />
+                {SUPPORT_EMAIL}
+              </a>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:pl-6">
+              <span className="text-sm font-medium text-foreground">Other ways to reach us</span>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>[Business Address — TBD]</span>
+              </div>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Phone className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>[Phone Number — TBD]</span>
+              </div>
+              <a
+                href="#"
+                className="flex items-start gap-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <MessageCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>Message us on Facebook</span>
+              </a>
+            </div>
           </div>
 
           <p className="mt-6 text-sm text-muted-foreground">

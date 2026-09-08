@@ -198,6 +198,14 @@ export async function getBetaSettings(): Promise<BetaSettings> {
   };
 }
 
+export interface SupportMessageRow {
+  id: string;
+  senderRole: "admin" | "farmer";
+  senderEmail: string | null;
+  body: string;
+  createdAt: string;
+}
+
 export interface SupportRequestRow {
   id: string;
   farmName: string;
@@ -207,6 +215,7 @@ export interface SupportRequestRow {
   priority: boolean;
   status: string;
   createdAt: string;
+  messages: SupportMessageRow[];
 }
 
 interface SupportRequestJoinRow {
@@ -221,12 +230,23 @@ interface SupportRequestJoinRow {
   farms: { name: string } | { name: string }[] | null;
 }
 
+interface SupportMessageDbRow {
+  id: string;
+  request_id: string;
+  sender_id: string;
+  sender_role: "admin" | "farmer";
+  body: string;
+  created_at: string;
+}
+
 /**
  * Every request, open first (then priority, then newest) -- for app/admin/'s
  * support panel, which splits this into an open list and a collapsed
  * "Resolved" section itself. Capped at 100 rows so history doesn't grow
  * without bound; same "one listUsers() call, not one per row" shape as
  * getAllSubscriptions, since submitter email isn't stored on the row itself.
+ * Each request's reply thread (support_request_messages) rides along in the
+ * same round trip, since the admin panel always needs both together.
  */
 export async function getSupportRequests(): Promise<SupportRequestRow[]> {
   const admin = createSupabaseAdminClient();
@@ -253,8 +273,37 @@ export async function getSupportRequests(): Promise<SupportRequestRow[]> {
   }
 
   const emailById = new Map(usersResult.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
+  const requestRows = (requestsResult.data ?? []) as unknown as SupportRequestJoinRow[];
 
-  return ((requestsResult.data ?? []) as unknown as SupportRequestJoinRow[]).map((row) => ({
+  const messagesByRequest = new Map<string, SupportMessageRow[]>();
+  if (requestRows.length > 0) {
+    const { data: messageRows, error: messagesError } = await admin
+      .from("support_request_messages")
+      .select("id, request_id, sender_id, sender_role, body, created_at")
+      .in(
+        "request_id",
+        requestRows.map((row) => row.id)
+      )
+      .order("created_at", { ascending: true });
+
+    if (messagesError) {
+      logger.error("support message lookup failed", { reason: messagesError.message });
+    } else {
+      for (const row of (messageRows ?? []) as SupportMessageDbRow[]) {
+        const list = messagesByRequest.get(row.request_id) ?? [];
+        list.push({
+          id: row.id,
+          senderRole: row.sender_role,
+          senderEmail: emailById.get(row.sender_id) ?? null,
+          body: row.body,
+          createdAt: row.created_at,
+        });
+        messagesByRequest.set(row.request_id, list);
+      }
+    }
+  }
+
+  return requestRows.map((row) => ({
     id: row.id,
     farmName: one(row.farms)?.name ?? "Unknown farm",
     submitterEmail: emailById.get(row.submitted_by) ?? null,
@@ -263,5 +312,6 @@ export async function getSupportRequests(): Promise<SupportRequestRow[]> {
     priority: row.priority,
     status: row.status,
     createdAt: row.created_at,
+    messages: messagesByRequest.get(row.id) ?? [],
   }));
 }

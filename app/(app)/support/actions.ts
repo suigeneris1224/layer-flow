@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
-import { supportRequestSchema, toFieldErrors } from "@/lib/validation/schemas";
+import { supportReplySchema, supportRequestSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { sendEmail } from "@/lib/email/client";
 import { buildSupportRequestNotificationEmail } from "@/lib/email/templates";
 import { logger } from "@/lib/observability/logger";
@@ -83,5 +85,74 @@ export async function submitSupportRequestAction(input: unknown): Promise<Action
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "submitSupportRequestAction");
+  }
+}
+
+/**
+ * Reply on your own support request.
+ *
+ * The insert itself is RLS-checked (support_request_messages_insert), no
+ * admin client needed. Reopening a resolved ticket does need the admin
+ * client, same as resolving it does the other way -- support_requests'
+ * update is revoked from authenticated entirely.
+ */
+export async function replyToSupportRequestAction(
+  requestId: string,
+  input: unknown
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const context = await requireFarmContext();
+
+  const parsed = supportReplySchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form below.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data: request, error: requestError } = await supabase
+      .from("support_requests")
+      .select("id, status")
+      .eq("id", requestId)
+      .eq("farm_id", context.farmId)
+      .maybeSingle();
+
+    if (requestError) return describeDatabaseError(requestError, "replyToSupportRequestAction");
+    if (!request) return failure("That request no longer exists.");
+
+    const { error } = await supabase.from("support_request_messages").insert({
+      request_id: requestId,
+      sender_id: user.id,
+      sender_role: "farmer",
+      body: parsed.data.body,
+    });
+
+    if (error) return describeDatabaseError(error, "replyToSupportRequestAction");
+
+    if (request.status === "resolved") {
+      const admin = createSupabaseAdminClient();
+      const { error: reopenError } = await admin
+        .from("support_requests")
+        .update({ status: "open" })
+        .eq("id", requestId);
+      if (reopenError) {
+        logger.warn("support request reopen failed", { reason: reopenError.message });
+      }
+    }
+
+    await recordAuditLog({
+      farmId: context.farmId,
+      userId: user.id,
+      action: AUDIT_ACTIONS.SUPPORT_REQUEST_REPLIED,
+      entityType: "support_request",
+      entityId: requestId,
+    });
+
+    revalidatePath("/support");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "replyToSupportRequestAction");
   }
 }

@@ -121,3 +121,22 @@ export function buildSupportRequestNotificationEmail(ctx: {
     text: bodyLines.join("\n\n"),
   };
 }
+
+/** Notifies a farmer that support replied to their ticket. */
+export function buildSupportReplyEmail(ctx: {
+  farmName: string;
+  subject: string;
+  body: string;
+}): BuiltEmail {
+  const bodyLines = [
+    `The LayerFlow team replied to your support request from ${ctx.farmName}.`,
+    `Subject: ${ctx.subject}`,
+    ctx.body,
+  ];
+
+  return {
+    subject: `Re: ${ctx.subject}`,
+    html: `<p>${bodyLines.map((line) => line.replace(/\n/g, "<br />")).join("</p><p>")}</p>`,
+    text: bodyLines.join("\n\n"),
+  };
+}

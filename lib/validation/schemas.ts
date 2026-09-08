@@ -283,6 +283,10 @@ export const supportRequestSchema = z.object({
   message: z.string().trim().min(1, "Enter a message").max(4000),
 });
 
+export const supportReplySchema = z.object({
+  body: z.string().trim().min(1, "Enter a message").max(4000),
+});
+
 /** Adding a beta tester by email -- lowercased to match beta_testers.email's primary key. */
 export const addBetaTesterSchema = z.object({
   email: z

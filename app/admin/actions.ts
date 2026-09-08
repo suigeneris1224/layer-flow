@@ -9,6 +9,7 @@ import { BILLING_PERIOD_DAYS } from "@/lib/subscriptions/plans";
 import {
   addBetaTesterSchema,
   devSetSubscriptionSchema,
+  supportReplySchema,
   toFieldErrors,
 } from "@/lib/validation/schemas";
 import {
@@ -17,6 +18,9 @@ import {
   failure,
   type ActionResult,
 } from "@/lib/errors";
+import { sendEmail } from "@/lib/email/client";
+import { buildSupportReplyEmail } from "@/lib/email/templates";
+import { logger } from "@/lib/observability/logger";
 
 const MAX_BETA_TESTERS = 5;
 
@@ -206,6 +210,81 @@ export async function resolveSupportRequestAction(requestId: string): Promise<Ac
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "resolveSupportRequestAction");
+  }
+}
+
+/** Reply to a farmer's support request. Best-effort emails them the reply. */
+export async function replySupportRequestAction(
+  requestId: string,
+  input: unknown
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  const parsed = supportReplySchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { data: request, error: requestError } = await admin
+      .from("support_requests")
+      .select("id, subject, submitted_by, farms(name)")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (requestError) return describeDatabaseError(requestError, "replySupportRequestAction");
+    if (!request) return failure("That request no longer exists.");
+
+    const { error } = await admin.from("support_request_messages").insert({
+      request_id: requestId,
+      sender_id: user.id,
+      sender_role: "admin",
+      body: parsed.data.body,
+    });
+
+    if (error) return describeDatabaseError(error, "replySupportRequestAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.SUPPORT_REQUEST_REPLIED,
+        entityType: "support_request",
+        entityId: requestId,
+      },
+      admin
+    );
+
+    const { data: farmer } = await admin.auth.admin.getUserById(request.submitted_by);
+    const farmerEmail = farmer?.user?.email;
+    if (farmerEmail) {
+      const farmName = (
+        Array.isArray(request.farms) ? request.farms[0] : request.farms
+      )?.name;
+      const email = buildSupportReplyEmail({
+        farmName: farmName ?? "your farm",
+        subject: request.subject,
+        body: parsed.data.body,
+      });
+      const sent = await sendEmail({
+        to: { email: farmerEmail },
+        subject: email.subject,
+        htmlContent: email.html,
+        textContent: email.text,
+      });
+      if (!sent.ok) {
+        logger.warn("support reply email failed", { reason: sent.error });
+      }
+    }
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "replySupportRequestAction");
   }
 }
 

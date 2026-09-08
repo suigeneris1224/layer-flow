@@ -100,4 +100,5 @@ export const AUDIT_ACTIONS = {
   BETA_TESTER_REMOVED: "beta.tester_removed",
   SUPPORT_REQUEST_CREATED: "support_request.created",
   SUPPORT_REQUEST_RESOLVED: "support_request.resolved",
+  SUPPORT_REQUEST_REPLIED: "support_request.replied",
 } as const;

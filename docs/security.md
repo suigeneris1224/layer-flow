@@ -130,13 +130,25 @@ them.
 ## Transport and headers
 
 Set in `next.config.ts`: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
-`Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy` denying camera,
-microphone and geolocation. HTTPS is terminated by Vercel.
+`Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` denying camera,
+microphone and geolocation, and a `Content-Security-Policy`. HTTPS is terminated by Vercel.
+
+The CSP's `connect-src`/`img-src` are built from `NEXT_PUBLIC_SUPABASE_URL` at config-load time,
+since that's the only third-party origin the app talks to (REST, Auth, Storage-hosted photos).
+`script-src`/`style-src` still carry `'unsafe-inline'` — a known, deliberate gap: the App Router
+injects its own inline hydration script, and at least one component sets CSS custom properties via
+a `style` attribute. Closing it needs a per-request nonce threaded through `middleware.ts` into
+every layout, verified in a real browser for hydration breakage — real plumbing, not a follow-up
+line item. `script-src` also carries `'unsafe-eval'` in development only (`NODE_ENV !== "production"`)
+— `next dev`'s Fast Refresh compiles with eval()-based source maps, and without it every client
+component (charts included) throws a CSP violation instead of running. Production builds don't
+eval, so it's dropped there.
 
 ## Still to do
 
 - [x] ~~Run the migrations.~~ Done — all seven apply cleanly.
 - [x] ~~RLS isolation tests.~~ Done — `tests/rls/isolation.test.ts`, 39 passing.
+- [x] ~~A Content-Security-Policy header.~~ Done — see "Transport and headers" above.
 - [ ] **Rate limiting** on auth endpoints and server actions.
-- [ ] **A Content-Security-Policy header.** Not yet set.
+- [ ] **Nonce-based CSP**, to drop `'unsafe-inline'` from `script-src`/`style-src`.
 - [ ] Verify email confirmation is enabled before any real farm signs up.

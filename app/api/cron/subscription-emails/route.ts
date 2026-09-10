@@ -82,6 +82,7 @@ export async function GET(request: Request) {
         subject: email.subject,
         htmlContent: email.html,
         textContent: email.text,
+        tags: ["past_due_reminder"],
       });
       if (!sent.ok) {
         results.failed++;
@@ -165,6 +166,7 @@ export async function GET(request: Request) {
         subject: email.subject,
         htmlContent: email.html,
         textContent: email.text,
+        tags: ["renewal_reminder"],
       });
       if (!sent.ok) {
         results.failed++;

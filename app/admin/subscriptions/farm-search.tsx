@@ -7,7 +7,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/field";
 
 /**
- * Debounced, URL-driven search box for /admin's farm table.
+ * Debounced, URL-driven search box for /admin/subscriptions' farm table.
  *
  * Matches the codebase's existing url-searchParams-as-state idiom
  * (components/reports/range-picker.tsx) rather than filtering client-side --
@@ -42,7 +42,7 @@ export function FarmSearch({
       if (value.trim()) params.set("q", value.trim());
       if (period !== "all") params.set("period", period);
       const query = params.toString();
-      router.replace((query ? `/admin?${query}` : "/admin") as Route);
+      router.replace((query ? `/admin/subscriptions?${query}` : "/admin/subscriptions") as Route);
     }, 300);
 
     return () => clearTimeout(timeout);

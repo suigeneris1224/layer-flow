@@ -309,6 +309,11 @@ export const supportReplySchema = z.object({
   body: z.string().trim().min(1, "Enter a message").max(4000),
 });
 
+/** The admin/beta-settings save button -- persists beta_settings.max_testers. */
+export const setBetaMaxTestersSchema = z.object({
+  maxTesters: intFromForm("Max testers", { min: 1, max: 100 }),
+});
+
 /** Adding a beta tester by email -- lowercased to match beta_testers.email's primary key. */
 export const addBetaTesterSchema = z.object({
   email: z

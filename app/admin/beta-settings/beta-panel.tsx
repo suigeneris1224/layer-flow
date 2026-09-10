@@ -2,27 +2,34 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FlaskConical, Trash2, UserPlus } from "lucide-react";
+import { FlaskConical, Save, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
+import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import type { BetaTesterRow } from "@/lib/data/admin";
-import { addBetaTesterAction, removeBetaTesterAction, setBetaModeAction } from "./actions";
-
-const MAX_BETA_TESTERS = 5;
+import {
+  addBetaTesterAction,
+  removeBetaTesterAction,
+  setBetaMaxTestersAction,
+  setBetaModeAction,
+} from "../actions";
 
 /**
- * Closed-beta toggle plus the up-to-5 tester list -- see
- * lib/subscriptions/beta.ts for what the toggle and list actually gate
- * (Pro-tier access on owned farms, and the closed-beta signup block).
+ * Closed-beta toggle, the persisted tester-count cap, and the up-to-cap
+ * tester list -- see lib/subscriptions/beta.ts for what the toggle and list
+ * actually gate (Pro-tier access on owned farms, and the closed-beta signup
+ * block).
  */
 export function BetaPanel({
   enabled,
+  maxTesters,
   testers,
 }: {
   enabled: boolean;
+  maxTesters: number;
   testers: BetaTesterRow[];
 }) {
   const router = useRouter();
@@ -30,13 +37,17 @@ export function BetaPanel({
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [maxTestersInput, setMaxTestersInput] = useState(String(maxTesters));
 
-  // Mirrors admin-farm-row.tsx's reasoning: this panel never unmounts across
-  // router.refresh(), it just receives new props.
+  // This panel never unmounts across router.refresh(), it just receives new
+  // props -- so without this, local state would keep showing pre-save values
+  // even after the database has moved on.
   const [localEnabled, setLocalEnabled] = useState(enabled);
   useEffect(() => setLocalEnabled(enabled), [enabled]);
+  useEffect(() => setMaxTestersInput(String(maxTesters)), [maxTesters]);
 
-  const atCap = testers.length >= MAX_BETA_TESTERS;
+  const atCap = testers.length >= maxTesters;
+  const maxTestersDirty = maxTestersInput !== String(maxTesters);
 
   function onToggle() {
     setError(null);
@@ -44,6 +55,20 @@ export function BetaPanel({
 
     startTransition(async () => {
       const result = await setBetaModeAction(!localEnabled);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function onSaveMaxTesters() {
+    setError(null);
+    setPendingAction("maxTesters");
+
+    startTransition(async () => {
+      const result = await setBetaMaxTestersAction({ maxTesters: maxTestersInput });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -83,7 +108,18 @@ export function BetaPanel({
   }
 
   return (
-    <Panel title="Beta testing">
+    <Panel
+      title={
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          Beta access limits
+          {localEnabled && (
+            <span className="inline-flex items-center rounded-full bg-[hsl(var(--status-warn))]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--status-warn))]">
+              Beta active
+            </span>
+          )}
+        </h2>
+      }
+    >
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-start gap-2">
@@ -111,6 +147,36 @@ export function BetaPanel({
         </div>
 
         {error && <StatusNote tone="bad">{error}</StatusNote>}
+
+        <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4">
+          <div className="w-32">
+            <label htmlFor="max-testers" className="text-xs font-medium text-muted-foreground">
+              Max testers
+            </label>
+            <Input
+              id="max-testers"
+              type="number"
+              min={1}
+              max={100}
+              value={maxTestersInput}
+              onChange={(event) => setMaxTestersInput(event.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={pending && pendingAction === "maxTesters"}
+            disabled={pending || !maxTestersDirty}
+            onClick={onSaveMaxTesters}
+          >
+            <Save className="size-4" aria-hidden />
+            Save
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            {testers.length} of {maxTesters} testers used
+          </p>
+        </div>
 
         {testers.length === 0 ? (
           <p className="text-sm text-muted-foreground">No beta testers added yet.</p>
@@ -143,12 +209,15 @@ export function BetaPanel({
           </ul>
         )}
 
-        <form onSubmit={onAdd} className="flex flex-wrap items-end gap-2">
+        <form onSubmit={onAdd} className={cn("flex flex-wrap items-end gap-2", testers.length > 0 && "border-t border-border pt-4")}>
           <div className="min-w-[14rem] flex-1">
+            <label htmlFor="invite-tester" className="text-xs font-medium text-muted-foreground">
+              Invite a tester
+            </label>
             <Input
+              id="invite-tester"
               type="email"
               placeholder="tester@example.com"
-              aria-label="Beta tester email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               disabled={atCap}
@@ -157,12 +226,12 @@ export function BetaPanel({
           </div>
           <Button type="submit" size="sm" loading={pending && pendingAction === "add"} disabled={atCap || pending}>
             <UserPlus className="size-4" aria-hidden />
-            Add
+            Invite
           </Button>
         </form>
         {atCap && (
           <p className="text-xs text-muted-foreground">
-            {MAX_BETA_TESTERS} of {MAX_BETA_TESTERS} testers added. Remove one to add another.
+            {maxTesters} of {maxTesters} testers added. Remove one, or raise the limit above, to add another.
           </p>
         )}
       </div>

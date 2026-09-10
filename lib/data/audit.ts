@@ -96,6 +96,7 @@ export const AUDIT_ACTIONS = {
   /** metadata carries { kind: "receipt" | "past_due_reminder" | "renewal_reminder", to: "self" | "owner", trigger: "manual" | "cron" }. */
   SUBSCRIPTION_EMAIL_SENT: "subscription.email_sent",
   BETA_MODE_TOGGLED: "beta.mode_toggled",
+  BETA_MAX_TESTERS_CHANGED: "beta.max_testers_changed",
   BETA_TESTER_ADDED: "beta.tester_added",
   BETA_TESTER_REMOVED: "beta.tester_removed",
   SUPPORT_REQUEST_CREATED: "support_request.created",

@@ -2,9 +2,12 @@ import Link from "next/link";
 import { ArrowLeft, LogOut } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/auth/admin";
 import { signOutAction } from "@/app/auth/actions";
+import { getBetaStatusSummary } from "@/lib/data/admin";
 import { Brand } from "@/components/nav/brand";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AdminSidebar, AdminMobileNav } from "./admin-sidebar";
+import { AdminStatusBadges } from "./admin-status-badges";
 
 /**
  * Shell for the platform-admin pages (app/admin/).
@@ -13,9 +16,14 @@ import { cn } from "@/lib/utils";
  * (sidebar plan card, farm switcher, offline queue) that has nothing to do
  * with an operator looking across every farm at once. `requirePlatformAdmin`
  * is the actual gate; every page under this layout can assume it already ran.
+ *
+ * getBetaStatusSummary() runs on every admin page load (it backs the
+ * top-bar badges), so it's deliberately the lightweight query -- just a
+ * count, not the full tester list app/admin/beta-settings/ needs.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requirePlatformAdmin();
+  const betaStatus = await getBetaStatusSummary();
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -26,6 +34,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Admin
           </span>
         </div>
+
+        <AdminStatusBadges
+          betaEnabled={betaStatus.enabled}
+          activeBetaUsers={betaStatus.testerCount}
+        />
 
         <div className="flex items-center gap-2">
           <Link
@@ -44,9 +57,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
 
-      <main id="main" className="flex-1">
-        {children}
-      </main>
+      <AdminMobileNav />
+
+      <div className="flex min-h-0 flex-1">
+        <AdminSidebar />
+        <main id="main" className="min-w-0 flex-1">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

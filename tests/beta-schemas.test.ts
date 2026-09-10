@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addBetaTesterSchema } from "@/lib/validation/schemas";
+import { addBetaTesterSchema, setBetaMaxTestersSchema } from "@/lib/validation/schemas";
 
 describe("addBetaTesterSchema", () => {
   it("accepts a plain email", () => {
@@ -27,5 +27,26 @@ describe("addBetaTesterSchema", () => {
     const longEmail = `${"a".repeat(250)}@example.com`;
     const result = addBetaTesterSchema.safeParse({ email: longEmail });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("setBetaMaxTestersSchema", () => {
+  it("accepts a form-string value, coerced to a number", () => {
+    const result = setBetaMaxTestersSchema.safeParse({ maxTesters: "10" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.maxTesters).toBe(10);
+  });
+
+  it("rejects zero or negative", () => {
+    expect(setBetaMaxTestersSchema.safeParse({ maxTesters: "0" }).success).toBe(false);
+    expect(setBetaMaxTestersSchema.safeParse({ maxTesters: "-1" }).success).toBe(false);
+  });
+
+  it("rejects over 100", () => {
+    expect(setBetaMaxTestersSchema.safeParse({ maxTesters: "101" }).success).toBe(false);
+  });
+
+  it("rejects a non-numeric value", () => {
+    expect(setBetaMaxTestersSchema.safeParse({ maxTesters: "many" }).success).toBe(false);
   });
 });

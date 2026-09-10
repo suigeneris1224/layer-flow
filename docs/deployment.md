@@ -25,7 +25,7 @@ npx supabase link --project-ref <your-project-ref>
 npm run db:push
 ```
 
-Verify in Studio: every table present, and **RLS enabled on all 19 tables**. A table with RLS off
+Verify in Studio: every table present, and **RLS enabled on all 28 tables**. A table with RLS off
 is readable by every authenticated user of your project.
 
 **Do not run `supabase/seed.sql` against production.** It creates a demo account with a known
@@ -84,6 +84,7 @@ Cloudflare splits environment variables into two buckets, both needed:
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | Runtime var | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
 | `BREVO_API_KEY` | Secret | Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
 | `CRON_SECRET` | Secret | The scheduled Worker (`workers/cron-worker.ts`) sends it as `Authorization: Bearer <value>` — same value the route already expected under Vercel Cron |
+| `BREVO_WEBHOOK_SECRET` | Secret | Any random string. Brevo's delivery webhook (`/api/webhooks/brevo`) must send it back as `?secret=<value>`, or the route rejects the request — see the callout below |
 | `ADMIN_EMAILS` | Secret | Comma-separated, lowercase. Gates `/admin`; blank means nobody can reach it |
 
 `NEXT_PUBLIC_*` values are needed at **build** time too (to inline into the client bundle), not
@@ -113,6 +114,15 @@ bearer secret — the route itself needed no changes. Test it directly with:
 curl "http://127.0.0.1:8787/cdn-cgi/local/scheduled"   # local preview
 ```
 or the "Trigger Cron" button on the Worker's dashboard page once deployed.
+
+> **Brevo delivery webhook.** `app/admin/email-logs` shows real delivery/open/bounce status only
+> once Brevo is actually sending events to `/api/webhooks/brevo`. This has no automatic setup step
+> — after deploying, go to Brevo → **Transactional → Settings → Webhooks** and add:
+> ```
+> https://yourdomain.com/api/webhooks/brevo?secret=<BREVO_WEBHOOK_SECRET value>
+> ```
+> Until this is done, the "sent" log (audit_logs) still works — only the delivery-events table
+> stays empty, with a note to that effect shown in the admin UI.
 
 ## 6. Domain and HTTPS
 
@@ -199,7 +209,7 @@ Know your restore time before you need it.
 ## Pre-launch checklist
 
 - [ ] Migrations applied and verified against production
-- [ ] **RLS confirmed enabled on all 19 tables**
+- [ ] **RLS confirmed enabled on all 28 tables**
 - [ ] Email confirmation **on**
 - [ ] Real SMTP configured
 - [ ] Site URL and redirect URLs match the live domain
@@ -208,3 +218,6 @@ Know your restore time before you need it.
 - [ ] Backups enabled — and a restore actually rehearsed
 - [ ] `npm run verify` passes on the deployed commit
 - [ ] Tenant isolation tested with two real accounts on production
+- [ ] `BREVO_WEBHOOK_SECRET` set, and the webhook URL added in Brevo's dashboard (see the callout
+      in step 5) — confirm a real send produces a row in `email_events`, visible at
+      `/admin/email-logs`

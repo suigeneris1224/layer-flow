@@ -88,6 +88,21 @@ export const serverEnv = {
     return secret;
   },
   /**
+   * Shared secret Brevo's webhook must send as a `?secret=` query param --
+   * Brevo's webhook UI has no way to set a custom header, so this can't use
+   * the Bearer-header pattern cronSecret above does. See
+   * app/api/webhooks/brevo/route.ts.
+   */
+  get brevoWebhookSecret(): string {
+    const secret = process.env.BREVO_WEBHOOK_SECRET;
+    if (!secret) {
+      throw new Error(
+        "BREVO_WEBHOOK_SECRET is not set. It is required to authenticate Brevo's delivery webhook."
+      );
+    }
+    return secret;
+  },
+  /**
    * LayerFlow's own operators, lowercased -- not a farmer role. Gates
    * app/admin/ (see lib/auth/admin.ts). Unset means nobody is admin, which is
    * the safe default for anyone else running this codebase.

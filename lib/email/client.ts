@@ -22,6 +22,14 @@ export interface SendEmailInput {
   subject: string;
   htmlContent: string;
   textContent?: string;
+  /**
+   * Brevo echoes these back on every delivery-webhook event (see
+   * app/api/webhooks/brevo/route.ts), so app/admin/email-logs/ can show which
+   * template an event belongs to. Conventionally one tag, the same kind
+   * string AUDIT_ACTIONS.SUBSCRIPTION_EMAIL_SENT's metadata.kind already uses
+   * (e.g. "receipt", "manual_payment_approved").
+   */
+  tags?: string[];
 }
 
 export interface SendEmailResult {
@@ -68,6 +76,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         subject: input.subject,
         htmlContent: input.htmlContent,
         textContent: input.textContent,
+        tags: input.tags,
       }),
     });
 

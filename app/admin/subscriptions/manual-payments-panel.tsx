@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Receipt, XCircle } from "lucide-react";
+import { CheckCircle2, FileText, Receipt, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/format";
 import { formatRelativeDay } from "@/lib/format";
 import { PLANS } from "@/lib/subscriptions/plans";
 import type { PendingManualPaymentRow } from "@/lib/data/manual-payments";
-import { adminApproveManualPaymentAction, adminRejectManualPaymentAction } from "./actions";
+import { adminApproveManualPaymentAction, adminRejectManualPaymentAction } from "../actions";
 
 /** Pending manual QR/bank transfer payments awaiting review -- see app/admin/actions.ts. */
 export function ManualPaymentsPanel({ payments }: { payments: PendingManualPaymentRow[] }) {
@@ -65,8 +65,29 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {payments.map((payment) => (
-              <li key={payment.id} className="flex flex-col gap-2 py-3 first:pt-0">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+              <li key={payment.id} className="flex flex-col gap-3 py-3 first:pt-0 sm:flex-row">
+                {payment.receiptSignedUrl && (
+                  <a
+                    href={payment.receiptSignedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted"
+                  >
+                    {/^.*\.pdf(\?|$)/i.test(payment.receiptSignedUrl) ? (
+                      <FileText className="size-8 text-muted-foreground" aria-hidden />
+                    ) : (
+                      // A short-lived Supabase signed URL isn't worth next/image's remote-pattern config for a thumbnail this small.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={payment.receiptSignedUrl}
+                        alt={`Proof of payment from ${payment.payerName}`}
+                        className="size-full object-cover"
+                      />
+                    )}
+                  </a>
+                )}
+
+                <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{payment.payerName}</p>
                     <p className="text-xs text-muted-foreground">
@@ -75,8 +96,10 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
                     </p>
                     <p className="mt-1 text-sm">
                       {PLANS[payment.plan].name} —{" "}
-                      {formatCurrency(payment.amountCentavos / 100)} /{" "}
-                      {payment.billingPeriod === "ANNUAL" ? "year" : "month"}
+                      <span className="font-medium tabular">
+                        {formatCurrency(payment.amountCentavos / 100)}
+                      </span>{" "}
+                      / {payment.billingPeriod === "ANNUAL" ? "year" : "month"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Reference: <span className="tabular">{payment.referenceNumber}</span>
@@ -89,7 +112,7 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
                         className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                       >
                         <Receipt className="size-3.5" aria-hidden />
-                        View receipt
+                        View full receipt
                       </a>
                     )}
                   </div>
@@ -114,7 +137,7 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
                       onClick={() => onApprove(payment)}
                     >
                       <CheckCircle2 className="size-4" aria-hidden />
-                      Approve &amp; Grant Subscription
+                      Approve
                     </Button>
                   </div>
                 </div>

@@ -9,7 +9,7 @@ import { StatusNote } from "@/components/ui/states";
 import { Textarea } from "@/components/ui/field";
 import { formatRelativeDay } from "@/lib/format";
 import type { SupportRequestRow } from "@/lib/data/admin";
-import { replySupportRequestAction, resolveSupportRequestAction } from "./actions";
+import { replySupportRequestAction, resolveSupportRequestAction } from "../actions";
 
 /** One request's thread plus a reply box -- shared by the open and resolved lists. */
 function RequestThread({ request }: { request: SupportRequestRow }) {

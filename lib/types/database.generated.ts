@@ -104,16 +104,19 @@ export type Database = {
         Row: {
           enabled: boolean
           id: boolean
+          max_testers: number
           updated_at: string
         }
         Insert: {
           enabled?: boolean
           id?: boolean
+          max_testers?: number
           updated_at?: string
         }
         Update: {
           enabled?: boolean
           id?: boolean
+          max_testers?: number
           updated_at?: string
         }
         Relationships: []
@@ -570,6 +573,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          message_id: string | null
+          occurred_at: string
+          raw: Json | null
+          recipient: string
+          subject: string | null
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          message_id?: string | null
+          occurred_at: string
+          raw?: Json | null
+          recipient: string
+          subject?: string | null
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          message_id?: string | null
+          occurred_at?: string
+          raw?: Json | null
+          recipient?: string
+          subject?: string | null
+          tag?: string | null
+        }
+        Relationships: []
       }
       expenses: {
         Row: {

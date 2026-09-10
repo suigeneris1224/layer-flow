@@ -57,6 +57,7 @@ export type ExpenseRow = TableRow<"expenses">;
 export type SubscriptionRow = TableRow<"subscriptions">;
 export type AuditLogRow = TableRow<"audit_logs">;
 export type ManualPaymentRow = TableRow<"manual_payments">;
+export type EmailEventRow = TableRow<"email_events">;
 
 /** View: produced + adjusted - sold, per farm per egg size. */
 export type EggInventoryBalanceRow = ViewRow<"egg_inventory_balances">;

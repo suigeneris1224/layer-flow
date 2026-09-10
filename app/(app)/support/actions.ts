@@ -66,6 +66,7 @@ export async function submitSupportRequestAction(input: unknown): Promise<Action
       subject: email.subject,
       htmlContent: email.html,
       textContent: email.text,
+      tags: ["support_request_notification"],
     });
     if (!sent.ok) {
       // Best-effort, matches recordAuditLog's philosophy: the request is

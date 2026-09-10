@@ -170,15 +170,18 @@ export interface BetaTesterRow {
 
 export interface BetaSettings {
   enabled: boolean;
+  maxTesters: number;
   testers: BetaTesterRow[];
 }
 
-/** The beta-testing toggle and tester list, for app/admin/'s beta panel. */
+const DEFAULT_MAX_TESTERS = 5;
+
+/** The beta-testing toggle, cap and tester list, for app/admin/beta-settings/. */
 export async function getBetaSettings(): Promise<BetaSettings> {
   const admin = createSupabaseAdminClient();
 
   const [settingsResult, testersResult] = await Promise.all([
-    admin.from("beta_settings").select("enabled").eq("id", true).maybeSingle(),
+    admin.from("beta_settings").select("enabled, max_testers").eq("id", true).maybeSingle(),
     admin.from("beta_testers").select("email, added_at").order("added_at", { ascending: true }),
   ]);
 
@@ -191,10 +194,34 @@ export async function getBetaSettings(): Promise<BetaSettings> {
 
   return {
     enabled: settingsResult.data?.enabled ?? false,
+    maxTesters: settingsResult.data?.max_testers ?? DEFAULT_MAX_TESTERS,
     testers: (testersResult.data ?? []).map((row) => ({
       email: row.email,
       addedAt: row.added_at,
     })),
+  };
+}
+
+/**
+ * The lightweight version of getBetaSettings(), for the shared admin layout's
+ * top-bar badge -- every admin page pays for this on every load, so it skips
+ * the full tester list and just counts rows.
+ */
+export async function getBetaStatusSummary(): Promise<{ enabled: boolean; testerCount: number }> {
+  const admin = createSupabaseAdminClient();
+
+  const [settingsResult, countResult] = await Promise.all([
+    admin.from("beta_settings").select("enabled").eq("id", true).maybeSingle(),
+    admin.from("beta_testers").select("email", { count: "exact", head: true }),
+  ]);
+
+  if (settingsResult.error) {
+    logger.error("beta status summary lookup failed", { reason: settingsResult.error.message });
+  }
+
+  return {
+    enabled: settingsResult.data?.enabled ?? false,
+    testerCount: countResult.count ?? 0,
   };
 }
 

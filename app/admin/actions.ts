@@ -10,6 +10,7 @@ import {
   addBetaTesterSchema,
   devSetSubscriptionSchema,
   manualPaymentRejectSchema,
+  setBetaMaxTestersSchema,
   supportReplySchema,
   toFieldErrors,
 } from "@/lib/validation/schemas";
@@ -26,8 +27,6 @@ import {
   buildSupportReplyEmail,
 } from "@/lib/email/templates";
 import { logger } from "@/lib/observability/logger";
-
-const MAX_BETA_TESTERS = 5;
 
 /**
  * The production-safe equivalent of app/(app)/billing/actions.ts's
@@ -100,7 +99,7 @@ export async function adminSetSubscriptionAction(
       admin
     );
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/subscriptions");
 
     return { ok: true };
   } catch (error) {
@@ -130,7 +129,8 @@ export async function setBetaModeAction(enabled: boolean): Promise<ActionResult>
       admin
     );
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/beta-settings");
+    revalidatePath("/admin", "layout");
 
     return { ok: true };
   } catch (error) {
@@ -138,7 +138,46 @@ export async function setBetaModeAction(enabled: boolean): Promise<ActionResult>
   }
 }
 
-/** Add a beta tester by email, capped at MAX_BETA_TESTERS. */
+/** Save a new beta-tester cap -- app/admin/beta-settings/'s max-limit input. */
+export async function setBetaMaxTestersAction(input: unknown): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  const parsed = setBetaMaxTestersSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { error } = await admin
+      .from("beta_settings")
+      .update({ max_testers: parsed.data.maxTesters })
+      .eq("id", true);
+    if (error) return describeDatabaseError(error, "setBetaMaxTestersAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.BETA_MAX_TESTERS_CHANGED,
+        entityType: "beta_settings",
+        metadata: { maxTesters: parsed.data.maxTesters },
+      },
+      admin
+    );
+
+    revalidatePath("/admin/beta-settings");
+    revalidatePath("/admin", "layout");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "setBetaMaxTestersAction");
+  }
+}
+
+/** Add a beta tester by email, capped at beta_settings.max_testers. */
 export async function addBetaTesterAction(input: unknown): Promise<ActionResult> {
   const user = await requireUser();
   if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
@@ -151,12 +190,14 @@ export async function addBetaTesterAction(input: unknown): Promise<ActionResult>
   try {
     const admin = createSupabaseAdminClient();
 
-    const { count } = await admin
-      .from("beta_testers")
-      .select("email", { count: "exact", head: true });
+    const [{ count }, settingsResult] = await Promise.all([
+      admin.from("beta_testers").select("email", { count: "exact", head: true }),
+      admin.from("beta_settings").select("max_testers").eq("id", true).maybeSingle(),
+    ]);
+    const maxTesters = settingsResult.data?.max_testers ?? 5;
 
-    if ((count ?? 0) >= MAX_BETA_TESTERS) {
-      return failure(`You can have at most ${MAX_BETA_TESTERS} beta testers. Remove one first.`);
+    if ((count ?? 0) >= maxTesters) {
+      return failure(`You can have at most ${maxTesters} beta testers. Remove one first.`);
     }
 
     const { error } = await admin
@@ -176,7 +217,8 @@ export async function addBetaTesterAction(input: unknown): Promise<ActionResult>
       admin
     );
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/beta-settings");
+    revalidatePath("/admin", "layout");
 
     return { ok: true };
   } catch (error) {
@@ -210,7 +252,7 @@ export async function resolveSupportRequestAction(requestId: string): Promise<Ac
       admin
     );
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/tickets");
 
     return { ok: true };
   } catch (error) {
@@ -279,13 +321,14 @@ export async function replySupportRequestAction(
         subject: email.subject,
         htmlContent: email.html,
         textContent: email.text,
+        tags: ["support_reply"],
       });
       if (!sent.ok) {
         logger.warn("support reply email failed", { reason: sent.error });
       }
     }
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/tickets");
 
     return { ok: true };
   } catch (error) {
@@ -380,13 +423,14 @@ export async function adminApproveManualPaymentAction(paymentId: string): Promis
         subject: email.subject,
         htmlContent: email.html,
         textContent: email.text,
+        tags: ["manual_payment_approved"],
       });
       if (!sent.ok) {
         logger.warn("manual payment approval email failed", { reason: sent.error });
       }
     }
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/subscriptions");
 
     return { ok: true };
   } catch (error) {
@@ -458,13 +502,14 @@ export async function adminRejectManualPaymentAction(
         subject: email.subject,
         htmlContent: email.html,
         textContent: email.text,
+        tags: ["manual_payment_rejected"],
       });
       if (!sent.ok) {
         logger.warn("manual payment rejection email failed", { reason: sent.error });
       }
     }
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/subscriptions");
 
     return { ok: true };
   } catch (error) {
@@ -494,7 +539,8 @@ export async function removeBetaTesterAction(email: string): Promise<ActionResul
       admin
     );
 
-    revalidatePath("/admin");
+    revalidatePath("/admin/beta-settings");
+    revalidatePath("/admin", "layout");
 
     return { ok: true };
   } catch (error) {

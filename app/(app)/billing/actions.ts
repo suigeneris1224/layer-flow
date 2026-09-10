@@ -50,6 +50,7 @@ export async function emailReceiptAction(): Promise<ActionResult> {
       subject: email.subject,
       htmlContent: email.html,
       textContent: email.text,
+      tags: ["receipt"],
     });
     if (!result.ok) return failure("We couldn't send that email. Please try again.");
 
@@ -97,6 +98,7 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
       subject: email.subject,
       htmlContent: email.html,
       textContent: email.text,
+      tags: ["past_due_reminder"],
     });
     if (!result.ok) return failure("We couldn't send that email. Please try again.");
 

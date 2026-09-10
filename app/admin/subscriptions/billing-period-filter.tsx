@@ -19,7 +19,7 @@ export function BillingPeriodFilter({ period, q }: { period: string; q: string }
     if (q.trim()) params.set("q", q.trim());
     if (value !== "all") params.set("period", value);
     const query = params.toString();
-    return (query ? `/admin?${query}` : "/admin") as Route;
+    return (query ? `/admin/subscriptions?${query}` : "/admin/subscriptions") as Route;
   };
 
   return (

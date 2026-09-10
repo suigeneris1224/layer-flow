@@ -56,20 +56,26 @@ function RequestThread({ request, timezone }: { request: MySupportRequestRow; ti
         </ul>
       )}
 
-      <form onSubmit={onReply} className="flex flex-col gap-2">
-        {error && <StatusNote tone="bad">{error}</StatusNote>}
-        <Textarea
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          placeholder="Reply…"
-          rows={2}
-          required
-        />
-        <Button type="submit" variant="outline" size="sm" loading={pending} className="w-fit">
-          <Send className="size-4" aria-hidden />
-          Reply
-        </Button>
-      </form>
+      {request.status === "resolved" ? (
+        <StatusNote tone="info">
+          This request is resolved. Send a new request if you need more help.
+        </StatusNote>
+      ) : (
+        <form onSubmit={onReply} className="flex flex-col gap-2">
+          {error && <StatusNote tone="bad">{error}</StatusNote>}
+          <Textarea
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            placeholder="Reply…"
+            rows={2}
+            required
+          />
+          <Button type="submit" variant="outline" size="sm" loading={pending} className="w-fit">
+            <Send className="size-4" aria-hidden />
+            Reply
+          </Button>
+        </form>
+      )}
     </div>
   );
 }

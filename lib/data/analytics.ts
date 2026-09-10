@@ -164,25 +164,33 @@ function buildLayingRateSeries(
   });
 }
 
-function buildSizeSlices(rows: readonly unknown[]): SizeSlice[] {
-  const slices = (rows as SizeJoin[]).map((row) => {
+/**
+ * One row per (day, size) comes in from the query above -- a multi-day range
+ * needs these summed by size name before they're slices, or a year-long
+ * range renders hundreds of near-duplicate rows instead of one per size.
+ * Same Map-based reduction as buildLayingRateSeries above, keyed by name
+ * instead of date.
+ */
+export function buildSizeSlices(rows: readonly unknown[]): SizeSlice[] {
+  const byName = new Map<string, { sortOrder: number; quantity: number }>();
+
+  for (const row of rows as SizeJoin[]) {
     const size = one(row.egg_sizes);
-    return {
-      name: size?.name ?? "Unknown",
-      sortOrder: size?.sort_order ?? 0,
-      quantity: Number(row.quantity) || 0,
-    };
-  });
+    const name = size?.name ?? "Unknown";
+    const entry = byName.get(name) ?? { sortOrder: size?.sort_order ?? 0, quantity: 0 };
+    entry.quantity += Number(row.quantity) || 0;
+    byName.set(name, entry);
+  }
 
-  const total = slices.reduce((running, slice) => running + slice.quantity, 0);
+  const total = [...byName.values()].reduce((running, entry) => running + entry.quantity, 0);
 
-  return slices
-    .filter((slice) => slice.quantity > 0)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((slice) => ({
-      name: slice.name,
-      quantity: slice.quantity,
-      percentage: total > 0 ? Math.round((slice.quantity / total) * 1000) / 10 : 0,
+  return [...byName.entries()]
+    .filter(([, entry]) => entry.quantity > 0)
+    .sort(([, a], [, b]) => a.sortOrder - b.sortOrder)
+    .map(([name, entry]) => ({
+      name,
+      quantity: entry.quantity,
+      percentage: total > 0 ? Math.round((entry.quantity / total) * 1000) / 10 : 0,
     }));
 }
 

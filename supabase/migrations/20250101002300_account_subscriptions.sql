@@ -36,6 +36,12 @@ where id in (select id from ranked where rn > 1);
 alter table subscriptions alter column owner_id set not null;
 alter table subscriptions add constraint subscriptions_owner_id_key unique (owner_id);
 
+-- The old subscriptions_select policy (created in an earlier migration)
+-- still reads farm_id, so it has to go before the column does -- dropping
+-- the column first fails with "other objects depend on it". Its replacement
+-- is created further down, once owner_id is the only key left.
+drop policy subscriptions_select on subscriptions;
+
 -- Cascades through the inline `farm_id ... unique references farms` -- its
 -- constraint, supporting index, and subscriptions_farm_id_fkey all drop with
 -- it. The new unique constraint on owner_id already backs its own index.
@@ -61,8 +67,8 @@ $$;
 
 -- Any member of any farm this owner has may read the account's plan --
 -- entitlement resolution (getFarmContext) runs for every team member, not
--- just the owner.
-drop policy subscriptions_select on subscriptions;
+-- just the owner. (The old policy of this name was already dropped above,
+-- before farm_id went away.)
 create policy subscriptions_select on subscriptions
   for select to authenticated
   using (exists (

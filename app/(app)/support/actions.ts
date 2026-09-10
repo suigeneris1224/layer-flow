@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { supportReplySchema, supportRequestSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { sendEmail } from "@/lib/email/client";
@@ -92,10 +91,14 @@ export async function submitSupportRequestAction(input: unknown): Promise<Action
 /**
  * Reply on your own support request.
  *
+ * Resolved requests are locked: once marked resolved, this refuses the
+ * reply outright rather than silently reopening it, so a farmer can't end up
+ * talking into a thread that reads as closed on the admin side. They file a
+ * new request instead (app/(app)/support/support-requests-list.tsx hides the
+ * reply form for the same reason).
+ *
  * The insert itself is RLS-checked (support_request_messages_insert), no
- * admin client needed. Reopening a resolved ticket does need the admin
- * client, same as resolving it does the other way -- support_requests'
- * update is revoked from authenticated entirely.
+ * admin client needed.
  */
 export async function replyToSupportRequestAction(
   requestId: string,
@@ -121,6 +124,9 @@ export async function replyToSupportRequestAction(
 
     if (requestError) return describeDatabaseError(requestError, "replyToSupportRequestAction");
     if (!request) return failure("That request no longer exists.");
+    if (request.status === "resolved") {
+      return failure("This request is resolved. Send a new request if you need more help.");
+    }
 
     const { error } = await supabase.from("support_request_messages").insert({
       request_id: requestId,
@@ -130,17 +136,6 @@ export async function replyToSupportRequestAction(
     });
 
     if (error) return describeDatabaseError(error, "replyToSupportRequestAction");
-
-    if (request.status === "resolved") {
-      const admin = createSupabaseAdminClient();
-      const { error: reopenError } = await admin
-        .from("support_requests")
-        .update({ status: "open" })
-        .eq("id", requestId);
-      if (reopenError) {
-        logger.warn("support request reopen failed", { reason: reopenError.message });
-      }
-    }
 
     await recordAuditLog({
       farmId: context.farmId,

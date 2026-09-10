@@ -76,10 +76,12 @@ begin
   on conflict (id) do nothing;
 
   -- The demo is more useful on a paid plan, so sales and reports are visible.
+  -- Subscriptions are account-wide (keyed by owner_id, not farm_id) since
+  -- supabase/migrations/20250101002300_account_subscriptions.sql.
   update subscriptions
   set plan = 'STARTER', status = 'ACTIVE',
       current_period_start = now(), current_period_end = now() + interval '30 days'
-  where farm_id = v_farm_id;
+  where owner_id = v_user_id;
 
   insert into houses (id, farm_id, name, capacity, notes)
   values (v_house_id, v_farm_id, 'House A', 1500, 'Open-sided, east facing')

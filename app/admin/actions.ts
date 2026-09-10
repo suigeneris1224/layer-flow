@@ -9,6 +9,7 @@ import { BILLING_PERIOD_DAYS } from "@/lib/subscriptions/plans";
 import {
   addBetaTesterSchema,
   devSetSubscriptionSchema,
+  manualPaymentRejectSchema,
   supportReplySchema,
   toFieldErrors,
 } from "@/lib/validation/schemas";
@@ -19,7 +20,11 @@ import {
   type ActionResult,
 } from "@/lib/errors";
 import { sendEmail } from "@/lib/email/client";
-import { buildSupportReplyEmail } from "@/lib/email/templates";
+import {
+  buildManualPaymentApprovedEmail,
+  buildManualPaymentRejectedEmail,
+  buildSupportReplyEmail,
+} from "@/lib/email/templates";
 import { logger } from "@/lib/observability/logger";
 
 const MAX_BETA_TESTERS = 5;
@@ -285,6 +290,185 @@ export async function replySupportRequestAction(
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "replySupportRequestAction");
+  }
+}
+
+/**
+ * Approve a pending manual QR/bank transfer payment.
+ *
+ * Grants the plan/period the farmer submitted for, using the exact same
+ * subscriptions-table update shape as adminSetSubscriptionAction above (fresh
+ * period dates, both reminder-dedup columns cleared). The approval email is
+ * best-effort, same as replySupportRequestAction below -- a failed send must
+ * never leave the payment stuck un-reviewed.
+ */
+export async function adminApproveManualPaymentAction(paymentId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { data: payment, error: fetchError } = await admin
+      .from("manual_payments")
+      .select("id, owner_id, plan, billing_period, status")
+      .eq("id", paymentId)
+      .maybeSingle();
+
+    if (fetchError) return describeDatabaseError(fetchError, "adminApproveManualPaymentAction");
+    if (!payment) return failure("That payment no longer exists.");
+    if (payment.status !== "PENDING") return failure("That payment was already reviewed.");
+
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + BILLING_PERIOD_DAYS[payment.billing_period]);
+
+    const { error: subError } = await admin
+      .from("subscriptions")
+      .update({
+        plan: payment.plan,
+        status: "ACTIVE",
+        billing_period: payment.billing_period,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        past_due_reminder_sent_at: null,
+        renewal_reminder_sent_at: null,
+      })
+      .eq("owner_id", payment.owner_id);
+
+    if (subError) return describeDatabaseError(subError, "adminApproveManualPaymentAction");
+
+    const { error: updateError } = await admin
+      .from("manual_payments")
+      .update({ status: "APPROVED", reviewed_by: user.id, reviewed_at: now.toISOString() })
+      .eq("id", paymentId);
+
+    if (updateError) return describeDatabaseError(updateError, "adminApproveManualPaymentAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.MANUAL_PAYMENT_APPROVED,
+        entityType: "manual_payment",
+        entityId: paymentId,
+        metadata: { plan: payment.plan, billingPeriod: payment.billing_period },
+      },
+      admin
+    );
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.PLAN_CHANGED,
+        entityType: "subscription",
+        entityId: payment.owner_id,
+        metadata: { trigger: "manual_payment_approved" },
+      },
+      admin
+    );
+
+    const { data: owner } = await admin.auth.admin.getUserById(payment.owner_id);
+    const ownerEmail = owner?.user?.email;
+    if (ownerEmail) {
+      const email = buildManualPaymentApprovedEmail({
+        plan: payment.plan,
+        billingPeriod: payment.billing_period,
+      });
+      const sent = await sendEmail({
+        to: { email: ownerEmail },
+        subject: email.subject,
+        htmlContent: email.html,
+        textContent: email.text,
+      });
+      if (!sent.ok) {
+        logger.warn("manual payment approval email failed", { reason: sent.error });
+      }
+    }
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "adminApproveManualPaymentAction");
+  }
+}
+
+/** Reject a pending manual QR/bank transfer payment. Leaves `subscriptions` untouched. */
+export async function adminRejectManualPaymentAction(
+  paymentId: string,
+  input: unknown
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  const parsed = manualPaymentRejectSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { data: payment, error: fetchError } = await admin
+      .from("manual_payments")
+      .select("id, owner_id, plan, billing_period, status")
+      .eq("id", paymentId)
+      .maybeSingle();
+
+    if (fetchError) return describeDatabaseError(fetchError, "adminRejectManualPaymentAction");
+    if (!payment) return failure("That payment no longer exists.");
+    if (payment.status !== "PENDING") return failure("That payment was already reviewed.");
+
+    const now = new Date();
+    const { error: updateError } = await admin
+      .from("manual_payments")
+      .update({
+        status: "REJECTED",
+        reviewed_by: user.id,
+        reviewed_at: now.toISOString(),
+        rejection_reason: parsed.data.reason || null,
+      })
+      .eq("id", paymentId);
+
+    if (updateError) return describeDatabaseError(updateError, "adminRejectManualPaymentAction");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.MANUAL_PAYMENT_REJECTED,
+        entityType: "manual_payment",
+        entityId: paymentId,
+        metadata: { reason: parsed.data.reason || null },
+      },
+      admin
+    );
+
+    const { data: owner } = await admin.auth.admin.getUserById(payment.owner_id);
+    const ownerEmail = owner?.user?.email;
+    if (ownerEmail) {
+      const email = buildManualPaymentRejectedEmail({
+        plan: payment.plan,
+        billingPeriod: payment.billing_period,
+        reason: parsed.data.reason || undefined,
+      });
+      const sent = await sendEmail({
+        to: { email: ownerEmail },
+        subject: email.subject,
+        htmlContent: email.html,
+        textContent: email.text,
+      });
+      if (!sent.ok) {
+        logger.warn("manual payment rejection email failed", { reason: sent.error });
+      }
+    }
+
+    revalidatePath("/admin");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "adminRejectManualPaymentAction");
   }
 }
 

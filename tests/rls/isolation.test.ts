@@ -272,6 +272,94 @@ suite("RLS tenant isolation", () => {
       expect(data?.length).toBe(1);
     });
 
+    it("bob cannot read alice's manual payments", async () => {
+      // Manual payments are keyed by owner_id, not farm_id -- same reasoning
+      // as subscriptions above.
+      const { data, error } = await bob.client
+        .from("manual_payments")
+        .select("id")
+        .eq("owner_id", alice.id);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("bob cannot submit a manual payment for alice's account", async () => {
+      const { error } = await bob.client.from("manual_payments").insert({
+        owner_id: alice.id,
+        farm_id: farmA.farmId,
+        plan: "PRO",
+        billing_period: "MONTHLY",
+        amount_centavos: 89_900,
+        payer_name: "Trojan Payer",
+        reference_number: "FAKE-001",
+        receipt_storage_path: `${alice.id}/fake.jpg`,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("alice can submit and read her own manual payment", async () => {
+      const { data: inserted, error: insertError } = await alice.client
+        .from("manual_payments")
+        .insert({
+          owner_id: alice.id,
+          farm_id: farmA.farmId,
+          plan: "PRO",
+          billing_period: "MONTHLY",
+          amount_centavos: 89_900,
+          payer_name: "Alice",
+          reference_number: "GC-ALICE-001",
+          receipt_storage_path: `${alice.id}/receipt.jpg`,
+        })
+        .select("id, status")
+        .single();
+
+      expect(insertError).toBeNull();
+      expect(inserted?.status).toBe("PENDING");
+
+      const { data, error } = await alice.client
+        .from("manual_payments")
+        .select("id")
+        .eq("owner_id", alice.id);
+
+      expect(error).toBeNull();
+      expect(data?.length).toBeGreaterThan(0);
+    });
+
+    it("a manual payment's status cannot be approved from a client session", async () => {
+      const admin = adminClient();
+      const { data: seeded } = await admin
+        .from("manual_payments")
+        .insert({
+          owner_id: bob.id,
+          farm_id: farmB.farmId,
+          plan: "STARTER",
+          billing_period: "MONTHLY",
+          amount_centavos: 34_900,
+          payer_name: "Bob",
+          reference_number: "GC-BOB-001",
+          receipt_storage_path: `${bob.id}/receipt.jpg`,
+        })
+        .select("id")
+        .single();
+
+      // No update policy exists for `authenticated` -- only the service-role
+      // admin actions (app/admin/actions.ts) may transition status.
+      await bob.client
+        .from("manual_payments")
+        .update({ status: "APPROVED" })
+        .eq("id", seeded!.id);
+
+      const { data: actual } = await admin
+        .from("manual_payments")
+        .select("status")
+        .eq("id", seeded!.id)
+        .single();
+
+      expect(actual?.status).toBe("PENDING");
+    });
+
     it("audit log entries cannot be rewritten or deleted", async () => {
       const admin = adminClient();
       const { data: before } = await admin

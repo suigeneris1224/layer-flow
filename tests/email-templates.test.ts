@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   SUBSCRIPTION_REMINDER_DAYS,
+  buildManualPaymentApprovedEmail,
+  buildManualPaymentRejectedEmail,
   buildPastDueReminderEmail,
   buildReceiptEmail,
   buildRenewalReminderEmail,
@@ -94,6 +96,30 @@ describe("annual billing period", () => {
     const email = buildReceiptEmail(ctx({ billingPeriod: "MONTHLY" }));
     expect(email.text).toContain(formatPlanPrice(PLANS.PRO, "MONTHLY"));
     expect(email.text).toContain("/ month");
+  });
+});
+
+describe("buildManualPaymentApprovedEmail", () => {
+  it("mentions the plan and price", () => {
+    const email = buildManualPaymentApprovedEmail({ plan: "PRO", billingPeriod: "MONTHLY" });
+    expect(email.subject).toContain("Pro");
+    expect(email.text).toContain(formatPlanPrice(PLANS.PRO, "MONTHLY"));
+  });
+});
+
+describe("buildManualPaymentRejectedEmail", () => {
+  it("includes a reason when given one", () => {
+    const email = buildManualPaymentRejectedEmail({
+      plan: "PRO",
+      billingPeriod: "MONTHLY",
+      reason: "Reference number not found",
+    });
+    expect(email.text).toContain("Reference number not found");
+  });
+
+  it("reads fine with no reason given", () => {
+    const email = buildManualPaymentRejectedEmail({ plan: "PRO", billingPeriod: "MONTHLY" });
+    expect(email.text).toContain("We couldn't verify your recent manual payment.");
   });
 });
 

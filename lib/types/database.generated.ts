@@ -932,6 +932,68 @@ export type Database = {
           },
         ]
       }
+      manual_payments: {
+        Row: {
+          amount_centavos: number
+          billing_period: Database["public"]["Enums"]["billing_period"]
+          created_at: string
+          farm_id: string | null
+          id: string
+          owner_id: string
+          payer_name: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          receipt_storage_path: string
+          reference_number: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["manual_payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_centavos: number
+          billing_period: Database["public"]["Enums"]["billing_period"]
+          created_at?: string
+          farm_id?: string | null
+          id?: string
+          owner_id: string
+          payer_name: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          receipt_storage_path: string
+          reference_number: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["manual_payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_centavos?: number
+          billing_period?: Database["public"]["Enums"]["billing_period"]
+          created_at?: string
+          farm_id?: string | null
+          id?: string
+          owner_id?: string
+          payer_name?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          receipt_storage_path?: string
+          reference_number?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["manual_payment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_payments_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mortality_records: {
         Row: {
           client_id: string | null
@@ -1360,6 +1422,7 @@ export type Database = {
         | "OTHER"
       farm_role: "OWNER" | "MANAGER" | "WORKER"
       flock_status: "GROWING" | "PRODUCING" | "SOLD" | "CLOSED"
+      manual_payment_status: "PENDING" | "APPROVED" | "REJECTED"
       payment_status: "PAID" | "PARTIAL" | "UNPAID"
       subscription_plan: "FREE" | "STARTER" | "PRO"
       subscription_status:
@@ -1510,6 +1573,7 @@ export const Constants = {
       ],
       farm_role: ["OWNER", "MANAGER", "WORKER"],
       flock_status: ["GROWING", "PRODUCING", "SOLD", "CLOSED"],
+      manual_payment_status: ["PENDING", "APPROVED", "REJECTED"],
       payment_status: ["PAID", "PARTIAL", "UNPAID"],
       subscription_plan: ["FREE", "STARTER", "PRO"],
       subscription_status: [

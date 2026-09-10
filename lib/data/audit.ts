@@ -101,4 +101,7 @@ export const AUDIT_ACTIONS = {
   SUPPORT_REQUEST_CREATED: "support_request.created",
   SUPPORT_REQUEST_RESOLVED: "support_request.resolved",
   SUPPORT_REQUEST_REPLIED: "support_request.replied",
+  MANUAL_PAYMENT_SUBMITTED: "manual_payment.submitted",
+  MANUAL_PAYMENT_APPROVED: "manual_payment.approved",
+  MANUAL_PAYMENT_REJECTED: "manual_payment.rejected",
 } as const;

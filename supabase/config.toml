@@ -2,14 +2,14 @@ project_id = "layerflow"
 
 [api]
 enabled = true
-port = 54321
+port = 52321
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 52322
+shadow_port = 52320
 major_version = 15
 
 [db.pooler]
@@ -17,13 +17,13 @@ enabled = false
 
 [studio]
 enabled = true
-port = 54323
-api_url = "http://127.0.0.1:54321"
+port = 52323
+api_url = "http://127.0.0.1:52321"
 
 # Local mail catcher. Signup/reset emails land here instead of being sent.
 [inbucket]
 enabled = true
-port = 54324
+port = 52324
 
 [storage]
 enabled = true

@@ -100,6 +100,34 @@ export function buildRenewalReminderEmail(
   };
 }
 
+export interface ManualPaymentEmailContext {
+  plan: SubscriptionPlan;
+  billingPeriod: BillingPeriod;
+}
+
+/** Sent when an admin approves a manual QR/bank transfer payment -- see app/admin/actions.ts. */
+export function buildManualPaymentApprovedEmail(ctx: ManualPaymentEmailContext): BuiltEmail {
+  const plan = PLANS[ctx.plan];
+  const { html, text } = wrap([
+    `Your manual payment has been verified and your account is now on the ${plan.name} plan (${formatPlanPrice(plan, ctx.billingPeriod)} / ${periodNoun(ctx.billingPeriod)}).`,
+    `Thanks for your patience while we confirmed the transfer.`,
+  ]);
+
+  return { subject: `Your LayerFlow ${plan.name} plan is active`, html, text };
+}
+
+/** Sent when an admin rejects a manual QR/bank transfer payment -- see app/admin/actions.ts. */
+export function buildManualPaymentRejectedEmail(
+  ctx: ManualPaymentEmailContext & { reason?: string }
+): BuiltEmail {
+  const { html, text } = wrap([
+    `We couldn't verify your recent manual payment${ctx.reason ? `: ${ctx.reason}` : "."}`,
+    `Please double check the reference number and try submitting again, or contact support if you think this is a mistake.`,
+  ]);
+
+  return { subject: `We couldn't verify your payment`, html, text };
+}
+
 /** Notifies the support inbox of a new request -- see app/(app)/support/actions.ts. */
 export function buildSupportRequestNotificationEmail(ctx: {
   farmName: string;

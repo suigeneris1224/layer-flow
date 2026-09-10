@@ -30,6 +30,7 @@ export type ExpenseCategory = Public["Enums"]["expense_category"];
 export type SubscriptionPlan = Public["Enums"]["subscription_plan"];
 export type SubscriptionStatus = Public["Enums"]["subscription_status"];
 export type BillingPeriod = Public["Enums"]["billing_period"];
+export type ManualPaymentStatus = Public["Enums"]["manual_payment_status"];
 
 // ---------------------------------------------------------------------------
 // Rows
@@ -55,6 +56,7 @@ export type EggInventoryAdjustmentRow = TableRow<"egg_inventory_adjustments">;
 export type ExpenseRow = TableRow<"expenses">;
 export type SubscriptionRow = TableRow<"subscriptions">;
 export type AuditLogRow = TableRow<"audit_logs">;
+export type ManualPaymentRow = TableRow<"manual_payments">;
 
 /** View: produced + adjusted - sold, per farm per egg size. */
 export type EggInventoryBalanceRow = ViewRow<"egg_inventory_balances">;

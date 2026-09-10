@@ -278,6 +278,28 @@ export const devSetSubscriptionSchema = z.object({
     .default("MONTHLY"),
 });
 
+/** Submitting a manual QR/bank transfer payment for review -- see app/(app)/checkout/actions.ts. */
+export const manualPaymentSubmitSchema = z.object({
+  payerName: z.string().trim().min(1, "Enter a name").max(200),
+  referenceNumber: z.string().trim().min(1, "Enter the payment reference number").max(100),
+  plan: z.enum(
+    PLAN_ORDER.filter((id) => id !== "FREE") as [SubscriptionPlan, ...SubscriptionPlan[]],
+    { errorMap: () => ({ message: "Choose a plan" }) }
+  ),
+  billingPeriod: z.enum(BILLING_PERIODS as [BillingPeriod, ...BillingPeriod[]], {
+    errorMap: () => ({ message: "Choose a billing period" }),
+  }),
+});
+
+export type ManualPaymentSubmitInput = z.infer<typeof manualPaymentSubmitSchema>;
+
+/** Rejecting a manual payment -- see app/admin/actions.ts's adminRejectManualPaymentAction. */
+export const manualPaymentRejectSchema = z.object({
+  reason: z.string().trim().max(500).optional().default(""),
+});
+
+export type ManualPaymentRejectInput = z.infer<typeof manualPaymentRejectSchema>;
+
 export const supportRequestSchema = z.object({
   subject: z.string().trim().min(1, "Enter a subject").max(150),
   message: z.string().trim().min(1, "Enter a message").max(4000),

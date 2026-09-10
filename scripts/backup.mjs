@@ -23,7 +23,7 @@ const BACKUP_DIR = "backups";
 const KEEP = 14;
 
 const useLocal = process.argv.includes("--local");
-const LOCAL_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const LOCAL_DB_URL = "postgresql://postgres:postgres@127.0.0.1:52322/postgres";
 
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { getAllSubscriptions, getBetaSettings, getSupportRequests } from "@/lib/data/admin";
+import { getPendingManualPayments } from "@/lib/data/manual-payments";
 import { searchFarms, paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
 import { PLANS, PLAN_ORDER } from "@/lib/subscriptions/plans";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
@@ -18,6 +19,7 @@ import { BillingPeriodFilter } from "./billing-period-filter";
 import { AdminPagination } from "./pagination";
 import { BetaPanel } from "./beta-panel";
 import { SupportPanel } from "./support-panel";
+import { ManualPaymentsPanel } from "./manual-payments-panel";
 
 export const metadata: Metadata = { title: "Admin — Subscriptions" };
 
@@ -35,10 +37,11 @@ export default async function AdminSubscriptionsPage({
   searchParams: Promise<{ q?: string; page?: string; period?: string }>;
 }) {
   const { q = "", page: pageParam, period = "all" } = await searchParams;
-  const [rows, betaSettings, supportRequests] = await Promise.all([
+  const [rows, betaSettings, supportRequests, pendingManualPayments] = await Promise.all([
     getAllSubscriptions(),
     getBetaSettings(),
     getSupportRequests(),
+    getPendingManualPayments(),
   ]);
 
   const countByPlan = Object.fromEntries(
@@ -113,6 +116,8 @@ export default async function AdminSubscriptionsPage({
       />
 
       <BetaPanel enabled={betaSettings.enabled} testers={betaSettings.testers} />
+
+      <ManualPaymentsPanel payments={pendingManualPayments} />
 
       <SupportPanel requests={supportRequests} />
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { Check } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { BillingPeriodToggle } from "./billing-period-toggle";
@@ -67,7 +68,9 @@ export function LandingPlanCards() {
               </p>
 
               <Link
-                href="/signup"
+                href={
+                  (id === "FREE" ? "/signup" : `/checkout?plan=${id}&period=${period}`) as Route
+                }
                 className={cn(
                   buttonVariants({ variant: featured ? "primary" : "outline", block: true }),
                   "mt-5"

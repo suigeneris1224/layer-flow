@@ -113,7 +113,7 @@ identical on every machine that runs `supabase start`, published in Supabase's o
 useless against any real project:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:52321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -146,8 +146,12 @@ Open <http://localhost:3000> and sign in with:
 - **Email** `demo@layerflow.ph`
 - **Password** `demo123456`
 
-Local Supabase services: Studio on `54323`, API on `54321`, Postgres on `54322`, and Inbucket on
-`54324` (all signup and reset emails land there instead of being sent).
+Local Supabase services: Studio on `52323`, API on `52321`, Postgres on `52322`, and Inbucket on
+`52324` (all signup and reset emails land there instead of being sent). These were moved off the
+`543xx` defaults because Windows had that whole block excluded for Hyper-V/WSL2 (see
+`netsh interface ipv4 show excludedportrange protocol=tcp`) — if `supabase start` ever fails again
+with a "forbidden by its access permissions" bind error, re-check that command and move the
+`[api]`/`[db]`/`[studio]`/`[inbucket]` ports in `supabase/config.toml` to a free range.
 
 ---
 

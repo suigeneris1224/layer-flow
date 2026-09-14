@@ -1,99 +1,49 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BellRing, CreditCard, LogOut, Warehouse } from "lucide-react";
-import { requireFarmContext, requireUser } from "@/lib/auth/session";
-import { ROLE_LABELS } from "@/lib/auth/permissions";
-import { PLANS } from "@/lib/subscriptions/plans";
-import { effectivePlan } from "@/lib/subscriptions/entitlements";
-import { getProfile } from "@/lib/data/profile";
-import { signOutAction } from "@/app/auth/actions";
-import { PageHeader, PageShell } from "@/components/layout/page-shell";
-import { Panel } from "@/components/ui/panel";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
+import { requireFarmContext } from "@/lib/auth/session";
+import { visibleSettingsCategories } from "@/lib/domain/settings-categories";
+import { PageHeader } from "@/components/layout/page-shell";
+import { DesktopSettingsRedirect } from "@/components/nav/desktop-settings-redirect";
 import { cn } from "@/lib/utils";
-import { ProfileForm } from "./profile-form";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export const dynamic = "force-dynamic";
-
 export default async function SettingsPage() {
-  const user = await requireUser();
   const context = await requireFarmContext();
-
-  const profile = await getProfile(user.id);
-  const plan = PLANS[effectivePlan(context.plan, context.subscriptionStatus)];
+  const visible = visibleSettingsCategories(context);
 
   return (
-    <PageShell>
-      <PageHeader title="Settings" description="Your account and this farm." />
+    <div className="md:hidden">
+      <DesktopSettingsRedirect />
 
-      <ProfileForm
-        email={user.email}
-        // The table is the source of truth; auth metadata is only the fallback
-        // for a profile row that has not been filled in yet.
-        initialFullName={profile?.fullName || user.fullName}
-        initialPhone={profile?.phone ?? ""}
-        avatarUrl={profile?.avatarUrl ?? null}
-        coverUrl={profile?.coverUrl ?? null}
-      />
+      <PageHeader title="Settings" description="Manage your farm and account." />
 
-      <Panel title="This farm">
-        <dl className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-sm text-muted-foreground">Farm</dt>
-            <dd className="text-sm font-medium">{context.farmName}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-sm text-muted-foreground">Your role</dt>
-            <dd className="text-sm font-medium">{ROLE_LABELS[context.role]}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-sm text-muted-foreground">Plan</dt>
-            <dd className="text-sm font-medium">
-              {plan.name}
-              {context.isBetaOverride && (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                  (Beta access)
-                </span>
-              )}
-            </dd>
-          </div>
-        </dl>
-
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {visible.map((category) => (
           <Link
-            href="/farms"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            key={category.key}
+            href={category.href}
+            className={cn(
+              "flex items-start gap-3 rounded-lg border border-border bg-surface p-4 shadow-card",
+              "transition-colors hover:border-foreground/20 hover:bg-muted"
+            )}
           >
-            <Warehouse className="size-4" aria-hidden />
-            Farm settings
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+              <category.icon className="size-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1 font-medium">
+                {category.title}
+                <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+              </span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                {category.description}
+              </span>
+            </span>
           </Link>
-          <Link
-            href="/billing"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            <CreditCard className="size-4" aria-hidden />
-            Plans and billing
-          </Link>
-          <Link
-            href="/settings/alerts"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            <BellRing className="size-4" aria-hidden />
-            Alert settings
-          </Link>
-        </div>
-      </Panel>
-
-      <Panel title="Session">
-        <form action={signOutAction}>
-          <Button type="submit" variant="outline" size="sm">
-            <LogOut className="size-4" aria-hidden />
-            Sign out
-          </Button>
-        </form>
-      </Panel>
-    </PageShell>
+        ))}
+      </div>
+    </div>
   );
 }

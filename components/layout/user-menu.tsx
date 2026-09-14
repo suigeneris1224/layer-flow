@@ -3,22 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, CreditCard, LogOut, Settings, ShieldCheck } from "lucide-react";
+import {
+  ChevronDown,
+  LifeBuoy,
+  LogOut,
+  Repeat,
+  Settings,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { signOutAction } from "@/app/auth/actions";
 
-/** Avatar, name and role, with settings, billing, admin and sign-out behind a small menu. */
+/** Avatar, name and role, with profile, settings, switch farm, support, admin and sign-out behind a small menu. */
 export function UserMenu({
   userName,
   role,
   avatarUrl,
-  canManageBilling,
+  multiFarm,
   isAdmin,
 }: {
   userName: string;
   role: string;
   avatarUrl?: string | null;
-  /** Billing is owner-only -- hidden for anyone else, same as /billing itself. */
-  canManageBilling: boolean;
+  /** Switch Farm is only worth offering to someone who actually belongs to more than one. */
+  multiFarm: boolean;
   /** LayerFlow's own operators, not a farm role -- hidden for every farmer. */
   isAdmin: boolean;
 }) {
@@ -94,6 +102,16 @@ export function UserMenu({
           </div>
 
           <Link
+            href="/settings/profile"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+          >
+            <UserRound className="size-4" aria-hidden />
+            Profile
+          </Link>
+
+          <Link
             href="/settings"
             role="menuitem"
             onClick={() => setOpen(false)}
@@ -103,17 +121,27 @@ export function UserMenu({
             Settings
           </Link>
 
-          {canManageBilling && (
+          {multiFarm && (
             <Link
-              href="/billing"
+              href="/farms"
               role="menuitem"
               onClick={() => setOpen(false)}
               className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
             >
-              <CreditCard className="size-4" aria-hidden />
-              Billing
+              <Repeat className="size-4" aria-hidden />
+              Switch Farm
             </Link>
           )}
+
+          <Link
+            href="/settings/support"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+          >
+            <LifeBuoy className="size-4" aria-hidden />
+            Help & Support
+          </Link>
 
           {isAdmin && (
             <Link

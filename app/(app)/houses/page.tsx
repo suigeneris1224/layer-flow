@@ -4,6 +4,7 @@ import { requireFarmContext } from "@/lib/auth/session";
 import { canManageHouse } from "@/lib/auth/permissions";
 import { canCreate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
 import { getHouses } from "@/lib/data/houses";
+import { getFarmDefaults } from "@/lib/data/farm-defaults";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { EmptyState, StatusNote } from "@/components/ui/states";
@@ -16,7 +17,10 @@ export const dynamic = "force-dynamic";
 
 export default async function HousesPage() {
   const context = await requireFarmContext();
-  const houses = await getHouses(context.farmId);
+  const [houses, defaults] = await Promise.all([
+    getHouses(context.farmId),
+    getFarmDefaults(context.farmId),
+  ]);
 
   const canManage = canManageHouse(context);
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
@@ -76,7 +80,7 @@ export default async function HousesPage() {
       )}
 
       {canManage ? (
-        <HouseForm houses={houses} canAdd={canAdd} />
+        <HouseForm houses={houses} canAdd={canAdd} defaultCapacity={defaults.houseCapacity} />
       ) : (
         <StatusNote tone="info">
           Only the farm owner or a manager can manage houses.

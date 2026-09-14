@@ -30,12 +30,12 @@ const ENFORCED: Record<Feature, string> = {
   advanced_alerts:
     "lib/data/dashboard.ts — buildAlerts()'s egg-size/inventory/flock/pricing rules and threshold overrides; app/(app)/settings/alerts/{page,actions}.ts — per-farm threshold configuration",
   data_export: "app/api/export/{sales,expenses}/route.ts — assertCanAccess before any row is read",
-  team_management: "app/(app)/team/{page,actions}.ts",
+  team_management: "app/(app)/settings/team/{page,actions}.ts",
   multi_farm: "enforced indirectly by the `farms` limit in farms/actions.ts",
   offline_mode:
     "app/(app)/production/new/page.tsx + app/(app)/health/page.tsx — canAccess gates whether the offline queue (lib/offline/) is used at all",
   cross_farm_reporting: "app/(app)/reports/cross-farm/page.tsx",
-  priority_support: "app/(app)/support/actions.ts — priority flag set from context.plan/isBetaOverride",
+  priority_support: "app/(app)/settings/support/actions.ts — priority flag set from context.plan/isBetaOverride",
 } as Record<Feature, string>;
 
 /**
@@ -90,7 +90,7 @@ const ENFORCED_LIMITS: Record<LimitKey, string> = {
   houses: "app/(app)/houses/actions.ts",
   active_flocks: "app/(app)/flocks/actions.ts",
   customers: "app/(app)/customers/actions.ts",
-  users: "app/(app)/team/actions.ts — inviteMemberAction, incl. pending invites",
+  users: "app/(app)/settings/team/actions.ts — inviteMemberAction, incl. pending invites",
   history_days: "app/(app)/production/page.tsx — via historyCutoffDate",
 };
 

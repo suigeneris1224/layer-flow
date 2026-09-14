@@ -8,12 +8,11 @@ import {
   HeartPulse,
   Home,
   Layers,
-  LifeBuoy,
   LineChart,
   PhilippinePeso,
   Receipt,
-  Settings,
   Tags,
+  UserRound,
   Users,
   Warehouse,
   type LucideIcon,
@@ -55,7 +54,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "houses", href: "/houses", label: "Houses", icon: Home },
       { key: "flocks", href: "/flocks", label: "Flocks", icon: Layers },
       { key: "inventory", href: "/inventory", label: "Egg Inventory", icon: Boxes },
-      { key: "team", href: "/team", label: "Team", icon: Users },
     ],
   },
   {
@@ -98,10 +96,6 @@ export const NAV_GROUPS: NavGroup[] = [
       },
     ],
   },
-  {
-    label: "Support",
-    items: [{ key: "support", href: "/support", label: "Support", icon: LifeBuoy }],
-  },
 ];
 
 /**
@@ -114,5 +108,9 @@ export const TAB_ITEMS: NavItem[] = [
   { key: "home", href: "/dashboard", label: "Home", icon: Home },
   { key: "inventory", href: "/inventory", label: "Stock", icon: Boxes },
   { key: "money", href: "/sales", label: "Money", icon: PhilippinePeso },
-  { key: "more", href: "/settings", label: "More", icon: Settings },
+  // Exception to the "tabs default to Profile" rule desktop follows: mobile
+  // has no tab bar of its own, so Account goes to the hub card grid instead
+  // of skipping straight to Profile -- the grid is mobile's only way to see
+  // every settings category, not just the first one.
+  { key: "account", href: "/settings", label: "Account", icon: UserRound },
 ];

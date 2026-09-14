@@ -23,7 +23,7 @@ export function AppTopbar({
   unreadCount,
   timezone,
   dateLabel,
-  canManageBilling,
+  multiFarm,
   isAdmin,
 }: {
   greeting: string;
@@ -36,7 +36,7 @@ export function AppTopbar({
   unreadCount: number;
   timezone: string;
   dateLabel: string;
-  canManageBilling: boolean;
+  multiFarm: boolean;
   isAdmin: boolean;
 }) {
   const firstName = userName.split(" ")[0] || "there";
@@ -66,7 +66,7 @@ export function AppTopbar({
         userName={userName}
         role={role}
         avatarUrl={avatarUrl}
-        canManageBilling={canManageBilling}
+        multiFarm={multiFarm}
         isAdmin={isAdmin}
       />
     </header>

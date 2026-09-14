@@ -147,7 +147,7 @@ export function ProfileForm({
   }
 
   return (
-    <Panel title="Your profile">
+    <Panel title="Personal information">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {formError && <StatusNote tone="bad">{formError}</StatusNote>}
         {success && <StatusNote tone="good">{success}</StatusNote>}

@@ -1,5 +1,5 @@
-import { requireFarmContext, requireUser } from "@/lib/auth/session";
-import { canManageBilling, canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
+import { getUserFarms, requireFarmContext, requireUser } from "@/lib/auth/session";
+import { canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { canAccess } from "@/lib/subscriptions/entitlements";
 import { getDashboardData } from "@/lib/data/dashboard";
@@ -26,10 +26,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // read them, so this navigation shows the sync it just performed rather than
   // the previous one.
   await getDashboardData(context);
-  const [notifications, unreadCount, profile] = await Promise.all([
+  const [notifications, unreadCount, profile, farms] = await Promise.all([
     getNotifications(context),
     getUnreadNotificationCount(context),
     getProfile(user.id),
+    getUserFarms(),
   ]);
 
   // Greeting follows the farm's clock, not the server's: a Manila farmer at
@@ -61,7 +62,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           unreadCount={unreadCount}
           timezone={context.timezone}
           dateLabel={weekLabel}
-          canManageBilling={canManageBilling(context)}
+          multiFarm={farms.length > 1}
           isAdmin={isPlatformAdmin(user.email)}
         />
 

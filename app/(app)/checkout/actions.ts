@@ -104,7 +104,7 @@ export async function submitManualPaymentAction(formData: FormData): Promise<Act
       metadata: { plan: parsed.data.plan, billingPeriod: parsed.data.billingPeriod },
     });
 
-    revalidatePath("/billing");
+    revalidatePath("/settings/billing");
     revalidatePath("/checkout");
 
     return { ok: true };

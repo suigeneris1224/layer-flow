@@ -18,7 +18,7 @@ export function RenewalBanner({
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   currentPeriodEnd: string | null;
-  /** Off on /billing itself, where a link back to the same page is pointless. */
+  /** Off on Settings > Subscription itself, where a link back to the same page is pointless. */
   showManageLink?: boolean;
 }) {
   const banner = renewalBanner({ plan, status }, currentPeriodEnd);
@@ -30,7 +30,7 @@ export function RenewalBanner({
       {showManageLink && (
         <>
           {" "}
-          <Link href="/billing" className="font-medium underline">
+          <Link href="/settings/billing" className="font-medium underline">
             Manage billing
           </Link>
         </>

@@ -661,6 +661,35 @@ export type Database = {
           },
         ]
       }
+      farm_defaults: {
+        Row: {
+          default_flock_breed: string | null
+          default_house_capacity: number | null
+          farm_id: string
+          updated_at: string
+        }
+        Insert: {
+          default_flock_breed?: string | null
+          default_house_capacity?: number | null
+          farm_id: string
+          updated_at?: string
+        }
+        Update: {
+          default_flock_breed?: string | null
+          default_house_capacity?: number | null
+          farm_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_defaults_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: true
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farm_invitations: {
         Row: {
           accepted_at: string | null
@@ -1093,6 +1122,35 @@ export type Database = {
             columns: ["flock_id"]
             isOneToOne: false
             referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          farm_alerts_enabled: boolean
+          farm_id: string
+          inventory_alerts_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          farm_alerts_enabled?: boolean
+          farm_id: string
+          inventory_alerts_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          farm_alerts_enabled?: boolean
+          farm_id?: string
+          inventory_alerts_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: true
+            referencedRelation: "farms"
             referencedColumns: ["id"]
           },
         ]

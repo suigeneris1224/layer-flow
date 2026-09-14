@@ -43,6 +43,8 @@ import {
 import { getLatestVaccinationByFlock } from "@/lib/data/health";
 import { syncNotifications } from "@/lib/data/notifications";
 import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
+import { getNotificationPreferences } from "@/lib/data/notification-preferences";
+import { filterAlertsForNotifications } from "@/lib/domain/notification-preferences";
 import { getCurrentPrices } from "@/lib/data/pricing";
 import { farmToday, shiftDate, startOfWeek } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
@@ -210,6 +212,7 @@ export const getDashboardData = cache(async function getDashboardData(
     latestVaccinationByFlock,
     thresholdOverrides,
     prices,
+    notificationPreferences,
   ] = await Promise.all([
     supabase
       .from("daily_production")
@@ -278,6 +281,7 @@ export const getDashboardData = cache(async function getDashboardData(
     getLatestVaccinationByFlock(context.farmId),
     hasAdvancedAlerts ? getAlertThresholdOverrides(context.farmId) : Promise.resolve(null),
     hasAdvancedAlerts ? getCurrentPrices(context.farmId, today) : Promise.resolve([]),
+    getNotificationPreferences(context.farmId),
   ]);
 
   logFailures({
@@ -381,7 +385,8 @@ export const getDashboardData = cache(async function getDashboardData(
    * of thrown.
    */
   try {
-    await syncNotifications(context, alerts);
+    const notifiable = filterAlertsForNotifications(alerts, notificationPreferences);
+    await syncNotifications(context, notifiable);
   } catch (error) {
     logger.error("notification sync failed", {
       reason: error instanceof Error ? error.message : String(error),

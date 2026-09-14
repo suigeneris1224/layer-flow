@@ -44,10 +44,13 @@ export function FlockForm({
   flocks,
   houses,
   canAdd,
+  defaultBreed,
 }: {
   flocks: FlockOption[];
   houses: HouseOption[];
   canAdd: boolean;
+  /** Farm-level default (Settings → Farm → Production defaults), pre-fills a new flock only. */
+  defaultBreed: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -59,7 +62,7 @@ export function FlockForm({
   const editing = flocks.find((flock) => flock.id === selected) ?? null;
 
   const [name, setName] = useState(editing?.name ?? "");
-  const [breed, setBreed] = useState(editing?.breed ?? "");
+  const [breed, setBreed] = useState(editing?.breed ?? defaultBreed ?? "");
   const [houseId, setHouseId] = useState(editing?.houseId ?? houses[0]?.id ?? "");
   const [initialHens, setInitialHens] = useState(editing ? String(editing.initialHens) : "");
   const [placementDate, setPlacementDate] = useState(editing?.placementDate ?? "");
@@ -71,7 +74,7 @@ export function FlockForm({
 
   function resetFrom(flock: FlockOption | null) {
     setName(flock?.name ?? "");
-    setBreed(flock?.breed ?? "");
+    setBreed(flock?.breed ?? defaultBreed ?? "");
     setHouseId(flock?.houseId ?? houses[0]?.id ?? "");
     setInitialHens(flock ? String(flock.initialHens) : "");
     setPlacementDate(flock?.placementDate ?? "");

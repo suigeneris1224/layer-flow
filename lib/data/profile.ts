@@ -23,6 +23,7 @@ export interface Profile {
   phone: string;
   avatarUrl: string | null;
   coverUrl: string | null;
+  createdAt: string;
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
@@ -30,7 +31,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, avatar_url, cover_url")
+    .select("id, full_name, phone, avatar_url, cover_url, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -46,5 +47,6 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     phone: data.phone ?? "",
     avatarUrl: data.avatar_url,
     coverUrl: data.cover_url,
+    createdAt: data.created_at,
   };
 }

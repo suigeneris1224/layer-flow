@@ -67,7 +67,7 @@ function RequestThread({ request }: { request: SupportRequestRow }) {
   );
 }
 
-/** Open support requests, priority (Pro/beta-Pro) first, plus a collapsed resolved history -- see lib/data/support usage in app/(app)/support/actions.ts. */
+/** Open support requests, priority (Pro/beta-Pro) first, plus a collapsed resolved history -- see lib/data/support usage in app/(app)/settings/support/actions.ts. */
 export function SupportPanel({ requests }: { requests: SupportRequestRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();

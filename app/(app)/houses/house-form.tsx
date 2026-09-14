@@ -26,7 +26,16 @@ const NEW = "__new__";
  * as PriceForm's "pick a size, then edit its price" -- familiar, and houses
  * have too few fields to justify a dedicated page per row.
  */
-export function HouseForm({ houses, canAdd }: { houses: HouseOption[]; canAdd: boolean }) {
+export function HouseForm({
+  houses,
+  canAdd,
+  defaultCapacity,
+}: {
+  houses: HouseOption[];
+  canAdd: boolean;
+  /** Farm-level default (Settings → Farm → Production defaults), pre-fills a new house only. */
+  defaultCapacity: number | null;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<string>(canAdd ? NEW : (houses[0]?.id ?? NEW));
@@ -37,14 +46,16 @@ export function HouseForm({ houses, canAdd }: { houses: HouseOption[]; canAdd: b
   const editing = houses.find((house) => house.id === selected) ?? null;
 
   const [name, setName] = useState(editing?.name ?? "");
-  const [capacity, setCapacity] = useState(editing ? String(editing.capacity) : "");
+  const [capacity, setCapacity] = useState(
+    editing ? String(editing.capacity) : defaultCapacity ? String(defaultCapacity) : ""
+  );
   const [notes, setNotes] = useState(editing?.notes ?? "");
 
   function onSelect(nextId: string) {
     setSelected(nextId);
     const next = houses.find((house) => house.id === nextId) ?? null;
     setName(next?.name ?? "");
-    setCapacity(next ? String(next.capacity) : "");
+    setCapacity(next ? String(next.capacity) : defaultCapacity ? String(defaultCapacity) : "");
     setNotes(next?.notes ?? "");
     setFormError(null);
     setFieldErrors({});
@@ -72,7 +83,7 @@ export function HouseForm({ houses, canAdd }: { houses: HouseOption[]; canAdd: b
       setSuccess(editing ? "House updated." : "House added.");
       if (!editing) {
         setName("");
-        setCapacity("");
+        setCapacity(defaultCapacity ? String(defaultCapacity) : "");
         setNotes("");
       }
       router.refresh();

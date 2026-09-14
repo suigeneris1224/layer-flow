@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
+import { SUPPORTED_CURRENCIES, SUPPORTED_TIMEZONES } from "@/lib/domain/farm-config";
 import { PLAN_ORDER } from "@/lib/subscriptions/plans";
 import type {
   BillingPeriod,
@@ -86,6 +87,51 @@ export const createFlockSchema = z
 /** Same fields as onboarding collects; identical rules apply to an edit. */
 export const updateFarmSchema = createFarmSchema;
 export const updateHouseSchema = createHouseSchema;
+
+const currencyCodes = SUPPORTED_CURRENCIES.map((c) => c.code) as [string, ...string[]];
+const timezoneIds = SUPPORTED_TIMEZONES.map((t) => t.id) as [string, ...string[]];
+
+/**
+ * Farm configuration -- currency and timezone, a separate concern from the
+ * name/address updateFarmSchema covers (app/(app)/settings/farm's own card,
+ * not the /farms edit form). Constrained to the curated lists in
+ * lib/domain/farm-config.ts rather than free text, since both values feed
+ * straight into Intl formatting.
+ */
+export const updateFarmConfigSchema = z.object({
+  currency: z.enum(currencyCodes, { errorMap: () => ({ message: "Choose a currency" }) }),
+  timezone: z.enum(timezoneIds, { errorMap: () => ({ message: "Choose a timezone" }) }),
+});
+
+export type UpdateFarmConfigInput = z.infer<typeof updateFarmConfigSchema>;
+
+/**
+ * Production defaults -- pre-filled into the "add a house"/"add a flock"
+ * forms, not enforced anywhere. Both optional: a blank field means "no
+ * default set," which is the transform below turning "" into null.
+ */
+export const farmDefaultsSchema = z.object({
+  defaultHouseCapacity: z
+    .union([intFromForm("Default house capacity", { min: 1, max: 1_000_000 }), z.literal("")])
+    .optional()
+    .transform((value) => (value === "" || value === undefined ? null : value)),
+  defaultFlockBreed: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((value) => (value ? value : null)),
+});
+
+export type FarmDefaultsInput = z.infer<typeof farmDefaultsSchema>;
+
+/** Settings -> Notifications' two on/off switches. */
+export const notificationPreferencesSchema = z.object({
+  farmAlertsEnabled: z.boolean(),
+  inventoryAlertsEnabled: z.boolean(),
+});
+
+export type NotificationPreferencesInput = z.infer<typeof notificationPreferencesSchema>;
 
 /**
  * Editing a flock, deliberately narrower than creating one: `initialHens` is

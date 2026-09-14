@@ -93,7 +93,7 @@ export async function inviteMemberAction(
       metadata: { email: parsed.data.email, role: parsed.data.role },
     });
 
-    revalidatePath("/team");
+    revalidatePath("/settings/team");
 
     return { ok: true, data: { token: data.token } };
   } catch (error) {
@@ -135,7 +135,7 @@ export async function revokeInvitationAction(
       metadata: { email: data.email, revoked: true },
     });
 
-    revalidatePath("/team");
+    revalidatePath("/settings/team");
 
     return { ok: true };
   } catch (error) {
@@ -187,7 +187,7 @@ export async function updateMemberRoleAction(input: unknown): Promise<ActionResu
       metadata: { role: parsed.data.role },
     });
 
-    revalidatePath("/team");
+    revalidatePath("/settings/team");
 
     return { ok: true };
   } catch (error) {
@@ -230,7 +230,7 @@ export async function removeMemberAction(memberId: string): Promise<ActionResult
       metadata: { userId: data.user_id },
     });
 
-    revalidatePath("/team");
+    revalidatePath("/settings/team");
 
     return { ok: true };
   } catch (error) {
@@ -243,8 +243,8 @@ export async function removeMemberAction(memberId: string): Promise<ActionResult
  *
  * Not farm-scoped, and deliberately so: the person calling this has no farm
  * context yet -- that is the entire point of accepting. Like the profile
- * actions in app/(app)/settings/actions.ts it runs on the verified session
- * alone, and the token is what authorises it inside the RPC.
+ * actions in app/(app)/settings/profile/actions.ts it runs on the verified
+ * session alone, and the token is what authorises it inside the RPC.
  */
 export async function acceptInvitationAction(
   token: string

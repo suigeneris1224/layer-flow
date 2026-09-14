@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { toFieldErrors, updateProfileSchema } from "@/lib/validation/schemas";
 import {
+  describeAuthError,
   describeDatabaseError,
   describeUnknownError,
   failure,
@@ -75,7 +77,7 @@ export async function updateProfileAction(input: unknown): Promise<ActionResult>
       });
     }
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/profile");
     revalidatePath("/dashboard");
 
     return { ok: true };
@@ -131,7 +133,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
 
     if (error) return describeDatabaseError(error, "uploadAvatarAction");
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/profile");
     revalidatePath("/dashboard");
 
     return { ok: true };
@@ -160,7 +162,7 @@ export async function removeAvatarAction(): Promise<ActionResult> {
       .from("avatars")
       .remove(Object.values(AVATAR_TYPES).map((ext) => `${user.id}/avatar.${ext}`));
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/profile");
     revalidatePath("/dashboard");
 
     return { ok: true };
@@ -212,7 +214,7 @@ export async function uploadCoverAction(formData: FormData): Promise<ActionResul
 
     if (error) return describeDatabaseError(error, "uploadCoverAction");
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/profile");
 
     return { ok: true };
   } catch (error) {
@@ -237,10 +239,48 @@ export async function removeCoverAction(): Promise<ActionResult> {
       .from("covers")
       .remove(Object.values(COVER_TYPES).map((ext) => `${user.id}/cover.${ext}`));
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/profile");
 
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "removeCoverAction");
+  }
+}
+
+const changePasswordSchema = z
+  .object({
+    password: z.string().min(8, "Use at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    message: "Both passwords must match",
+    path: ["confirmPassword"],
+  });
+
+/**
+ * Changing your password while already signed in, from Settings > Profile.
+ *
+ * Deliberately not a reuse of app/auth/actions.ts's updatePasswordAction: that
+ * one is wired to useActionState (the AuthState convention) and always
+ * redirects to /dashboard, which is right for the password-recovery-email
+ * flow it serves but wrong here -- this form wants to stay on the page and
+ * show a success message. The underlying Supabase call is identical.
+ */
+export async function changePasswordAction(input: unknown): Promise<ActionResult> {
+  await requireUser();
+
+  const parsed = changePasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form below.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    if (error) return describeAuthError(error.message, "password");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "changePasswordAction");
   }
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusNote } from "@/components/ui/states";
-import { acceptInvitationAction } from "@/app/(app)/team/actions";
+import { acceptInvitationAction } from "@/app/(app)/settings/team/actions";
 
 /** The one button that turns a token into a membership. */
 export function AcceptInvitation({

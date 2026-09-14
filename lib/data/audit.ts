@@ -93,6 +93,8 @@ export const AUDIT_ACTIONS = {
   MEMBER_REMOVED: "member.removed",
   PLAN_CHANGED: "subscription.plan_changed",
   ALERT_THRESHOLDS_UPDATED: "alert_thresholds.updated",
+  FARM_DEFAULTS_UPDATED: "farm_defaults.updated",
+  NOTIFICATION_PREFERENCES_UPDATED: "notification_preferences.updated",
   /** metadata carries { kind: "receipt" | "past_due_reminder" | "renewal_reminder", to: "self" | "owner", trigger: "manual" | "cron" }. */
   SUBSCRIPTION_EMAIL_SENT: "subscription.email_sent",
   BETA_MODE_TOGGLED: "beta.mode_toggled",

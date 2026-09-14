@@ -21,8 +21,8 @@ import {
 } from "@/lib/errors";
 
 /**
- * Everything on the dedicated /billing page. Every action here is
- * OWNER-only (`canManageBilling`).
+ * Everything on the dedicated Settings > Subscription page. Every action here
+ * is OWNER-only (`canManageBilling`).
  */
 
 export async function emailReceiptAction(): Promise<ActionResult> {

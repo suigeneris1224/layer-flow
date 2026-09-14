@@ -248,7 +248,7 @@ export function buildManualPaymentRejectedEmail(
   return { subject: `We couldn't verify your payment`, html, text: wrapText(bodyLines) };
 }
 
-/** Notifies the support inbox of a new request -- see app/(app)/support/actions.ts. */
+/** Notifies the support inbox of a new request -- see app/(app)/settings/support/actions.ts. */
 export function buildSupportRequestNotificationEmail(ctx: {
   farmName: string;
   submitterEmail: string;

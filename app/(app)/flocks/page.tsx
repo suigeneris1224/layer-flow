@@ -5,6 +5,7 @@ import { requireFarmContext } from "@/lib/auth/session";
 import { canManageFlock } from "@/lib/auth/permissions";
 import { canCreate, limitReachedPrompt } from "@/lib/subscriptions/entitlements";
 import { getFlocks, getHouseOptions } from "@/lib/data/flocks";
+import { getFarmDefaults } from "@/lib/data/farm-defaults";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { EmptyState, StatusNote } from "@/components/ui/states";
@@ -32,9 +33,10 @@ const STATUS_TONE: Record<string, string> = {
 
 export default async function FlocksPage() {
   const context = await requireFarmContext();
-  const [flocks, houseOptions] = await Promise.all([
+  const [flocks, houseOptions, defaults] = await Promise.all([
     getFlocks(context.farmId),
     getHouseOptions(context.farmId),
+    getFarmDefaults(context.farmId),
   ]);
 
   const canManage = canManageFlock(context);
@@ -121,7 +123,12 @@ export default async function FlocksPage() {
         houseOptions.length === 0 ? (
           <StatusNote tone="info">Add a house before you can add a flock.</StatusNote>
         ) : (
-          <FlockForm flocks={flocks} houses={houseOptions} canAdd={canAdd} />
+          <FlockForm
+            flocks={flocks}
+            houses={houseOptions}
+            canAdd={canAdd}
+            defaultBreed={defaults.flockBreed}
+          />
         )
       ) : (
         <StatusNote tone="info">

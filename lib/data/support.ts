@@ -41,7 +41,7 @@ interface SupportMessageDbRow {
 
 /**
  * A user's own submitted support requests, newest first -- for the tracker
- * beside the form on app/(app)/support/page.tsx. Scoped to submitted_by on
+ * beside the form on app/(app)/settings/support/page.tsx. Scoped to submitted_by on
  * top of the support_requests_select RLS policy, which itself already lets
  * any farm member read every request on the farm.
  */

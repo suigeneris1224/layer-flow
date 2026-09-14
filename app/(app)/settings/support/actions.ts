@@ -94,8 +94,8 @@ export async function submitSupportRequestAction(input: unknown): Promise<Action
  * Resolved requests are locked: once marked resolved, this refuses the
  * reply outright rather than silently reopening it, so a farmer can't end up
  * talking into a thread that reads as closed on the admin side. They file a
- * new request instead (app/(app)/support/support-requests-list.tsx hides the
- * reply form for the same reason).
+ * new request instead (app/(app)/settings/support/support-requests-list.tsx
+ * hides the reply form for the same reason).
  *
  * The insert itself is RLS-checked (support_request_messages_insert), no
  * admin client needed.
@@ -145,7 +145,7 @@ export async function replyToSupportRequestAction(
       entityId: requestId,
     });
 
-    revalidatePath("/support");
+    revalidatePath("/settings/support");
 
     return { ok: true };
   } catch (error) {

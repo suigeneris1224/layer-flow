@@ -4,6 +4,7 @@ import { PLANS } from "@/lib/subscriptions/plans";
 import { effectivePlan } from "@/lib/subscriptions/entitlements";
 import { SettingsNav } from "@/components/nav/settings-nav";
 import { PendingSyncPill } from "@/components/offline/pending-sync-pill";
+import { PageHeader } from "@/components/layout/page-shell";
 
 /**
  * Shell for every /settings/* route: a tab bar on top at tablet/desktop
@@ -25,15 +26,19 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-4 lg:gap-5 lg:p-6">
       <div className="hidden md:block">
-        <SettingsNav
-          visibleKeys={categories.map((category) => category.key)}
-          badges={{
-            subscription: (
-              <span className="text-xs font-normal text-muted-foreground">{planName}</span>
-            ),
-            "data-sync": <PendingSyncPill />,
-          }}
-        />
+        <PageHeader title="Settings" description="Manage your farm and account." />
+
+        <div className="mt-4">
+          <SettingsNav
+            visibleKeys={categories.map((category) => category.key)}
+            badges={{
+              subscription: (
+                <span className="text-xs font-normal text-muted-foreground">{planName}</span>
+              ),
+              "data-sync": <PendingSyncPill />,
+            }}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 lg:gap-5">{children}</div>

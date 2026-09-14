@@ -35,7 +35,7 @@ export function QuickAdd({ canManageMoney }: { canManageMoney: boolean }) {
         onClick={() => setOpen(true)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="flex size-14 -translate-y-3 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-card transition-transform active:scale-95"
+        className="flex size-14 -translate-y-3 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card transition-transform active:scale-95"
       >
         <Plus className="size-6" aria-hidden />
         <span className="sr-only">Add a record</span>

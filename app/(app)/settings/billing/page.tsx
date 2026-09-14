@@ -51,7 +51,11 @@ export default async function BillingPage() {
     getUsageSummary(context),
   ]);
   const pendingManualPayment = manualPayments.find((payment) => payment.status === "PENDING");
-  const upgradablePlans = PLAN_ORDER.filter((id) => id !== "FREE" && id !== context.plan);
+  // Only plans ranked above the current one -- PLAN_ORDER's own index is the
+  // rank (FREE < STARTER < PRO), so a Pro farm has nothing left to "upgrade"
+  // to and correctly sees no buttons here.
+  const currentRank = PLAN_ORDER.indexOf(context.plan);
+  const upgradablePlans = PLAN_ORDER.filter((_, rank) => rank > currentRank);
   const limits = PLANS[context.plan].limits;
 
   return (
@@ -112,7 +116,7 @@ export default async function BillingPage() {
             <Link
               key={id}
               href={`/checkout?plan=${id}&period=${billingPeriod}` as Route}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              className={cn(buttonVariants({ variant: "primary", size: "sm" }))}
             >
               Upgrade to {PLANS[id].name}
             </Link>

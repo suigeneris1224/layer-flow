@@ -1,5 +1,6 @@
 import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import {
+  FEATURE_DESCRIPTIONS,
   FEATURE_LABELS,
   LIMIT_LABELS,
   PLANS,
@@ -60,6 +61,8 @@ export function canCreate(
 export interface UpgradePrompt {
   title: string;
   message: string;
+  /** A fuller explanation of what the feature actually does, when one exists (see FEATURE_DESCRIPTIONS). */
+  description?: string;
   suggestedPlan: SubscriptionPlan | null;
   ctaLabel: string;
 }
@@ -100,6 +103,7 @@ export function featureLockedPrompt(subject: Entitled, feature: Feature): Upgrad
     message: required
       ? `Available on ${PLANS[required].name}.`
       : "This feature is not available on your plan.",
+    description: FEATURE_DESCRIPTIONS[feature],
     suggestedPlan: required,
     ctaLabel: required ? `Upgrade to ${PLANS[required].name}` : "See plans",
   };

@@ -61,7 +61,6 @@ const STARTER_FEATURES: readonly Feature[] = [
   "customers",
   "full_expenses",
   "production_charts",
-  "egg_size_analytics",
   "alerts",
   "reports",
   "offline_mode",
@@ -69,6 +68,10 @@ const STARTER_FEATURES: readonly Feature[] = [
 
 const PRO_FEATURES: readonly Feature[] = [
   ...STARTER_FEATURES,
+  // Moved here from Starter: the egg-size chart is the one genuinely
+  // chart-shaped piece of "Advanced Analytics" (see egg-size-trend-chart.tsx),
+  // so it belongs behind the same gate as flock comparison, not ahead of it.
+  "egg_size_analytics",
   "advanced_alerts",
   "advanced_reports",
   "flock_comparison",
@@ -234,6 +237,23 @@ export const FEATURE_LABELS: Record<Feature, string> = {
  */
 export const PLAN_FEATURE_ROWS: Record<SubscriptionPlan, Feature[]> = {
   FREE: ["production_charts"],
-  STARTER: ["egg_sales", "full_expenses", "egg_size_analytics", "alerts", "reports"],
-  PRO: ["team_management", "multi_farm", "cross_farm_reporting", "priority_support"],
+  STARTER: ["egg_sales", "full_expenses", "alerts", "reports"],
+  PRO: ["flock_comparison", "team_management", "multi_farm", "priority_support"],
+};
+
+/**
+ * A one-line explanation for a feature, shown on an UpgradePanel (a farmer
+ * hit a locked feature) instead of the bare `"Available on Pro."` message.
+ * Scoped to the features this pass actually deepened -- not every feature
+ * needs one, only the ones worth explaining beyond their label.
+ */
+export const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
+  egg_size_analytics:
+    "See your daily egg size mix, and how it shifts over time -- not just today's snapshot.",
+  flock_comparison:
+    "Compare your flocks side by side -- laying rate, feed efficiency, and cost per egg -- to see which are pulling their weight.",
+  advanced_reports:
+    "See profit by flock and where your money actually goes, broken down by expense category.",
+  cross_farm_reporting:
+    "Compare revenue, cost and profit across every farm you run, side by side.",
 };

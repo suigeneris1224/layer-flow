@@ -12,6 +12,7 @@ import {
   roundMoney,
 } from "@/lib/domain/calculations";
 import { attributeFlockProfitability, type FlockProfitRow } from "@/lib/domain/profitability";
+import { getExpensesByCategory, type CategoryBreakdownRow } from "@/lib/data/expenses";
 import { shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 import {
@@ -64,6 +65,8 @@ export interface ReportsData {
   chart: DailyMoneyPoint[];
   /** Only populated when the farm's plan includes advanced_reports. */
   flockProfitability: FlockProfitRow[] | null;
+  /** Same gate as flockProfitability. */
+  expenseByCategory: CategoryBreakdownRow[] | null;
 }
 
 type SaleRow = { sale_date: string; total_amount: number; flock_id: string | null };
@@ -131,11 +134,12 @@ export const getReportsData = cache(async function getReportsData(
   const hasSales = canAccess(entitlement, "egg_sales");
   const hasAdvanced = canAccess(entitlement, "advanced_reports");
 
-  const [current, previous, lastYearPeriod, flocks] = await Promise.all([
+  const [current, previous, lastYearPeriod, flocks, expenseByCategory] = await Promise.all([
     fetchPeriod(supabase, context.farmId, range.from, range.to, hasSales),
     fetchPeriod(supabase, context.farmId, previousStart, previousEnd, hasSales),
     fetchPeriod(supabase, context.farmId, yearAgo.from, yearAgo.to, hasSales),
     hasAdvanced ? getFlocks(context.farmId) : Promise.resolve([]),
+    hasAdvanced ? getExpensesByCategory(context, range) : Promise.resolve(null),
   ]);
 
   const revenue = roundMoney(sum(current.sales, (row) => Number(row.total_amount)));
@@ -188,6 +192,7 @@ export const getReportsData = cache(async function getReportsData(
     flockProfitability: hasAdvanced
       ? attributeFlockProfitability(flocks, current.sales, current.expenses, current.feed)
       : null,
+    expenseByCategory,
   };
 });
 

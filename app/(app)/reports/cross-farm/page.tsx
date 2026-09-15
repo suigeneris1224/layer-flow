@@ -9,9 +9,11 @@ import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
+import { FarmComparisonChart } from "@/components/charts/lazy";
 import { ReportRangeSelect } from "@/components/reports/report-range-select";
 import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
 import { farmToday, formatCurrencyShort } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Compare farms" };
 
@@ -72,6 +74,10 @@ export default async function CrossFarmReportsPage({
     range
   );
 
+  const rankedFarms = [...data.rows].sort((a, b) => b.profit - a.profit);
+  const bestFarmId = rankedFarms[0]?.farmId;
+  const worstFarmId = rankedFarms.length > 1 ? rankedFarms[rankedFarms.length - 1]?.farmId : undefined;
+
   return (
     <PageShell>
       <PageHeader
@@ -115,36 +121,57 @@ export default async function CrossFarmReportsPage({
       </section>
 
       <Panel title="By farm">
-        <div className="scroll-x">
-          <table className="w-full min-w-[32rem] border-collapse text-sm">
-            <caption className="sr-only">Revenue, cost and profit by farm: {range.label}</caption>
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th scope="col" className="py-2 text-left font-medium">Farm</th>
-                <th scope="col" className="py-2 text-right font-medium">Revenue</th>
-                <th scope="col" className="py-2 text-right font-medium">Cost</th>
-                <th scope="col" className="py-2 text-right font-medium">Profit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row) => (
-                <tr key={row.farmId} className="border-b border-border last:border-0">
-                  <th scope="row" className="py-2.5 text-left font-normal">
-                    {row.farmName}
-                  </th>
-                  <td className="py-2.5 text-right tabular">
-                    {formatCurrencyShort(row.revenue, context.currency)}
-                  </td>
-                  <td className="py-2.5 text-right tabular text-muted-foreground">
-                    {formatCurrencyShort(row.cost, context.currency)}
-                  </td>
-                  <td className="py-2.5 text-right font-medium tabular">
-                    {formatCurrencyShort(row.profit, context.currency)}
-                  </td>
+        <div className="flex flex-col gap-4">
+          <FarmComparisonChart data={data.rows} currency={context.currency} />
+
+          <div className="scroll-x">
+            <table className="w-full min-w-[32rem] border-collapse text-sm">
+              <caption className="sr-only">Revenue, cost and profit by farm: {range.label}</caption>
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th scope="col" className="py-2 text-left font-medium">Farm</th>
+                  <th scope="col" className="py-2 text-right font-medium">Revenue</th>
+                  <th scope="col" className="py-2 text-right font-medium">Cost</th>
+                  <th scope="col" className="py-2 text-right font-medium">Profit</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.rows.map((row) => (
+                  <tr key={row.farmId} className="border-b border-border last:border-0">
+                    <th scope="row" className="py-2.5 text-left font-normal">
+                      <span className="flex items-center gap-2">
+                        {row.farmName}
+                        {row.farmId === bestFarmId && (
+                          <span className="rounded-full bg-good/15 px-2 py-0.5 text-[11px] font-medium text-good">
+                            Top performer
+                          </span>
+                        )}
+                        {row.farmId === worstFarmId && (
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                              "bg-[hsl(var(--status-warn))]/15 text-[hsl(var(--status-warn))]"
+                            )}
+                          >
+                            Needs attention
+                          </span>
+                        )}
+                      </span>
+                    </th>
+                    <td className="py-2.5 text-right tabular">
+                      {formatCurrencyShort(row.revenue, context.currency)}
+                    </td>
+                    <td className="py-2.5 text-right tabular text-muted-foreground">
+                      {formatCurrencyShort(row.cost, context.currency)}
+                    </td>
+                    <td className="py-2.5 text-right font-medium tabular">
+                      {formatCurrencyShort(row.profit, context.currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </Panel>
 

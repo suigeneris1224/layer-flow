@@ -9,10 +9,16 @@ import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
-import { EggSizeDonut, LayingRateChart } from "@/components/charts/lazy";
+import {
+  EggSizeDonut,
+  EggSizeTrendChart,
+  FlockComparisonChart,
+  LayingRateChart,
+} from "@/components/charts/lazy";
 import { ReportRangeSelect } from "@/components/reports/report-range-select";
 import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
-import { farmToday, formatKg, formatNumber, formatPercent } from "@/lib/format";
+import { farmToday, formatCurrency, formatKg, formatNumber, formatPercent } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Analytics" };
 
@@ -46,6 +52,11 @@ export default async function AnalyticsPage({
     getFarmStartYear(context.farmId),
   ]);
   const hasProduction = data.totals.totalEggs > 0 || data.totals.totalMortality > 0;
+
+  const flockComparison = data.flockComparison ?? [];
+  const bestFlockId = flockComparison[0]?.id;
+  const worstFlockId =
+    flockComparison.length > 1 ? flockComparison[flockComparison.length - 1]?.id : undefined;
 
   return (
     <PageShell>
@@ -112,9 +123,21 @@ export default async function AnalyticsPage({
               <LayingRateChart data={data.charts.layingRate} />
             </Panel>
 
-            {data.charts.sizes ? (
+            {data.charts.sizes && data.charts.sizeTrend ? (
               <Panel title="Eggs by size" className="lg:col-span-4 lg:self-start">
-                <EggSizeDonut slices={data.charts.sizes} total={data.totals.totalEggs} />
+                <div className="flex flex-col gap-5">
+                  <EggSizeDonut slices={data.charts.sizes} total={data.totals.totalEggs} />
+
+                  <div className="border-t border-border pt-4">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      Mix over {range.label.toLowerCase()}
+                    </p>
+                    <EggSizeTrendChart
+                      points={data.charts.sizeTrend.points}
+                      sizes={data.charts.sizeTrend.sizes}
+                    />
+                  </div>
+                </div>
               </Panel>
             ) : (
               <UpgradePanel
@@ -129,44 +152,77 @@ export default async function AnalyticsPage({
               <p className="mb-3 text-sm text-muted-foreground">
                 See which of your flocks is laying best, so you know where to focus.
               </p>
-              {data.flockComparison.length === 0 ? (
+              {flockComparison.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No active flocks to compare yet.</p>
               ) : (
-                <div className="scroll-x">
-                  <table className="w-full min-w-[36rem] border-collapse text-sm">
-                    <caption className="sr-only">Flock comparison: {range.label}</caption>
-                    <thead>
-                      <tr className="border-b border-border text-muted-foreground">
-                        <th scope="col" className="py-2 text-left font-medium">Flock</th>
-                        <th scope="col" className="py-2 text-right font-medium">Age</th>
-                        <th scope="col" className="py-2 text-right font-medium">Eggs</th>
-                        <th scope="col" className="py-2 text-right font-medium">Avg laying rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.flockComparison.map((flock) => (
-                        <tr key={flock.id} className="border-b border-border last:border-0">
-                          <th scope="row" className="py-2.5 text-left font-normal">
-                            {flock.name}
-                            {flock.breed && (
-                              <span className="block text-xs text-muted-foreground">
-                                {flock.breed}
-                              </span>
-                            )}
-                          </th>
-                          <td className="py-2.5 text-right text-muted-foreground">
-                            {flock.ageWeeks} wk
-                          </td>
-                          <td className="py-2.5 text-right tabular">
-                            {formatNumber(flock.totalEggs)}
-                          </td>
-                          <td className="py-2.5 text-right font-medium tabular">
-                            {formatPercent(flock.avgLayingRate)}
-                          </td>
+                <div className="flex flex-col gap-4">
+                  <FlockComparisonChart data={flockComparison} />
+
+                  <div className="scroll-x">
+                    <table className="w-full min-w-[44rem] border-collapse text-sm">
+                      <caption className="sr-only">Flock comparison: {range.label}</caption>
+                      <thead>
+                        <tr className="border-b border-border text-muted-foreground">
+                          <th scope="col" className="py-2 text-left font-medium">Flock</th>
+                          <th scope="col" className="py-2 text-right font-medium">Age</th>
+                          <th scope="col" className="py-2 text-right font-medium">Eggs</th>
+                          <th scope="col" className="py-2 text-right font-medium">Avg laying rate</th>
+                          <th scope="col" className="py-2 text-right font-medium">Feed conversion</th>
+                          <th scope="col" className="py-2 text-right font-medium">Cost / egg</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {flockComparison.map((flock) => (
+                          <tr key={flock.id} className="border-b border-border last:border-0">
+                            <th scope="row" className="py-2.5 text-left font-normal">
+                              <span className="flex items-center gap-2">
+                                <span>
+                                  {flock.name}
+                                  {flock.breed && (
+                                    <span className="block text-xs text-muted-foreground">
+                                      {flock.breed}
+                                    </span>
+                                  )}
+                                </span>
+                                {flock.id === bestFlockId && (
+                                  <span className="rounded-full bg-good/15 px-2 py-0.5 text-[11px] font-medium text-good">
+                                    Top performer
+                                  </span>
+                                )}
+                                {flock.id === worstFlockId && (
+                                  <span
+                                    className={cn(
+                                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                      "bg-[hsl(var(--status-warn))]/15 text-[hsl(var(--status-warn))]"
+                                    )}
+                                  >
+                                    Needs attention
+                                  </span>
+                                )}
+                              </span>
+                            </th>
+                            <td className="py-2.5 text-right text-muted-foreground">
+                              {flock.ageWeeks} wk
+                            </td>
+                            <td className="py-2.5 text-right tabular">
+                              {formatNumber(flock.totalEggs)}
+                            </td>
+                            <td className="py-2.5 text-right font-medium tabular">
+                              {formatPercent(flock.avgLayingRate)}
+                            </td>
+                            <td className="py-2.5 text-right tabular text-muted-foreground">
+                              {flock.feedConversion > 0 ? `${formatKg(flock.feedConversion)}/egg` : "—"}
+                            </td>
+                            <td className="py-2.5 text-right tabular text-muted-foreground">
+                              {flock.costPerEgg > 0
+                                ? `${formatCurrency(flock.costPerEgg, context.currency)}/egg`
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </Panel>

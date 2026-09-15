@@ -45,6 +45,7 @@ import { syncNotifications } from "@/lib/data/notifications";
 import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
 import { getNotificationPreferences } from "@/lib/data/notification-preferences";
 import { filterAlertsForNotifications } from "@/lib/domain/notification-preferences";
+import { buildSizeSlices } from "@/lib/data/analytics";
 import { getCurrentPrices } from "@/lib/data/pricing";
 import { farmToday, shiftDate, startOfWeek } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
@@ -759,29 +760,6 @@ function buildProductionSeries(
       lastWeek: byDate.get(shiftDate(date, -7)) ?? 0,
     };
   });
-}
-
-/** Today's collection split by size, for the donut. */
-function buildSizeSlices(rows: readonly SizeProductionRow[]): SizeSlice[] {
-  const slices = rows.map((row) => {
-    const size = oneOf(row.egg_sizes);
-    return {
-      name: size?.name ?? "Unknown",
-      sortOrder: size?.sort_order ?? 0,
-      quantity: Number(row.quantity) || 0,
-    };
-  });
-
-  const total = slices.reduce((running, slice) => running + slice.quantity, 0);
-
-  return slices
-    .filter((slice) => slice.quantity > 0)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((slice) => ({
-      name: slice.name,
-      quantity: slice.quantity,
-      percentage: total > 0 ? Math.round((slice.quantity / total) * 1000) / 10 : 0,
-    }));
 }
 
 function buildActivity(

@@ -50,3 +50,23 @@ export const ExpenseCategoryChart = dynamic(
   () => import("./expense-category-chart").then((mod) => mod.ExpenseCategoryChart),
   { ssr: false, loading: () => <ChartSkeleton className="h-[220px] w-full" /> }
 );
+
+export const FlockComparisonChart = dynamic(
+  () => import("./flock-comparison-chart").then((mod) => mod.FlockComparisonChart),
+  { ssr: false, loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[220px]" /> }
+);
+
+export const EggSizeTrendChart = dynamic(
+  () => import("./egg-size-trend-chart").then((mod) => mod.EggSizeTrendChart),
+  { ssr: false, loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[210px]" /> }
+);
+
+export const FlockProfitChart = dynamic(
+  () => import("./flock-profit-chart").then((mod) => mod.FlockProfitChart),
+  { ssr: false, loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[220px]" /> }
+);
+
+export const FarmComparisonChart = dynamic(
+  () => import("./farm-comparison-chart").then((mod) => mod.FarmComparisonChart),
+  { ssr: false, loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[220px]" /> }
+);

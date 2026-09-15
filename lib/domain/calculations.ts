@@ -90,6 +90,12 @@ export function feedCostPerEgg(totalFeedCost: number, eggsCollected: number): nu
   return Math.round((totalFeedCost / eggsCollected) * 10000) / 10000;
 }
 
+/** Kilograms of feed spent per egg produced -- a flock's feed efficiency, independent of feed price. */
+export function feedConversionRatio(feedKg: number, eggsCollected: number): number {
+  if (eggsCollected <= 0) return 0;
+  return Math.round((feedKg / eggsCollected) * 10000) / 10000;
+}
+
 // ---------------------------------------------------------------------------
 // Egg size breakdown
 // ---------------------------------------------------------------------------

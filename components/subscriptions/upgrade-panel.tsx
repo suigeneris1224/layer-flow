@@ -31,6 +31,9 @@ export function UpgradePanel({
       <div>
         <p className="font-medium">{prompt.title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{prompt.message}</p>
+        {prompt.description && (
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">{prompt.description}</p>
+        )}
       </div>
       <Link href="/pricing" className={cn(buttonVariants({ size: "md" }), "mt-1")}>
         {prompt.ctaLabel}

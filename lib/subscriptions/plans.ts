@@ -226,3 +226,14 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   cross_farm_reporting: "Cross-farm reporting",
   priority_support: "Priority support",
 };
+
+/**
+ * A curated few bullets per plan for a compact card (the landing page teaser,
+ * Settings > Subscription's upgrade cards) -- not the full feature list, see
+ * /pricing for that.
+ */
+export const PLAN_FEATURE_ROWS: Record<SubscriptionPlan, Feature[]> = {
+  FREE: ["production_charts"],
+  STARTER: ["egg_sales", "full_expenses", "egg_size_analytics", "alerts", "reports"],
+  PRO: ["team_management", "multi_farm", "cross_farm_reporting", "priority_support"],
+};

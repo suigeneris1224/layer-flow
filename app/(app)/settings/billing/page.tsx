@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
-import Link from "next/link";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
 import { isProduction } from "@/lib/config/env";
@@ -9,8 +8,10 @@ import { getManualPaymentsForOwner } from "@/lib/data/manual-payments";
 import { getUsageSummary } from "@/lib/data/usage";
 import {
   describeLimit,
+  FEATURE_LABELS,
   LIMIT_LABELS,
   PLANS,
+  PLAN_FEATURE_ROWS,
   PLAN_ORDER,
   formatPlanPrice,
   type LimitKey,
@@ -18,9 +19,8 @@ import {
 import { PageHeader } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
+import { PlanCard } from "@/components/subscriptions/plan-card";
 import { BillingPanel } from "./billing-panel";
 import { DevPlanSwitcher } from "./dev-plan-switcher";
 
@@ -51,11 +51,7 @@ export default async function BillingPage() {
     getUsageSummary(context),
   ]);
   const pendingManualPayment = manualPayments.find((payment) => payment.status === "PENDING");
-  // Only plans ranked above the current one -- PLAN_ORDER's own index is the
-  // rank (FREE < STARTER < PRO), so a Pro farm has nothing left to "upgrade"
-  // to and correctly sees no buttons here.
   const currentRank = PLAN_ORDER.indexOf(context.plan);
-  const upgradablePlans = PLAN_ORDER.filter((_, rank) => rank > currentRank);
   const limits = PLANS[context.plan].limits;
 
   return (
@@ -110,17 +106,43 @@ export default async function BillingPage() {
         </dl>
       </Panel>
 
-      {!context.isBetaOverride && !pendingManualPayment && upgradablePlans.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {upgradablePlans.map((id) => (
-            <Link
-              key={id}
-              href={`/checkout?plan=${id}&period=${billingPeriod}` as Route}
-              className={cn(buttonVariants({ variant: "primary", size: "sm" }))}
-            >
-              Upgrade to {PLANS[id].name}
-            </Link>
-          ))}
+      {!context.isBetaOverride && !pendingManualPayment && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {PLAN_ORDER.map((id) => {
+            const isCurrent = id === context.plan;
+            const rank = PLAN_ORDER.indexOf(id);
+
+            // Any Starter/Pro move -- either direction -- goes through the
+            // same manual-payment checkout: submitManualPaymentAction and the
+            // admin approve/reject actions are rank-agnostic, so a downgrade
+            // claim is processed exactly like an upgrade one. Free is the one
+            // real gap: there's no submission path for it (nothing to pay
+            // for) and no cancellation flow built yet, so that still detours
+            // to support.
+            const cta = isCurrent
+              ? null
+              : id === "FREE"
+                ? { href: "/settings/support" as Route, label: "Downgrade to Free" }
+                : {
+                    href: `/checkout?plan=${id}&period=${billingPeriod}` as Route,
+                    label:
+                      rank > currentRank
+                        ? `Upgrade to ${PLANS[id].name}`
+                        : `Downgrade to ${PLANS[id].name}`,
+                  };
+
+            return (
+              <PlanCard
+                key={id}
+                plan={PLANS[id]}
+                period={billingPeriod}
+                bullets={PLAN_FEATURE_ROWS[id].map((feature) => FEATURE_LABELS[feature])}
+                cta={cta}
+                isCurrent={isCurrent}
+                showMarketingHighlight={false}
+              />
+            );
+          })}
         </div>
       )}
 

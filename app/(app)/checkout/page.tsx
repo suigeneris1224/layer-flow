@@ -39,7 +39,7 @@ export default async function CheckoutPage({
   if (!canManageBilling(context)) {
     return (
       <PageShell width="reading">
-        <PageHeader title="Checkout" description="Upgrade your plan." />
+        <PageHeader title="Checkout" description="Change your plan." />
         <StatusNote tone="info" title="Owner only">
           Only the account owner can change the plan.
         </StatusNote>

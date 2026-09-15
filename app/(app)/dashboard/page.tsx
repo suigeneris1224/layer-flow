@@ -154,7 +154,11 @@ export default async function DashboardPage({
         </Panel>
 
         {data.charts.hasSizeAnalytics ? (
-          <Panel title="Eggs by size" className="lg:col-span-5 xl:col-span-3">
+          <Panel
+            title="Eggs by size"
+            className="lg:col-span-5 xl:col-span-3"
+            action={<span className="text-xs text-muted-foreground">Today</span>}
+          >
             <EggSizeDonut slices={data.charts.sizesToday} total={data.today.eggs} />
           </Panel>
         ) : (

@@ -12,7 +12,7 @@ import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { FarmComparisonChart } from "@/components/charts/lazy";
 import { ReportRangeSelect } from "@/components/reports/report-range-select";
 import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
-import { farmToday, formatCurrencyShort } from "@/lib/format";
+import { farmToday, formatCurrencyCompact, formatCurrencyShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Compare farms" };
@@ -41,7 +41,11 @@ export default async function CrossFarmReportsPage({
 
   const today = farmToday(context.timezone);
   const { range: rangeParam } = await searchParams;
-  const range = resolveReportRange(rangeParam, today);
+  // "Today" isn't offered in the picker anymore (report-range-select.tsx),
+  // so a fresh visit with no ?range= should land on "This week", not the
+  // single-day default resolveReportRange still falls back to for other
+  // callers (sales-overview.ts, lib/export/route.ts).
+  const range = resolveReportRange(rangeParam ?? "week", today);
 
   const [farms, startYear] = await Promise.all([
     getUserFarms(),
@@ -100,21 +104,21 @@ export default async function CrossFarmReportsPage({
           icon={PhilippinePeso}
           tint="teal"
           label="Combined revenue"
-          value={formatCurrencyShort(data.totals.revenue, context.currency)}
+          value={formatCurrencyCompact(data.totals.revenue, context.currency)}
           sublabel={range.label}
         />
         <StatCard
           icon={Receipt}
           tint="rose"
           label="Combined cost"
-          value={formatCurrencyShort(data.totals.cost, context.currency)}
+          value={formatCurrencyCompact(data.totals.cost, context.currency)}
           sublabel="Feed and expenses"
         />
         <StatCard
           icon={TrendingUp}
           tint="violet"
           label="Combined profit"
-          value={formatCurrencyShort(data.totals.profit, context.currency)}
+          value={formatCurrencyCompact(data.totals.profit, context.currency)}
           sublabel="Estimated operating profit"
           className="col-span-2 xl:col-span-1"
         />

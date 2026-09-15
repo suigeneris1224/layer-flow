@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { FlockProfitRow } from "@/lib/data/reports";
-import { formatCurrency, formatCurrencyShort } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
 /** Profit per flock, side by side -- green when it's actually profitable, rose when it's a loss. */
 export function FlockProfitChart({
@@ -17,7 +17,7 @@ export function FlockProfitChart({
   return (
     <div className="h-[180px] w-full lg:h-[220px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
+        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
 
           <XAxis
@@ -31,7 +31,7 @@ export function FlockProfitChart({
             axisLine={false}
             width={56}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-            tickFormatter={(value: number) => formatCurrencyShort(value, currency)}
+            tickFormatter={(value: number) => formatCurrencyCompact(value, currency)}
           />
 
           <Tooltip

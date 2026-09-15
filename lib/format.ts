@@ -32,6 +32,23 @@ export function formatCurrencyShort(amount: number, currency = "PHP"): string {
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+/**
+ * Compact money for stat tiles that can't fit a big number, e.g. ₱12.3K.
+ * Stays exact below the threshold so small values aren't needlessly
+ * abbreviated -- anything at or past a thousand compacts.
+ */
+export function formatCurrencyCompact(amount: number, currency = "PHP"): string {
+  const value = Number.isFinite(amount) ? amount : 0;
+  if (Math.abs(value) < 1_000) return formatCurrencyShort(value, currency);
+  return new Intl.NumberFormat(PH_LOCALE, {
+    style: "currency",
+    currency,
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 export function formatNumber(value: number, fractionDigits = 0): string {
   return new Intl.NumberFormat(PH_LOCALE, {
     minimumFractionDigits: fractionDigits,

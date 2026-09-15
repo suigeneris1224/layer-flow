@@ -41,7 +41,7 @@ export function EggSizeTrendChart({
     <div>
       <div className="h-[180px] w-full lg:h-[210px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
+          <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
 
             <XAxis
@@ -54,7 +54,7 @@ export function EggSizeTrendChart({
             <YAxis
               tickLine={false}
               axisLine={false}
-              width={36}
+              width={48}
               domain={[0, 100]}
               tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               tickFormatter={(value: number) => `${value}%`}

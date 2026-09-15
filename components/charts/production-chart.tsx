@@ -22,7 +22,7 @@ export function ProductionChart({ data }: { data: SeriesPoint[] }) {
   return (
     <div className="h-[180px] w-full lg:h-[230px]">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="thisWeekFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.22} />

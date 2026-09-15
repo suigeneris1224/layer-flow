@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CategoryBreakdownRow } from "@/lib/data/expenses";
-import { formatCurrency, formatCurrencyShort } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
 const BAR_COLOURS = [
   "hsl(var(--chart-1))",
@@ -41,7 +41,7 @@ export function ExpenseCategoryChart({
             tickLine={false}
             axisLine={false}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-            tickFormatter={(value: number) => formatCurrencyShort(value, currency)}
+            tickFormatter={(value: number) => formatCurrencyCompact(value, currency)}
           />
           <YAxis
             type="category"

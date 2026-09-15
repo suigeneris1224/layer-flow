@@ -11,7 +11,7 @@ export function FlockComparisonChart({ data }: { data: FlockComparisonRow[] }) {
   return (
     <div className="h-[180px] w-full lg:h-[220px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
+        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
 
           <XAxis
@@ -23,7 +23,7 @@ export function FlockComparisonChart({ data }: { data: FlockComparisonRow[] }) {
           <YAxis
             tickLine={false}
             axisLine={false}
-            width={40}
+            width={48}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={(value: number) => `${value}%`}
           />

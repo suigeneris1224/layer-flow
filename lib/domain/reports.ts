@@ -74,7 +74,10 @@ export function resolveReportRange(raw: string | undefined, today: string): Reso
     case "week": {
       const day = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0=Sun..6=Sat
       const from = shiftDate(today, -((day + 6) % 7)); // back to Monday
-      return { value: "week", from, to: today, label: "This week" };
+      // Full Monday-Sunday span, matching Dashboard's Production overview week
+      // grid -- not clamped to today like month/year, since a week is small
+      // and future days just contribute no rows to any query that uses it.
+      return { value: "week", from, to: shiftDate(from, 6), label: "This week" };
     }
     case "month": {
       const from = `${today.slice(0, 7)}-01`;

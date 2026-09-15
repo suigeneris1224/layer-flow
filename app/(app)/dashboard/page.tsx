@@ -25,7 +25,7 @@ import { FlockStatusPanel } from "@/components/dashboard/flock-status-panel";
 import { FarmCards } from "@/components/farms/farm-cards";
 import { TodayStatus } from "@/components/dashboard/today-status";
 import { SalesRangeToggle } from "@/components/dashboard/sales-range-toggle";
-import { formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
+import { formatCurrencyCompact, formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -95,7 +95,7 @@ export default async function DashboardPage({
           icon={PhilippinePeso}
           tint="teal"
           label="Sales today"
-          value={formatCurrencyShort(data.money.revenue, context.currency)}
+          value={formatCurrencyCompact(data.money.revenue, context.currency)}
           sublabel="Total sales"
           delta={data.deltas.revenue}
           deltaLabel="vs yesterday"
@@ -104,7 +104,7 @@ export default async function DashboardPage({
           icon={Receipt}
           tint="rose"
           label="Costs today"
-          value={formatCurrencyShort(data.money.operatingCosts, context.currency)}
+          value={formatCurrencyCompact(data.money.operatingCosts, context.currency)}
           sublabel="Feed and expenses"
           delta={data.deltas.expenses}
           deltaLabel="vs yesterday"
@@ -115,7 +115,7 @@ export default async function DashboardPage({
           icon={TrendingUp}
           tint="violet"
           label="Est. profit"
-          value={formatCurrencyShort(data.money.estimatedProfit, context.currency)}
+          value={formatCurrencyCompact(data.money.estimatedProfit, context.currency)}
           sublabel="Estimated operating profit"
           delta={data.deltas.profit}
           deltaLabel="vs yesterday"

@@ -1,7 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { formatCurrency, formatCurrencyShort } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
 /**
  * Sales per point -- one bar per day (This month) or one per month (This
@@ -31,7 +31,7 @@ export function SalesChart({
   return (
     <div className="h-[180px] w-full lg:h-[210px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
+        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
 
           <XAxis
@@ -49,7 +49,7 @@ export function SalesChart({
             axisLine={false}
             width={56}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-            tickFormatter={(value: number) => formatCurrencyShort(value, currency)}
+            tickFormatter={(value: number) => formatCurrencyCompact(value, currency)}
           />
 
           <Tooltip

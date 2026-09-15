@@ -46,7 +46,11 @@ export default async function AnalyticsPage({
 
   const today = farmToday(context.timezone);
   const { range: rangeParam } = await searchParams;
-  const range = resolveReportRange(rangeParam, today);
+  // "Today" isn't offered in the picker anymore (report-range-select.tsx),
+  // so a fresh visit with no ?range= should land on "This week", not the
+  // single-day default resolveReportRange still falls back to for other
+  // callers (sales-overview.ts, lib/export/route.ts).
+  const range = resolveReportRange(rangeParam ?? "week", today);
   const [data, startYear] = await Promise.all([
     getAnalyticsData(context, range),
     getFarmStartYear(context.farmId),

@@ -22,7 +22,7 @@ export function LayingRateChart({ data }: { data: LayingRatePoint[] }) {
   return (
     <div className="h-[180px] w-full lg:h-[230px]">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="layingRateFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.22} />
@@ -42,7 +42,7 @@ export function LayingRateChart({ data }: { data: LayingRatePoint[] }) {
           <YAxis
             tickLine={false}
             axisLine={false}
-            width={44}
+            width={48}
             domain={[0, 100]}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={(value: number) => `${value}%`}

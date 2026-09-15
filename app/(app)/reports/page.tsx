@@ -17,6 +17,7 @@ import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
 import {
   farmToday,
   formatCurrency,
+  formatCurrencyCompact,
   formatCurrencyShort,
   formatDateShort,
   formatPercent,
@@ -46,7 +47,11 @@ export default async function ReportsPage({
 
   const today = farmToday(context.timezone);
   const { range: rangeParam } = await searchParams;
-  const range = resolveReportRange(rangeParam, today);
+  // "Today" isn't offered in the picker anymore (report-range-select.tsx),
+  // so a fresh visit with no ?range= should land on "This week", not the
+  // single-day default resolveReportRange still falls back to for other
+  // callers (sales-overview.ts, lib/export/route.ts).
+  const range = resolveReportRange(rangeParam ?? "week", today);
   const [data, startYear] = await Promise.all([
     getReportsData(context, range),
     getFarmStartYear(context.farmId),
@@ -86,7 +91,7 @@ export default async function ReportsPage({
               icon={PhilippinePeso}
               tint="teal"
               label="Revenue"
-              value={formatCurrencyShort(data.totals.revenue, context.currency)}
+              value={formatCurrencyCompact(data.totals.revenue, context.currency)}
               sublabel={range.label}
               delta={data.deltas.revenue}
               deltaLabel="vs previous period"
@@ -95,7 +100,7 @@ export default async function ReportsPage({
               icon={Receipt}
               tint="rose"
               label="Cost"
-              value={formatCurrencyShort(data.totals.cost, context.currency)}
+              value={formatCurrencyCompact(data.totals.cost, context.currency)}
               sublabel="Feed and expenses"
               delta={data.deltas.cost}
               deltaLabel="vs previous period"
@@ -105,7 +110,7 @@ export default async function ReportsPage({
               icon={TrendingUp}
               tint="violet"
               label="Est. profit"
-              value={formatCurrencyShort(data.totals.profit, context.currency)}
+              value={formatCurrencyCompact(data.totals.profit, context.currency)}
               sublabel="Estimated operating profit"
               delta={data.deltas.profit}
               deltaLabel="vs previous period"

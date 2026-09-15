@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   farmToday,
   formatCurrency,
+  formatCurrencyCompact,
   formatCurrencyShort,
   formatDate,
   formatDateShort,
@@ -81,6 +82,34 @@ describe("money formatting", () => {
   it("renders 0 rather than NaN for a bad value", () => {
     expect(formatCurrency(Number.NaN)).toContain("0.00");
     expect(formatNumber(Number.POSITIVE_INFINITY)).toBe("0");
+  });
+});
+
+describe("formatCurrencyCompact", () => {
+  it("stays exact below the compacting threshold", () => {
+    expect(formatCurrencyCompact(850)).toBe(formatCurrencyShort(850));
+  });
+
+  it("abbreviates as soon as a value crosses a thousand", () => {
+    const result = formatCurrencyCompact(5900);
+    expect(result).toContain("5.9");
+    expect(result).toMatch(/K/i);
+  });
+
+  it("abbreviates thousands once it would crowd a tile", () => {
+    const result = formatCurrencyCompact(12345);
+    expect(result).toContain("12.3");
+    expect(result).toMatch(/K/i);
+  });
+
+  it("abbreviates millions the same way", () => {
+    const result = formatCurrencyCompact(2_400_000);
+    expect(result).toMatch(/2\.4/);
+    expect(result).toMatch(/M/i);
+  });
+
+  it("renders 0 rather than NaN for a bad value", () => {
+    expect(formatCurrencyCompact(Number.NaN)).toContain("0");
   });
 });
 

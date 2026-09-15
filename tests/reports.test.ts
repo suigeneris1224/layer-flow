@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { daysBetween, sameRangeLastYear, samePeriodLastMonth } from "@/lib/domain/reports";
+import {
+  daysBetween,
+  resolveReportRange,
+  sameRangeLastYear,
+  samePeriodLastMonth,
+} from "@/lib/domain/reports";
+
+describe("resolveReportRange", () => {
+  it("spans the full Monday-Sunday week regardless of what day today is", () => {
+    // 2026-09-15 is a Tuesday; the week's Sunday (09-20) is still ahead.
+    expect(resolveReportRange("week", "2026-09-15")).toEqual({
+      value: "week",
+      from: "2026-09-14",
+      to: "2026-09-20",
+      label: "This week",
+    });
+  });
+
+  it("still starts the week on Monday when today is itself a Sunday", () => {
+    expect(resolveReportRange("week", "2026-09-20")).toEqual({
+      value: "week",
+      from: "2026-09-14",
+      to: "2026-09-20",
+      label: "This week",
+    });
+  });
+});
 
 /**
  * The year-over-year comparison window.

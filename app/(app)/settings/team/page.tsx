@@ -27,10 +27,12 @@ export default async function TeamPage() {
   if (!canAccess(entitlement, "team_management")) {
     return (
       <div className="flex max-w-3xl flex-col gap-4 lg:gap-5">
-        <PageHeader
-          title="Team"
-          description="Let other people record on this farm."
-        />
+        <div className="md:hidden">
+          <PageHeader
+            title="Team"
+            description="Let other people record on this farm."
+          />
+        </div>
         <UpgradePanel prompt={featureLockedPrompt(entitlement, "team_management")} />
       </div>
     );
@@ -50,10 +52,12 @@ export default async function TeamPage() {
 
   return (
     <>
-      <PageHeader
-        title="Team"
-        description="Let other people record on this farm."
-      />
+      <div className="md:hidden">
+        <PageHeader
+          title="Team"
+          description="Let other people record on this farm."
+        />
+      </div>
 
       {!canManage && (
         <StatusNote tone="info" title="Read only">

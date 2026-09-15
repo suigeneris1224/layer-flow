@@ -37,7 +37,9 @@ export default async function BillingPage() {
   if (!canManage) {
     return (
       <div className="flex max-w-3xl flex-col gap-4 lg:gap-5">
-        <PageHeader title="Billing" description="Your plan and billing details." />
+        <div className="md:hidden">
+          <PageHeader title="Billing" description="Your plan and billing details." />
+        </div>
         <StatusNote tone="info" title="Owner only">
           Only the farm owner can view billing details.
         </StatusNote>
@@ -56,7 +58,9 @@ export default async function BillingPage() {
 
   return (
     <>
-      <PageHeader title="Billing" description="Your plan and billing details." />
+      <div className="md:hidden">
+        <PageHeader title="Billing" description="Your plan and billing details." />
+      </div>
 
       {pendingManualPayment && (
         <StatusNote tone="info" title="Payment being verified">

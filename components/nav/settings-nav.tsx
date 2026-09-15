@@ -7,10 +7,13 @@ import { cn } from "@/lib/utils";
 import { SETTINGS_CATEGORIES } from "@/lib/domain/settings-categories";
 
 /**
- * The Settings nav for tablet/desktop (app/(app)/settings/layout.tsx): a
- * "Settings > [current tab]" breadcrumb over an underline tab row. Mobile
+ * The Settings nav for tablet/desktop (app/(app)/settings/layout.tsx): the
+ * page's own big title, styled as a "Settings > [current tab]" breadcrumb --
+ * "Settings" small and muted, linking back to the hub; the current tab's name
+ * takes over as the actual page heading -- over an underline tab row. Mobile
  * never renders this -- it keeps the hub-grid-then-full-page flow at bare
- * /settings.
+ * /settings, where each tab's own <PageHeader> (shown only below `md`) is the
+ * only heading.
  *
  * All 7 tabs genuinely live under /settings/* (Profile/Team/Subscription/
  * Help & Support moved here from their own top-level routes), so every one
@@ -39,19 +42,24 @@ export function SettingsNav({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 pb-3 text-base">
-        <Link
-          href="/settings"
-          className="text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Settings
-        </Link>
-        {current && (
-          <>
-            <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
-            <span className="font-medium">{current.title}</span>
-          </>
+      <div className="mb-4">
+        {current ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Link
+              href="/settings"
+              className="text-2xl font-bold tracking-tight text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Settings
+            </Link>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+            <h1 className="text-2xl font-bold tracking-tight">{current.title}</h1>
+          </div>
+        ) : (
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         )}
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {current?.description ?? "Manage your farm and account."}
+        </p>
       </div>
 
       <nav aria-label="Settings" className="flex gap-5 overflow-x-auto border-b border-border">

@@ -21,10 +21,12 @@ export default async function NotificationsSettingsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Notifications"
-        description="What LayerFlow should tell you, and when."
-      />
+      <div className="md:hidden">
+        <PageHeader
+          title="Notifications"
+          description="What LayerFlow should tell you, and when."
+        />
+      </div>
 
       {canManage ? (
         <NotificationToggleForm

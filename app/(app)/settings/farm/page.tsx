@@ -22,7 +22,9 @@ export default async function FarmSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Farm" description={`Settings for ${context.farmName}.`} />
+      <div className="md:hidden">
+        <PageHeader title="Farm" description={`Settings for ${context.farmName}.`} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-5">
         <Panel title="Farm information">

@@ -23,7 +23,9 @@ export default async function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" description="Your personal information and account." />
+      <div className="md:hidden">
+        <PageHeader title="Profile" description="Your personal information and account." />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
         <ProfileForm

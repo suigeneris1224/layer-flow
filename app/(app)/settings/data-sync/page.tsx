@@ -16,7 +16,9 @@ export default async function DataSyncSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Data & Sync" description="Whether your data is saved and up to date." />
+      <div className="md:hidden">
+        <PageHeader title="Data & Sync" description="Whether your data is saved and up to date." />
+      </div>
       <DataSyncPanel offlineEnabled={offlineEnabled} />
     </>
   );

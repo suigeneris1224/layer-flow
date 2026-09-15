@@ -17,10 +17,12 @@ export default async function SupportPage() {
 
   return (
     <>
-      <PageHeader
-        title="Support"
-        description="Questions about your farm, your account, or a plan -- send us a message."
-      />
+      <div className="md:hidden">
+        <PageHeader
+          title="Support"
+          description="Questions about your farm, your account, or a plan -- send us a message."
+        />
+      </div>
 
       {priority && (
         <StatusNote tone="good">

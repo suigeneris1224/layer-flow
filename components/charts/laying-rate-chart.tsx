@@ -4,8 +4,21 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import type { LayingRatePoint } from "@/lib/data/analytics";
 import { formatPercent } from "@/lib/format";
 
-/** Laying rate percentage per day, over the chosen range. */
-export function LayingRateChart({ data }: { data: LayingRatePoint[] }) {
+/**
+ * Laying rate percentage per day, over the chosen range, against the same
+ * days one comparison period back (this week/last week, this month/last
+ * month, ...) -- same green-solid/gray-dashed treatment as Dashboard's
+ * Production overview (components/charts/production-chart.tsx).
+ */
+export function LayingRateChart({
+  data,
+  currentLabel,
+  previousLabel,
+}: {
+  data: LayingRatePoint[];
+  currentLabel: string;
+  previousLabel: string;
+}) {
   const hasData = data.some((point) => point.layingRate > 0);
 
   if (!hasData) {
@@ -20,54 +33,78 @@ export function LayingRateChart({ data }: { data: LayingRatePoint[] }) {
   const tickInterval = Math.max(0, Math.floor(data.length / 10) - 1);
 
   return (
-    <div className="h-[180px] w-full lg:h-[230px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-          <defs>
-            <linearGradient id="layingRateFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.22} />
-              <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
-            </linearGradient>
-          </defs>
+    <div>
+      <div className="h-[180px] w-full lg:h-[230px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="layingRateFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
 
-          <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
+            <CartesianGrid vertical={false} stroke="hsl(var(--chart-grid))" />
 
-          <XAxis
-            dataKey="day"
-            tickLine={false}
-            axisLine={false}
-            interval={tickInterval}
-            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={48}
-            domain={[0, 100]}
-            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-            tickFormatter={(value: number) => `${value}%`}
-          />
+            <XAxis
+              dataKey="day"
+              tickLine={false}
+              axisLine={false}
+              interval={tickInterval}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={48}
+              domain={[0, 100]}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              tickFormatter={(value: number) => `${value}%`}
+            />
 
-          <Tooltip
-            cursor={{ stroke: "hsl(var(--chart-grid))" }}
-            contentStyle={{
-              borderRadius: 8,
-              border: "1px solid hsl(var(--border))",
-              background: "hsl(var(--surface))",
-              fontSize: 12,
-            }}
-            formatter={(value: number) => [formatPercent(value), "Laying rate"]}
-          />
+            <Tooltip
+              cursor={{ stroke: "hsl(var(--chart-grid))" }}
+              contentStyle={{
+                borderRadius: 8,
+                border: "1px solid hsl(var(--border))",
+                background: "hsl(var(--surface))",
+                fontSize: 12,
+              }}
+              formatter={(value: number, name) => [
+                formatPercent(value),
+                name === "previous" ? previousLabel : currentLabel,
+              ]}
+            />
 
-          <Area
-            type="monotone"
-            dataKey="layingRate"
-            stroke="hsl(var(--chart-1))"
-            strokeWidth={2.5}
-            fill="url(#layingRateFill)"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+            <Area
+              type="monotone"
+              dataKey="previous"
+              stroke="hsl(var(--chart-2))"
+              strokeWidth={1.5}
+              strokeDasharray="4 4"
+              fill="none"
+            />
+            <Area
+              type="monotone"
+              dataKey="layingRate"
+              stroke="hsl(var(--chart-1))"
+              strokeWidth={2.5}
+              fill="url(#layingRateFill)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      <p className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 shrink-0 rounded-full bg-good" aria-hidden />
+          {currentLabel}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden />
+          {previousLabel}
+        </span>
+      </p>
     </div>
   );
 }

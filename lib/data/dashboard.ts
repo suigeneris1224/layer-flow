@@ -47,7 +47,7 @@ import { getNotificationPreferences } from "@/lib/data/notification-preferences"
 import { filterAlertsForNotifications } from "@/lib/domain/notification-preferences";
 import { buildSizeSlices } from "@/lib/data/analytics";
 import { getCurrentPrices } from "@/lib/data/pricing";
-import { farmToday, shiftDate, startOfWeek } from "@/lib/format";
+import { farmToday, shiftDate, startOfWeek, weekdayShort } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 
 export type { InventoryLine };
@@ -739,8 +739,6 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
   return summariseAlerts(alerts);
 }
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 /** This calendar week (Mon-Sun) against the same weekday last week. */
 function buildProductionSeries(
   rows: readonly { production_date: string; eggs_collected: number }[],
@@ -755,7 +753,7 @@ function buildProductionSeries(
   return Array.from({ length: 7 }, (_, index) => {
     const date = shiftDate(monday, index);
     return {
-      day: WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()],
+      day: weekdayShort(date),
       thisWeek: byDate.get(date) ?? 0,
       lastWeek: byDate.get(shiftDate(date, -7)) ?? 0,
     };

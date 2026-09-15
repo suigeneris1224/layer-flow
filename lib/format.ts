@@ -162,6 +162,13 @@ export function startOfWeek(date: string): string {
   return shiftDate(date, offsetToMonday);
 }
 
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Short weekday name for a YYYY-MM-DD date, e.g. "Mon". */
+export function weekdayShort(date: string): string {
+  return WEEKDAY_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+}
+
 /**
  * "Sep 7 - 13, 2026" for a range within one month, expanding to repeat the
  * month and/or year on the end date once the range crosses either boundary.

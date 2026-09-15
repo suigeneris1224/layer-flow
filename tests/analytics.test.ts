@@ -1,5 +1,55 @@
 import { describe, expect, it } from "vitest";
-import { buildSizeSlices } from "@/lib/data/analytics";
+import { buildLayingRateSeries, buildSizeSlices } from "@/lib/data/analytics";
+import { resolveReportRange } from "@/lib/domain/reports";
+
+function productionRow(date: string, eggs: number, hens: number) {
+  return { production_date: date, eggs_collected: eggs, hens_present: hens };
+}
+
+describe("buildLayingRateSeries", () => {
+  it("compares a week against the same weekday 7 days back", () => {
+    const range = resolveReportRange("week", "2026-09-15"); // Mon 2026-09-14 .. Sun 2026-09-20
+    const rows = [
+      productionRow("2026-09-14", 80, 100), // this Monday
+      productionRow("2026-09-07", 60, 100), // last Monday
+    ];
+
+    const series = buildLayingRateSeries(rows, range);
+
+    expect(series[0].day).toBe("Mon");
+    expect(series[0].layingRate).toBe(80);
+    expect(series[0].previous).toBe(60);
+    // No data at all for last Tuesday -> previous reads as 0, not missing.
+    expect(series[1].previous).toBe(0);
+  });
+
+  it("compares a month against the same day last calendar month", () => {
+    const range = resolveReportRange("month", "2026-09-15");
+    const rows = [
+      productionRow("2026-09-01", 90, 100),
+      productionRow("2026-08-01", 70, 100),
+    ];
+
+    const series = buildLayingRateSeries(rows, range);
+
+    const first = series.find((point) => point.day === "09-01");
+    expect(first?.layingRate).toBe(90);
+    expect(first?.previous).toBe(70);
+  });
+
+  it("compares a rolling 30-day range against the 30 days right before it", () => {
+    const range = resolveReportRange("30", "2026-09-15");
+    const rows = [
+      productionRow(range.from, 50, 100),
+      productionRow("2026-07-18", 40, 100), // exactly 30 days before range.from
+    ];
+
+    const series = buildLayingRateSeries(rows, range);
+
+    expect(series[0].layingRate).toBe(50);
+    expect(series[0].previous).toBe(40);
+  });
+});
 
 /**
  * buildSizeSlices consumes one row per (day, egg size) from the underlying

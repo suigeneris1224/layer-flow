@@ -13,9 +13,14 @@ import {
   feedPerHen,
   flockAgeWeeks,
 } from "@/lib/domain/calculations";
-import { farmToday } from "@/lib/format";
+import { farmToday, weekdayShort } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
-import { eachDate, type ResolvedRange } from "@/lib/domain/reports";
+import {
+  comparisonWindow,
+  eachDate,
+  type ComparisonWindow,
+  type ResolvedRange,
+} from "@/lib/domain/reports";
 
 /**
  * Production-side insights: laying rate trend, egg-size mix (Pro), and (Pro)
@@ -28,6 +33,8 @@ import { eachDate, type ResolvedRange } from "@/lib/domain/reports";
 export interface LayingRatePoint {
   day: string;
   layingRate: number;
+  /** Same date one comparison period back (see lib/domain/reports.ts's comparisonWindow). 0 when there's no data that far back. */
+  previous: number;
 }
 
 export interface SizeSlice {
@@ -65,6 +72,8 @@ export interface AnalyticsData {
   };
   charts: {
     layingRate: LayingRatePoint[];
+    /** e.g. "Last week", "Last month" -- what the laying rate chart's "previous" series is compared against. */
+    layingRateComparisonLabel: string;
     /** Only populated when the farm's plan includes egg_size_analytics. */
     sizes: SizeSlice[] | null;
     /** Same gate as `sizes` -- the size names present in `points`, in display order. */
@@ -107,12 +116,17 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
   const hasFlockComparison = canAccess(entitlement, "flock_comparison");
   const hasSizeAnalytics = canAccess(entitlement, "egg_size_analytics");
 
+  const comparison = comparisonWindow(range);
+  // Widened to also cover the laying rate chart's comparison period -- always
+  // <= range.from, so this one query covers both without a second round trip.
+  const productionQueryFrom = comparison.shift(range.from);
+
   const [production, feed, sizes, flocks, sales, expenses] = await Promise.all([
     supabase
       .from("daily_production")
       .select("production_date, hens_present, eggs_collected, mortality, flock_id")
       .eq("farm_id", context.farmId)
-      .gte("production_date", range.from)
+      .gte("production_date", productionQueryFrom)
       .lte("production_date", range.to),
     // flock_id/total_cost are only needed for flock comparison's cost-per-egg
     // and feed-conversion columns, but this is the same table/date range the
@@ -170,14 +184,18 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
   }
 
   const productionRows = production.data ?? [];
+  // The query above was widened to also pull in the comparison period's rows
+  // (see productionQueryFrom) -- everything except the laying rate chart
+  // itself must stay scoped to the range actually being reported on.
+  const currentRangeRows = productionRows.filter((row) => row.production_date >= range.from);
   const feedRows = (feed.data ?? []) as FeedRow[];
 
-  const totalEggs = sum(productionRows, (row) => row.eggs_collected);
-  const totalMortality = sum(productionRows, (row) => row.mortality);
-  const totalHensDays = sum(productionRows, (row) => row.hens_present);
+  const totalEggs = sum(currentRangeRows, (row) => row.eggs_collected);
+  const totalMortality = sum(currentRangeRows, (row) => row.mortality);
+  const totalHensDays = sum(currentRangeRows, (row) => row.hens_present);
   const totalFeedKg = sum(feedRows, (row) => Number(row.quantity_kg));
 
-  const layingRateSeries = buildLayingRateSeries(productionRows, range);
+  const layingRateSeries = buildLayingRateSeries(productionRows, range, comparison);
   const sizeRows = sizes.data ?? [];
 
   return {
@@ -190,13 +208,14 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
     },
     charts: {
       layingRate: layingRateSeries,
+      layingRateComparisonLabel: comparison.label,
       sizes: hasSizeAnalytics ? buildSizeSlices(sizeRows) : null,
       sizeTrend: hasSizeAnalytics ? buildSizeTrend(sizeRows, range) : null,
     },
     flockComparison: hasFlockComparison
       ? buildFlockComparison(
           flocks,
-          productionRows,
+          currentRangeRows,
           feedRows,
           (sales.data ?? []) as SaleRow[],
           (expenses.data ?? []) as ExpenseRow[],
@@ -206,9 +225,10 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
   };
 });
 
-function buildLayingRateSeries(
+export function buildLayingRateSeries(
   rows: readonly { production_date: string; eggs_collected: number; hens_present: number }[],
-  range: ResolvedRange
+  range: ResolvedRange,
+  comparison: ComparisonWindow = comparisonWindow(range)
 ): LayingRatePoint[] {
   const byDate = new Map<string, { eggs: number; hens: number }>();
   for (const row of rows) {
@@ -218,13 +238,14 @@ function buildLayingRateSeries(
     byDate.set(row.production_date, entry);
   }
 
-  return eachDate(range.from, range.to).map((date) => {
-    const entry = byDate.get(date);
-    return {
-      day: date.slice(5),
-      layingRate: entry ? layingRate(entry.eggs, entry.hens) : 0,
-    };
-  });
+  const rate = (entry: { eggs: number; hens: number } | undefined) =>
+    entry ? layingRate(entry.eggs, entry.hens) : 0;
+
+  return eachDate(range.from, range.to).map((date) => ({
+    day: range.value === "week" ? weekdayShort(date) : date.slice(5),
+    layingRate: rate(byDate.get(date)),
+    previous: rate(byDate.get(comparison.shift(date))),
+  }));
 }
 
 /**

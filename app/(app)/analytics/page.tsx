@@ -124,7 +124,11 @@ export default async function AnalyticsPage({
 
           <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
             <Panel title="Laying rate" className="lg:col-span-8">
-              <LayingRateChart data={data.charts.layingRate} />
+              <LayingRateChart
+                data={data.charts.layingRate}
+                currentLabel={data.range.label}
+                previousLabel={data.charts.layingRateComparisonLabel}
+              />
             </Panel>
 
             {data.charts.sizes && data.charts.sizeTrend ? (

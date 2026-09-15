@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  comparisonWindow,
   daysBetween,
   resolveReportRange,
   sameRangeLastYear,
@@ -86,6 +87,42 @@ describe("sameRangeLastYear", () => {
     });
   });
 });
+
+describe("comparisonWindow", () => {
+  it("compares a week against the same weekday 7 days back", () => {
+    const range = resolveReportRange("week", "2026-09-15");
+    const window = comparisonWindow(range);
+    expect(window.label).toBe("Last week");
+    expect(window.shift("2026-09-15")).toBe("2026-09-08");
+  });
+
+  it("compares a month against the same day last calendar month", () => {
+    const range = resolveReportRange("month", "2026-09-15");
+    const window = comparisonWindow(range);
+    expect(window.label).toBe("Last month");
+    expect(window.shift("2026-09-15")).toBe("2026-08-15");
+  });
+
+  it("compares a year against the same date last calendar year", () => {
+    const range = resolveReportRange("year", "2026-09-15");
+    const window = comparisonWindow(range);
+    expect(window.label).toBe("Last year");
+    expect(window.shift("2026-09-15")).toBe("2025-09-15");
+  });
+
+  it("compares a rolling day-count range against an equal-length window right before it", () => {
+    const range = resolveReportRange("30", "2026-09-15");
+    const window = comparisonWindow(range);
+    expect(window.label).toBe("Previous period");
+    expect(window.shift(range.from)).toBe(daysBeforeRangeStart(range.from, 30));
+  });
+});
+
+function daysBeforeRangeStart(from: string, length: number): string {
+  const date = new Date(`${from}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - length);
+  return date.toISOString().slice(0, 10);
+}
 
 describe("samePeriodLastMonth", () => {
   it("shifts back one calendar month, keeping the day", () => {

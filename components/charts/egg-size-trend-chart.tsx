@@ -2,6 +2,7 @@
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SizeTrendPoint } from "@/lib/data/analytics";
+import { formatPercent } from "@/lib/format";
 
 const SLICE_COLOURS = [
   "hsl(var(--chart-1))",
@@ -35,7 +36,10 @@ export function EggSizeTrendChart({
     );
   }
 
-  const tickInterval = Math.max(0, Math.floor(points.length / 10) - 1);
+  // This chart sits in a narrow side column (roughly a third the width of the
+  // main Laying rate chart), so it can only fit ~4 labels before they overlap
+  // -- unlike the wide charts' ~10-label target.
+  const tickInterval = Math.max(0, Math.ceil(points.length / 4) - 1);
 
   return (
     <div>
@@ -56,8 +60,14 @@ export function EggSizeTrendChart({
               axisLine={false}
               width={48}
               domain={[0, 100]}
+              // Each size's share is rounded independently (buildSizeTrend), so a
+              // day's stack can land a hair past 100 (e.g. 100.2, or a
+              // floating-point string of it like 100.19999999999999) --
+              // allowDataOverflow clips that sliver instead of stretching the
+              // axis to fit it and printing the raw float as a tick label.
+              allowDataOverflow
               tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value: number) => `${value}%`}
+              tickFormatter={(value: number) => `${Math.round(value)}%`}
             />
 
             <Tooltip
@@ -68,7 +78,7 @@ export function EggSizeTrendChart({
                 background: "hsl(var(--surface))",
                 fontSize: 12,
               }}
-              formatter={(value: number, name) => [`${value}%`, name]}
+              formatter={(value: number, name) => [formatPercent(value), name]}
             />
 
             {sizes.map((size, index) => (

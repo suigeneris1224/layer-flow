@@ -123,7 +123,7 @@ export function sameRangeLastYear(from: string, to: string): { from: string; to:
   return { from: shiftYear(from), to: shiftYear(to) };
 }
 
-function shiftYear(date: string): string {
+export function shiftYear(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
   const previous = year - 1;
   const clamped = Math.min(day, daysInMonth(previous, month));
@@ -140,13 +140,39 @@ export function samePeriodLastMonth(from: string, to: string): { from: string; t
   return { from: shiftMonth(from), to: shiftMonth(to) };
 }
 
-function shiftMonth(date: string): string {
+export function shiftMonth(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
   const totalMonths = year * 12 + (month - 1) - 1;
   const y = Math.floor(totalMonths / 12);
   const m = (totalMonths % 12) + 1;
   const clamped = Math.min(day, daysInMonth(y, m));
   return `${y}-${String(m).padStart(2, "0")}-${String(clamped).padStart(2, "0")}`;
+}
+
+export interface ComparisonWindow {
+  /** e.g. "Last week", "Last month", "Last year", "Previous period". */
+  label: string;
+  /** Maps a date inside the resolved range to its comparison-period counterpart. */
+  shift: (date: string) => string;
+}
+
+/**
+ * The "previous period" a chart should compare each date in `range` against --
+ * the calendar-correct predecessor for a calendar-aligned range (month/year),
+ * an equal-length window immediately before it otherwise.
+ *
+ * The "week" branch is mathematically identical to the fallback -- a resolved
+ * week is always exactly 7 days -- split out only for the nicer label.
+ */
+export function comparisonWindow(range: ResolvedRange): ComparisonWindow {
+  if (range.value === "month") return { label: "Last month", shift: shiftMonth };
+  if (range.value.startsWith("m:")) return { label: "Previous month", shift: shiftMonth };
+  if (range.value === "year") return { label: "Last year", shift: shiftYear };
+  if (range.value.startsWith("y:")) return { label: "Previous year", shift: shiftYear };
+  if (range.value === "week") return { label: "Last week", shift: (date) => shiftDate(date, -7) };
+
+  const length = daysBetween(range.from, range.to);
+  return { label: "Previous period", shift: (date) => shiftDate(date, -length) };
 }
 
 /** Every date from `from` to `to`, inclusive, for building a daily series over any resolved range. */

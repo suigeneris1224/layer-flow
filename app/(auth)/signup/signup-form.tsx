@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusNote } from "@/components/ui/states";
+import { PASSWORD_MAX_LENGTH } from "@/lib/domain/password";
 import { signUpAction, type AuthState } from "@/app/auth/actions";
 
 export function SignupForm({ next }: { next: string }) {
@@ -14,6 +16,7 @@ export function SignupForm({ next }: { next: string }) {
     signUpAction,
     undefined
   );
+  const [password, setPassword] = useState("");
 
   const fieldErrors = state && !state.ok ? state.fieldErrors : undefined;
 
@@ -48,7 +51,7 @@ export function SignupForm({ next }: { next: string }) {
       <Field
         label="Password"
         htmlFor="password"
-        hint="At least 8 characters."
+        hint="At least 8 characters, with a mix of letters, numbers, or symbols."
         error={fieldErrors?.password}
       >
         <PasswordInput
@@ -56,9 +59,13 @@ export function SignupForm({ next }: { next: string }) {
           name="password"
           autoComplete="new-password"
           minLength={8}
+          maxLength={PASSWORD_MAX_LENGTH}
           required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
           aria-invalid={Boolean(fieldErrors?.password)}
         />
+        <PasswordStrengthMeter password={password} />
       </Field>
 
       <Checkbox

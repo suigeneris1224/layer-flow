@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { StatusNote } from "@/components/ui/states";
+import { PASSWORD_MAX_LENGTH } from "@/lib/domain/password";
 import { updatePasswordAction, type AuthState } from "@/app/auth/actions";
 
 export function ResetPasswordForm() {
@@ -30,6 +31,7 @@ export function ResetPasswordForm() {
           name="password"
           autoComplete="new-password"
           minLength={8}
+          maxLength={PASSWORD_MAX_LENGTH}
           required
           autoFocus
           aria-invalid={Boolean(fieldErrors?.password)}
@@ -46,6 +48,7 @@ export function ResetPasswordForm() {
           name="confirmPassword"
           autoComplete="new-password"
           minLength={8}
+          maxLength={PASSWORD_MAX_LENGTH}
           required
           aria-invalid={Boolean(fieldErrors?.confirmPassword)}
         />

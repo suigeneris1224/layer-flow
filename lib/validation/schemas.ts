@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
 import { SUPPORTED_CURRENCIES, SUPPORTED_TIMEZONES } from "@/lib/domain/farm-config";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, isPasswordSecure } from "@/lib/domain/password";
 import { PLAN_ORDER } from "@/lib/subscriptions/plans";
 import type {
   BillingPeriod,
@@ -46,6 +47,21 @@ const isoDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date");
 
 export const uuid = z.string().uuid("That item is no longer available");
+
+/**
+ * Shared by signup, the password-recovery-email flow, and Settings > Profile's
+ * change-password form (app/auth/actions.ts, app/(app)/settings/profile/actions.ts)
+ * -- one rule instead of each defining its own min(8) independently.
+ *
+ * Capped at 15 -- comfortably under bcrypt's 72-byte hashing limit (Supabase
+ * Auth's hasher), so there's no risk of a longer password silently losing
+ * its tail; this cap is purely a product choice, not a technical ceiling.
+ */
+export const securePasswordField = z
+  .string()
+  .min(PASSWORD_MIN_LENGTH, `Use at least ${PASSWORD_MIN_LENGTH} characters`)
+  .max(PASSWORD_MAX_LENGTH, `Use at most ${PASSWORD_MAX_LENGTH} characters`)
+  .refine(isPasswordSecure, "Add a mix of uppercase, lowercase, numbers, or symbols");
 
 // ---------------------------------------------------------------------------
 // Onboarding

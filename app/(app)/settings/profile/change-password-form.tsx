@@ -4,8 +4,11 @@ import { useState, useTransition } from "react";
 import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
-import { Field, Input } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { StatusNote } from "@/components/ui/states";
+import { PASSWORD_MAX_LENGTH } from "@/lib/domain/password";
 import { changePasswordAction } from "./actions";
 
 export function ChangePasswordForm() {
@@ -46,17 +49,19 @@ export function ChangePasswordForm() {
         <Field
           label="New password"
           htmlFor="new-password"
-          hint="Use at least 8 characters."
+          hint="At least 8 characters, with a mix of letters, numbers, or symbols."
           error={fieldErrors.password}
         >
-          <Input
+          <PasswordInput
             id="new-password"
-            type="password"
             autoComplete="new-password"
+            minLength={8}
+            maxLength={PASSWORD_MAX_LENGTH}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             aria-invalid={!!fieldErrors.password}
           />
+          <PasswordStrengthMeter password={password} />
         </Field>
 
         <Field
@@ -64,10 +69,10 @@ export function ChangePasswordForm() {
           htmlFor="confirm-password"
           error={fieldErrors.confirmPassword}
         >
-          <Input
+          <PasswordInput
             id="confirm-password"
-            type="password"
             autoComplete="new-password"
+            maxLength={PASSWORD_MAX_LENGTH}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             aria-invalid={!!fieldErrors.confirmPassword}

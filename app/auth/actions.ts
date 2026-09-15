@@ -9,6 +9,7 @@ import { createSupabaseServerClient, REMEMBER_ME_COOKIE } from "@/lib/supabase/s
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isBetaModeEnabled, isListedBetaTester } from "@/lib/subscriptions/beta";
 import { publicEnv } from "@/lib/config/env";
+import { securePasswordField } from "@/lib/validation/schemas";
 import { describeAuthError, describeUnknownError, failure, type ActionFailure } from "@/lib/errors";
 import { logger } from "@/lib/observability/logger";
 
@@ -17,9 +18,9 @@ export type AuthState = ActionFailure | { ok: true; message?: string } | undefin
 
 const emailField = z.string().trim().min(1, "Enter your email").email("Enter a valid email");
 
-// 8 chars is the floor Supabase enforces; we state it up front rather than
-// letting the farmer discover it from a server round trip.
-const passwordField = z.string().min(8, "Use at least 8 characters");
+// Shared with Settings > Profile's change-password form -- one rule, not two
+// independently-drifting min(8)s. See lib/domain/password.ts.
+const passwordField = securePasswordField;
 
 const signupSchema = z.object({
   fullName: z.string().trim().min(1, "Enter your name").max(120),

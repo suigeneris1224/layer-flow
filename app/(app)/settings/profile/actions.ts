@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
-import { toFieldErrors, updateProfileSchema } from "@/lib/validation/schemas";
+import { securePasswordField, toFieldErrors, updateProfileSchema } from "@/lib/validation/schemas";
 import {
   describeAuthError,
   describeDatabaseError,
@@ -249,7 +249,7 @@ export async function removeCoverAction(): Promise<ActionResult> {
 
 const changePasswordSchema = z
   .object({
-    password: z.string().min(8, "Use at least 8 characters"),
+    password: securePasswordField,
     confirmPassword: z.string(),
   })
   .refine((value) => value.password === value.confirmPassword, {

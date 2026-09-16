@@ -4,16 +4,25 @@ import { ChevronLeft, ChevronRight, PhilippinePeso } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageSales } from "@/lib/auth/permissions";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
-import { getOutstandingTotal, getSales, getSalesCount, type SaleEntry } from "@/lib/data/sales";
+import {
+  getOutstandingTotal,
+  getSales,
+  getSalesCount,
+  SALES_HISTORY_RANGES,
+  type SaleEntry,
+  type SalesHistoryRangeValue,
+} from "@/lib/data/sales";
+import { resolveReportRange } from "@/lib/domain/reports";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { EmptyState, StatusNote } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { buttonVariants } from "@/components/ui/button";
-import { formatCurrency, formatNumber, formatRelativeDay } from "@/lib/format";
+import { farmToday, formatCurrency, formatNumber, formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ExportMenu } from "@/components/export/export-menu";
 import { ExportNotice } from "@/lib/export/notices";
+import { SalesRangeSelect } from "@/components/sales/sales-range-select";
 import { PaymentBadge } from "./payment-badge";
 
 export const metadata: Metadata = { title: "Sales" };
@@ -41,7 +50,7 @@ function describeLines(sale: SaleEntry): string {
 export default async function SalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; export?: string }>;
+  searchParams: Promise<{ page?: string; export?: string; range?: string }>;
 }) {
   const context = await requireFarmContext();
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
@@ -58,11 +67,30 @@ export default async function SalesPage({
     );
   }
 
-  const { page: pageParam, export: exportReason } = await searchParams;
+  const { page: pageParam, export: exportReason, range: rangeParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
+  const range: SalesHistoryRangeValue = SALES_HISTORY_RANGES.includes(
+    rangeParam as SalesHistoryRangeValue
+  )
+    ? (rangeParam as SalesHistoryRangeValue)
+    : "week";
 
-  const [sales, salesCount, outstanding] = await Promise.all([
-    getSales(context, { limit: SALES_PER_PAGE, offset: (page - 1) * SALES_PER_PAGE }),
+  const today = farmToday(context.timezone);
+  // "all" stays unbounded -- getSales/getSalesCount only filter on from/to
+  // when given, so leaving both undefined is exactly "every sale ever".
+  const bounds: { from?: string; to?: string } =
+    range === "all" ? {} : resolveReportRange(range, today);
+
+  const [sales, salesCount, allTimeCount, outstanding] = await Promise.all([
+    getSales(context, {
+      from: bounds.from,
+      to: bounds.to,
+      limit: SALES_PER_PAGE,
+      offset: (page - 1) * SALES_PER_PAGE,
+    }),
+    getSalesCount(context, { from: bounds.from, to: bounds.to }),
+    // Cheap head-count, unscoped -- only used to tell "no sales in this
+    // period" apart from "no sales ever" for the empty state below.
     getSalesCount(context),
     getOutstandingTotal(context),
   ]);
@@ -76,19 +104,23 @@ export default async function SalesPage({
         title="Sales"
         description="What you sold, and what is still owed to you."
         action={
-          canSell ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <ExportMenu
-                action="/api/export/sales"
-                label="Sales"
-                locked={!canAccess(entitlement, "data_export")}
-              />
-              <Link href="/sales/new" className={cn(buttonVariants({ size: "md" }))}>
-                <PhilippinePeso className="size-4" aria-hidden />
-                Record a sale
-              </Link>
-            </div>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            <SalesRangeSelect value={range} />
+            {canSell && (
+              <>
+                <ExportMenu
+                  action="/api/export/sales"
+                  label="Sales"
+                  locked={!canAccess(entitlement, "data_export")}
+                  fixedRange={range}
+                />
+                <Link href="/sales/new" className={cn(buttonVariants({ size: "md" }))}>
+                  <PhilippinePeso className="size-4" aria-hidden />
+                  Record a sale
+                </Link>
+              </>
+            )}
+          </div>
         }
       />
 
@@ -96,20 +128,30 @@ export default async function SalesPage({
 
       {outstanding > 0 && (
         <StatusNote tone="warn" title={`${formatCurrency(outstanding, context.currency)} still owed`}>
-          Across the unpaid and part-paid sales below.
+          Across all your unpaid and part-paid sales, regardless of the date range below.
         </StatusNote>
       )}
 
       {salesCount === 0 ? (
-        <EmptyState
-          icon={PhilippinePeso}
-          title="No sales yet"
-          message="Record your first sale and your revenue starts showing on the dashboard."
-          actionLabel={canSell ? "Record a sale" : undefined}
-          actionHref={canSell ? "/sales/new" : undefined}
-        />
+        allTimeCount === 0 ? (
+          <EmptyState
+            icon={PhilippinePeso}
+            title="No sales yet"
+            message="Record your first sale and your revenue starts showing on the dashboard."
+            actionLabel={canSell ? "Record a sale" : undefined}
+            actionHref={canSell ? "/sales/new" : undefined}
+          />
+        ) : (
+          <EmptyState
+            icon={PhilippinePeso}
+            title="No sales in this period"
+            message="Try a different date range, or view everything at once."
+            actionLabel="View all time"
+            actionHref="/sales?range=all"
+          />
+        )
       ) : (
-        <Panel title="Recent sales">
+        <Panel title={range === "all" ? "All sales" : "Recent sales"}>
           <ul className="flex flex-col divide-y divide-border">
             {sales.map((sale) => (
               <li
@@ -160,7 +202,9 @@ export default async function SalesPage({
 
               <div className="flex gap-2 sm:order-1">
                 <Link
-                  href={page > 1 ? `/sales?page=${page - 1}` : "/sales"}
+                  href={
+                    page > 1 ? `/sales?range=${range}&page=${page - 1}` : `/sales?range=${range}`
+                  }
                   aria-disabled={page <= 1}
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),
@@ -173,7 +217,7 @@ export default async function SalesPage({
                 </Link>
 
                 <Link
-                  href={`/sales?page=${page + 1}`}
+                  href={`/sales?range=${range}&page=${page + 1}`}
                   aria-disabled={page >= totalPages}
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),

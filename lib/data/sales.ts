@@ -50,6 +50,22 @@ export interface SalesRange {
   offset?: number;
 }
 
+/**
+ * The Sales History filter (app/(app)/sales/page.tsx). "all" resolves to no
+ * bounds at all -- unlike lib/domain/reports.ts's ReportRangeValue, which
+ * every consumer expects to have concrete from/to bounds for chart math, a
+ * flat transaction list has no such requirement and "everything" is a
+ * genuinely useful view of it.
+ */
+export type SalesHistoryRangeValue = "week" | "month" | "year" | "all";
+
+export const SALES_HISTORY_RANGES: readonly SalesHistoryRangeValue[] = [
+  "week",
+  "month",
+  "year",
+  "all",
+];
+
 type SaleJoin = {
   id: string;
   sale_date: string;

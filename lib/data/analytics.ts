@@ -12,6 +12,7 @@ import {
   layingRate,
   feedPerHen,
   flockAgeWeeks,
+  roundPercent,
 } from "@/lib/domain/calculations";
 import { farmToday, weekdayShort } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
@@ -274,7 +275,7 @@ export function buildSizeSlices(rows: readonly unknown[]): SizeSlice[] {
     .map(([name, entry]) => ({
       name,
       quantity: entry.quantity,
-      percentage: total > 0 ? Math.round((entry.quantity / total) * 1000) / 10 : 0,
+      percentage: total > 0 ? roundPercent((entry.quantity / total) * 100) : 0,
     }));
 }
 
@@ -313,7 +314,7 @@ export function buildSizeTrend(
     const point: SizeTrendPoint = { day: date.slice(5) };
     for (const name of sizeNames) {
       const quantity = dayEntry?.get(name) ?? 0;
-      point[name] = total > 0 ? Math.round((quantity / total) * 1000) / 10 : 0;
+      point[name] = total > 0 ? roundPercent((quantity / total) * 100) : 0;
     }
     return point;
   });

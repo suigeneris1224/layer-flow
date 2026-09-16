@@ -158,7 +158,13 @@ export async function getExpensesByCategory(
     return [];
   }
 
-  const rows = (data ?? []) as { category: ExpenseCategory; amount: number }[];
+  // FEED-category rows are excluded here too, same as operatingCostsFromExpenses
+  // (lib/domain/calculations.ts): feed is costed through feed_usage, so counting
+  // a manually-logged FEED expense here as well would make this chart's total
+  // disagree with the Cost/Profit KPI cards it sits next to on Reports.
+  const rows = ((data ?? []) as { category: ExpenseCategory; amount: number }[]).filter(
+    (row) => row.category !== "FEED"
+  );
   const byCategory = new Map<ExpenseCategory, { total: number; count: number }>();
 
   for (const row of rows) {

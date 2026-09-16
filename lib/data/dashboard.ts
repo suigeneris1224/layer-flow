@@ -610,10 +610,22 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     feedRows.filter((row) => row.usage_date === today),
     (row) => Number(row.total_cost)
   );
-  const earlierFeed = feedRows.filter((row) => row.usage_date !== today);
+  // Averaged per day, not per row -- a farm with more than one flock logs more
+  // than one feed_usage row per day, and averaging rows directly would dilute
+  // the baseline below a true daily figure (same pitfall eggsByDate above
+  // avoids for the production alert).
+  const earlierFeedByDate = new Map<string, number>();
+  for (const row of feedRows) {
+    if (row.usage_date === today) continue;
+    earlierFeedByDate.set(
+      row.usage_date,
+      (earlierFeedByDate.get(row.usage_date) ?? 0) + Number(row.total_cost)
+    );
+  }
   const feedBaseline =
-    earlierFeed.length > 0
-      ? sum(earlierFeed, (row) => Number(row.total_cost)) / earlierFeed.length
+    earlierFeedByDate.size > 0
+      ? [...earlierFeedByDate.values()].reduce((total, cost) => total + cost, 0) /
+        earlierFeedByDate.size
       : 0;
 
   /*

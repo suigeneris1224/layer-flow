@@ -20,6 +20,8 @@ import {
   failure,
   type ActionResult,
 } from "@/lib/errors";
+import { consumeRateLimit } from "@/lib/data/rate-limit";
+import { formatRetryMessage } from "@/lib/domain/rate-limit";
 
 /** How long a link stays good. Long enough to send and be read, not forever. */
 const INVITE_DAYS = 7;
@@ -48,6 +50,14 @@ export async function inviteMemberAction(
   const parsed = inviteMemberSchema.safeParse(input);
   if (!parsed.success) {
     return failure("Please check the form below.", toFieldErrors(parsed.error));
+  }
+
+  // Scoped to the farm, not the invitee -- caps how many invites one farm can
+  // fire off, regardless of which owner (or compromised owner session) sends
+  // them.
+  const limit = await consumeRateLimit(context.farmId, "invite");
+  if (!limit.allowed) {
+    return failure(formatRetryMessage(limit.retryAfterSeconds));
   }
 
   try {

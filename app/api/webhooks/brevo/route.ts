@@ -1,8 +1,23 @@
+import { timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/config/env";
 import { logger } from "@/lib/observability/logger";
 import type { Json } from "@/lib/types/database";
+
+/**
+ * Constant-time secret compare. `!==` would let an attacker infer the secret
+ * byte-by-byte from response timing -- low-value target here (this route
+ * only writes to email_events), but now that the middleware actually lets
+ * requests reach this handler (see lib/supabase/middleware.ts), the check is
+ * worth doing properly.
+ */
+function secretMatches(provided: string | null, expected: string): boolean {
+  if (provided === null) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /**
  * Brevo's transactional delivery webhook: no user session, so the shared
@@ -36,7 +51,7 @@ interface BrevoEvent {
 
 export async function POST(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get("secret");
-  if (secret !== serverEnv.brevoWebhookSecret) {
+  if (!secretMatches(secret, serverEnv.brevoWebhookSecret)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

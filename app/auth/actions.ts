@@ -12,6 +12,8 @@ import { publicEnv } from "@/lib/config/env";
 import { securePasswordField } from "@/lib/validation/schemas";
 import { describeAuthError, describeUnknownError, failure, type ActionFailure } from "@/lib/errors";
 import { logger } from "@/lib/observability/logger";
+import { consumeRateLimit } from "@/lib/data/rate-limit";
+import { formatRetryMessage } from "@/lib/domain/rate-limit";
 
 /** Shape returned to every auth form. `undefined` means "not submitted yet". */
 export type AuthState = ActionFailure | { ok: true; message?: string } | undefined;
@@ -76,6 +78,12 @@ export async function signUpAction(
     return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
   }
 
+  const email = parsed.data.email.trim().toLowerCase();
+  const limit = await consumeRateLimit(email, "signup");
+  if (!limit.allowed) {
+    return failure(formatRetryMessage(limit.retryAfterSeconds));
+  }
+
   const next = String(formData.get("next") ?? "");
 
   try {
@@ -130,6 +138,12 @@ export async function signInAction(
     return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
   }
 
+  const email = parsed.data.email.trim().toLowerCase();
+  const limit = await consumeRateLimit(email, "login");
+  if (!limit.allowed) {
+    return failure(formatRetryMessage(limit.retryAfterSeconds));
+  }
+
   const next = String(formData.get("next") ?? "/dashboard");
   const rememberMe = formData.get("rememberMe") === "on";
 
@@ -182,15 +196,25 @@ export async function requestPasswordResetAction(
     return failure("Please check the form below.", fieldErrorsFrom(parsed.error));
   }
 
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-      redirectTo: `${publicEnv.appUrl}/auth/callback?next=/reset-password`,
-    });
+  const email = parsed.data.email.trim().toLowerCase();
+  const limit = await consumeRateLimit(email, "password_reset");
 
-    // Logged, not shown. Telling the visitor whether an email exists would
-    // turn this form into an account-enumeration oracle.
-    if (error) logger.warn("password reset request failed", { reason: error.message });
+  try {
+    // A rate-limited request still gets the same response below -- silently
+    // skipping the send here (rather than returning a distinguishable "too
+    // many attempts" message) keeps this an account-enumeration-safe no-op,
+    // consistent with the comment a few lines down: the response must never
+    // reveal anything about what actually happened.
+    if (limit.allowed) {
+      const supabase = await createSupabaseServerClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${publicEnv.appUrl}/auth/callback?next=/reset-password`,
+      });
+
+      // Logged, not shown. Telling the visitor whether an email exists would
+      // turn this form into an account-enumeration oracle.
+      if (error) logger.warn("password reset request failed", { reason: error.message });
+    }
   } catch (error) {
     logger.warn("password reset threw", { context: "requestPasswordResetAction" });
   }

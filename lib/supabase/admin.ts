@@ -16,6 +16,9 @@ import { publicEnv, serverEnv } from "@/lib/config/env";
  *     never reachable by a farmer
  *   - the closed-beta signup gate (app/auth/actions.ts's signUpAction), which
  *     necessarily runs before any session exists for RLS to key off of
+ *   - rate limiting login/signup/password-reset (lib/data/rate-limit.ts),
+ *     same reasoning: those checks run before a session exists, and the
+ *     invite rate limit is scoped per farm rather than per acting member
  *
  * Never reach for this to "make a query work". If a query fails under RLS,
  * that is the policy doing its job -- fix the policy or the access path. Any

@@ -30,6 +30,12 @@ const PUBLIC_PATHS = [
   // exemption every invocation would get redirected to /login before the
   // handler ever ran.
   "/api/cron",
+  // Third-party webhooks (app/api/webhooks/brevo/route.ts) carry no Supabase
+  // session either -- they authenticate via their own shared secret inside
+  // the handler. Same reasoning as /api/cron above; without this exemption
+  // every delivery would get redirected to /login before the handler, and
+  // its secret check, ever ran.
+  "/api/webhooks",
 ];
 
 function isPublicPath(pathname: string): boolean {

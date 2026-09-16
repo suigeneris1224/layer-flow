@@ -1,7 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getFarmNamesForOwner } from "@/lib/data/farms";
-import { getFarmOwnerEmail } from "@/lib/data/billing-contacts";
 import { recordAuditLog, AUDIT_ACTIONS } from "@/lib/data/audit";
+import { pruneRateLimitHits } from "@/lib/data/rate-limit";
 import { sendEmail } from "@/lib/email/client";
 import {
   SUBSCRIPTION_REMINDER_DAYS,
@@ -48,26 +47,86 @@ export async function GET(request: Request) {
   const admin = createSupabaseAdminClient();
   const results = { pastDue: 0, renewal: 0, failed: 0 };
 
-  const { data: pastDueRows, error: pastDueError } = await admin
-    .from("subscriptions")
-    .select("owner_id, plan, status, billing_period, current_period_end")
-    .eq("status", "PAST_DUE")
-    .is("past_due_reminder_sent_at", null);
+  // Piggybacks on this job's existing daily schedule rather than adding a
+  // second cron trigger just to keep rate_limit_hits from growing forever.
+  await pruneRateLimitHits();
 
-  if (pastDueError) {
-    logger.error("cron past-due query failed", { reason: pastDueError.message });
+  // Accounts whose current_period_end falls on the UTC calendar day exactly
+  // SUBSCRIPTION_REMINDER_DAYS from now. A day-bucket match, not exact
+  // timestamp equality, since the period end carries whatever time-of-day the
+  // last plan change happened at and the cron itself runs at a fixed hour.
+  const target = new Date();
+  target.setUTCDate(target.getUTCDate() + SUBSCRIPTION_REMINDER_DAYS);
+  const dayStart = new Date(target);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const dayEnd = new Date(target);
+  dayEnd.setUTCHours(23, 59, 59, 999);
+
+  const [pastDueResult, renewalResult] = await Promise.all([
+    admin
+      .from("subscriptions")
+      .select("owner_id, plan, status, billing_period, current_period_end")
+      .eq("status", "PAST_DUE")
+      .is("past_due_reminder_sent_at", null),
+    admin
+      .from("subscriptions")
+      .select("owner_id, plan, status, billing_period, current_period_end")
+      .gte("current_period_end", dayStart.toISOString())
+      .lte("current_period_end", dayEnd.toISOString())
+      .is("renewal_reminder_sent_at", null)
+      .not("status", "in", "(CANCELED,EXPIRED)"),
+  ]);
+
+  if (pastDueResult.error) {
+    logger.error("cron past-due query failed", { reason: pastDueResult.error.message });
+  }
+  if (renewalResult.error) {
+    logger.error("cron renewal query failed", { reason: renewalResult.error.message });
   }
 
-  for (const row of (pastDueRows ?? []) as SubscriptionRow[]) {
+  const pastDueRows = (pastDueResult.data ?? []) as SubscriptionRow[];
+  const renewalRows = (renewalResult.data ?? []) as SubscriptionRow[];
+
+  /*
+   * One listUsers() call and one bulk farms query for every owner touched by
+   * either sweep, instead of a getUserById() + farms lookup per row -- same
+   * batched shape as lib/data/admin.ts's getAllSubscriptions, which exists
+   * for exactly this reason ("fine for one account, wasteful for every
+   * account at once").
+   */
+  const ownerIds = [...new Set([...pastDueRows, ...renewalRows].map((row) => row.owner_id))];
+
+  const [usersResult, farmsResult] =
+    ownerIds.length > 0
+      ? await Promise.all([
+          admin.auth.admin.listUsers(),
+          admin.from("farms").select("owner_id, name").in("owner_id", ownerIds).order("created_at", { ascending: true }),
+        ])
+      : [null, null];
+
+  if (usersResult?.error) {
+    logger.error("cron user list lookup failed", { reason: usersResult.error.message });
+  }
+  if (farmsResult?.error) {
+    logger.error("cron farms lookup failed", { reason: farmsResult.error.message });
+  }
+
+  const emailByOwner = new Map(usersResult?.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
+  const farmNamesByOwner = new Map<string, string[]>();
+  for (const farm of farmsResult?.data ?? []) {
+    const names = farmNamesByOwner.get(farm.owner_id) ?? [];
+    names.push(farm.name);
+    farmNamesByOwner.set(farm.owner_id, names);
+  }
+
+  for (const row of pastDueRows) {
     try {
-      const [ownerEmail, farmNames] = await Promise.all([
-        getFarmOwnerEmail(row.owner_id),
-        getFarmNamesForOwner(row.owner_id, admin),
-      ]);
+      const ownerEmail = emailByOwner.get(row.owner_id);
       if (!ownerEmail) {
         results.failed++;
         continue;
       }
+      const farmNames = farmNamesByOwner.get(row.owner_id) ?? [];
 
       const email = buildPastDueReminderEmail({
         farmNames,
@@ -116,39 +175,14 @@ export async function GET(request: Request) {
     }
   }
 
-  // Accounts whose current_period_end falls on the UTC calendar day exactly
-  // SUBSCRIPTION_REMINDER_DAYS from now. A day-bucket match, not exact
-  // timestamp equality, since the period end carries whatever time-of-day the
-  // last plan change happened at and the cron itself runs at a fixed hour.
-  const target = new Date();
-  target.setUTCDate(target.getUTCDate() + SUBSCRIPTION_REMINDER_DAYS);
-  const dayStart = new Date(target);
-  dayStart.setUTCHours(0, 0, 0, 0);
-  const dayEnd = new Date(target);
-  dayEnd.setUTCHours(23, 59, 59, 999);
-
-  const { data: renewalRows, error: renewalError } = await admin
-    .from("subscriptions")
-    .select("owner_id, plan, status, billing_period, current_period_end")
-    .gte("current_period_end", dayStart.toISOString())
-    .lte("current_period_end", dayEnd.toISOString())
-    .is("renewal_reminder_sent_at", null)
-    .not("status", "in", "(CANCELED,EXPIRED)");
-
-  if (renewalError) {
-    logger.error("cron renewal query failed", { reason: renewalError.message });
-  }
-
-  for (const row of (renewalRows ?? []) as SubscriptionRow[]) {
+  for (const row of renewalRows) {
     try {
-      const [ownerEmail, farmNames] = await Promise.all([
-        getFarmOwnerEmail(row.owner_id),
-        getFarmNamesForOwner(row.owner_id, admin),
-      ]);
+      const ownerEmail = emailByOwner.get(row.owner_id);
       if (!ownerEmail) {
         results.failed++;
         continue;
       }
+      const farmNames = farmNamesByOwner.get(row.owner_id) ?? [];
 
       const email = buildRenewalReminderEmail(
         {

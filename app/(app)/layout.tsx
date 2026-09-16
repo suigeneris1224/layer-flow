@@ -10,6 +10,7 @@ import { farmHour, farmToday, formatDateRangeLabel, shiftDate, startOfWeek } fro
 import { DesktopSidebar } from "@/components/nav/desktop-sidebar";
 import { MobileTabBar } from "@/components/nav/mobile-tab-bar";
 import { AppTopbar } from "@/components/layout/app-topbar";
+import { PageTransition } from "@/components/layout/page-transition";
 import { OfflineStatus } from "@/components/offline/offline-status";
 
 /**
@@ -69,7 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <OfflineStatus offlineEnabled={offlineEnabled} />
 
         <main id="main" className="flex-1 pb-24 lg:pb-8">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
 

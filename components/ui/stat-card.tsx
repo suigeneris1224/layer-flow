@@ -42,12 +42,12 @@ export function StatCard({
       )}
     >
       {/*
-        The chip sits above the figure on a phone rather than beside it: in a
-        2-up grid it was eating 52px of a 123px content box, leaving the
-        headline number nowhere to go. Side by side again from `sm`, where
-        there is room for both.
+        The chip sits above the figure only below 380px: in a 2-up grid on a
+        very narrow phone, side-by-side eats too much of the content box,
+        leaving the headline number nowhere to go. From 380px there's enough
+        width for both side by side, matching the desktop layout.
       */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+      <div className="flex flex-col gap-2 xs:flex-row xs:items-start xs:gap-3">
         <IconChip icon={icon} tint={tint} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">

@@ -12,6 +12,12 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      /* Additive only -- sm/md/lg/xl keep their defaults. 380px is where a
+         phone gets wide enough for StatCard's icon to sit beside its figure
+         instead of stacked above it; see components/ui/stat-card.tsx. */
+      screens: {
+        xs: "380px",
+      },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
@@ -66,6 +72,12 @@ const config: Config = {
       },
       spacing: {
         sidebar: "260px",
+      },
+      transitionTimingFunction: {
+        // UIKit's own sheet-presentation curve -- used for the mobile
+        // quick-add sheet so it slides like a native action sheet rather
+        // than a generic web modal. See components/nav/quick-add.tsx.
+        sheet: "cubic-bezier(0.32, 0.72, 0, 1)",
       },
     },
   },

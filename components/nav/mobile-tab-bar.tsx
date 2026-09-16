@@ -64,7 +64,7 @@ function Tab({
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex min-h-14 w-16 flex-col items-center justify-center gap-1",
+          "flex min-h-14 w-16 flex-col items-center justify-center gap-1 transition-colors pointer-coarse:transition-transform pointer-coarse:active:scale-[0.97]",
           active ? "text-primary" : "text-muted-foreground"
         )}
       >

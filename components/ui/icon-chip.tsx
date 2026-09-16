@@ -17,6 +17,12 @@ const TINTS: Record<ChipTint, string> = {
   violet: "bg-chip-violet text-chip-violet-fg",
 };
 
+const SIZES = {
+  sm: { box: "size-8", icon: "size-4" },
+  md: { box: "size-10", icon: "size-5" },
+  lg: { box: "size-11", icon: "size-6" },
+} as const;
+
 export function IconChip({
   icon: Icon,
   tint,
@@ -25,20 +31,20 @@ export function IconChip({
 }: {
   icon: LucideIcon;
   tint: ChipTint;
-  size?: "sm" | "md";
+  size?: keyof typeof SIZES;
   className?: string;
 }) {
   return (
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-lg",
-        size === "md" ? "size-10" : "size-8",
+        SIZES[size].box,
         TINTS[tint],
         className
       )}
       aria-hidden
     >
-      <Icon className={size === "md" ? "size-5" : "size-4"} />
+      <Icon className={SIZES[size].icon} />
     </span>
   );
 }

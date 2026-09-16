@@ -104,6 +104,13 @@ export const Select = React.forwardRef<
      * The chevron is positioned against the wrapper, so a caller that narrowed
      * only the `<select>` used to leave it stranded at the far right of a
      * full-width span. Narrowing both together is the supported way to do it.
+     *
+     * Also tightens the horizontal padding and chevron gutter below `sm` --
+     * a fit select is a compact range toggle (report/dashboard/export range
+     * pickers), not a form field, so it can read less bulky on a phone
+     * header. Height (min-h-11) and font size (text-base) are untouched:
+     * those are the touch-target and iOS-zoom-prevention rules from the
+     * comment above CONTROL, and apply everywhere, fit or not.
      */
     fit?: boolean;
   }
@@ -115,8 +122,8 @@ export const Select = React.forwardRef<
       ref={ref}
       className={cn(
         CONTROL,
-        "cursor-pointer appearance-none bg-none pr-10",
-        fit && "w-auto",
+        "cursor-pointer appearance-none bg-none",
+        fit ? "w-auto pl-2.5 pr-7 sm:pl-3 sm:pr-10" : "pr-10",
         className
       )}
       {...props}
@@ -124,7 +131,10 @@ export const Select = React.forwardRef<
       {children}
     </select>
     <ChevronDown
-      className="pointer-events-none absolute right-3 size-4 text-muted-foreground"
+      className={cn(
+        "pointer-events-none absolute size-4 text-muted-foreground",
+        fit ? "right-2 sm:right-3" : "right-3"
+      )}
       aria-hidden
     />
   </span>

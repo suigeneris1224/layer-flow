@@ -192,6 +192,16 @@ export type RetireFlockInput = z.infer<typeof retireFlockSchema>;
 // Egg sizes and pricing
 // ---------------------------------------------------------------------------
 
+export const createEggSizeSchema = z.object({
+  name: z.string().trim().min(1, "Give the size a name").max(60),
+});
+
+/** Same field as create; the code (derived once, at creation) never changes. */
+export const updateEggSizeSchema = createEggSizeSchema;
+
+export type CreateEggSizeInput = z.infer<typeof createEggSizeSchema>;
+export type UpdateEggSizeInput = z.infer<typeof updateEggSizeSchema>;
+
 export const eggPriceRowSchema = z.object({
   eggSizeId: uuid,
   pricePerEgg: decimalFromForm("Price per egg", { max: 10_000 }),

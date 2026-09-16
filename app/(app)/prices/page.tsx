@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { Tags } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
-import { canManagePricing } from "@/lib/auth/permissions";
+import { canManageEggSizes, canManagePricing } from "@/lib/auth/permissions";
 import { getCurrentPrices, getPriceHistory } from "@/lib/data/pricing";
+import { getEggSizesForManagement } from "@/lib/data/egg-sizes";
 import { classifyPrice, impliedPricePerEgg } from "@/lib/domain/pricing";
 import { Panel } from "@/components/ui/panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { EmptyState, StatusNote } from "@/components/ui/states";
 import { farmToday, formatCurrency, formatDate } from "@/lib/format";
 import { PriceForm } from "./price-form";
+import { EggSizeForm } from "./egg-size-form";
 
 export const metadata: Metadata = { title: "Egg prices" };
 
@@ -18,12 +20,14 @@ export default async function PricesPage() {
   const context = await requireFarmContext();
   const today = farmToday(context.timezone);
 
-  const [sizes, history] = await Promise.all([
+  const [sizes, history, managedSizes] = await Promise.all([
     getCurrentPrices(context.farmId, today),
     getPriceHistory(context),
+    getEggSizesForManagement(context.farmId),
   ]);
 
   const canEdit = canManagePricing(context);
+  const canEditSizes = canManageEggSizes(context);
   const unpriced = sizes.filter((size) => size.currentPrice === null);
 
   // Three buckets, not two: a price starting tomorrow is neither current nor
@@ -49,7 +53,11 @@ export default async function PricesPage() {
         <EmptyState
           icon={Tags}
           title="No egg sizes yet"
-          message="Egg sizes are created when you set up your farm."
+          message={
+            canEditSizes
+              ? "Add an egg size below to start pricing and tracking it."
+              : "Ask the farm owner or a manager to add an egg size."
+          }
         />
       ) : (
         <Panel title="Current prices">
@@ -116,6 +124,20 @@ export default async function PricesPage() {
       ) : (
         <StatusNote tone="info">
           Only the farm owner or a manager can change prices.
+        </StatusNote>
+      )}
+
+      {canEditSizes ? (
+        <EggSizeForm
+          sizes={managedSizes.map((size) => ({
+            id: size.id,
+            name: size.name,
+            isActive: size.isActive,
+          }))}
+        />
+      ) : (
+        <StatusNote tone="info">
+          Only the farm owner or a manager can add or change egg sizes.
         </StatusNote>
       )}
 

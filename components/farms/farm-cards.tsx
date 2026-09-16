@@ -42,10 +42,12 @@ export function FarmCards({
   const [pending, startTransition] = useTransition();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function onSwitch(farmId: string) {
     if (farmId === activeFarmId || pending) return;
     setError(null);
+    setSuccess(null);
     setSwitchingId(farmId);
     startTransition(async () => {
       const result = await switchFarmAction(farmId);
@@ -53,6 +55,8 @@ export function FarmCards({
         setError(result.error);
         return;
       }
+      const farm = farms.find((f) => f.farmId === farmId);
+      setSuccess(farm ? `Switched to ${farm.farmName}.` : "Switched farm.");
       router.refresh();
     });
   }
@@ -60,6 +64,7 @@ export function FarmCards({
   return (
     <div className="flex flex-col gap-3">
       {error && <StatusNote tone="bad">{error}</StatusNote>}
+      {success && <StatusNote tone="good">{success}</StatusNote>}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {farms.map((farm) => {

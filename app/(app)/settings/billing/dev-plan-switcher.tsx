@@ -18,11 +18,13 @@ const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
  * Development-only: flip the account's plan/status without real billing.
  *
  * Subscriptions are account-wide, so this affects every farm the signed-in
- * owner has, not just the one currently open.
+ * account has, not just the one currently open.
  *
- * The page that renders this already checks `isProduction`, so this component
- * never ships to a live site -- but the styling still marks it as scaffolding
- * rather than a real settings control, in case anyone stumbles onto it in a
+ * The page that renders this already checks `isProduction` and
+ * `isPlatformAdmin` (lib/auth/admin.ts) -- a farm OWNER who isn't a platform
+ * admin never sees this, even in dev -- and devSetSubscriptionAction refuses
+ * independently on both counts too. The styling still marks it as scaffolding
+ * rather than a real settings control, in case an admin stumbles onto it in a
  * preview/staging build.
  */
 export function DevPlanSwitcher({
@@ -72,8 +74,8 @@ export function DevPlanSwitcher({
     <Panel title="Developer tools">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <StatusNote tone="warn">
-          Visible in development only — never shown in production. Sets the plan directly,
-          bypassing billing, for every farm on this account.
+          Visible to platform admins in development only — never shown in production. Sets the
+          plan directly, bypassing billing, for every farm on this account.
         </StatusNote>
 
         {error && <StatusNote tone="bad">{error}</StatusNote>}

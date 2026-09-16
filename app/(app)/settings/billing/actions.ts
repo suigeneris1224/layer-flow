@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
+import { isPlatformAdmin } from "@/lib/auth/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isProduction } from "@/lib/config/env";
 import { getFarmNamesForOwner } from "@/lib/data/farms";
@@ -126,8 +127,12 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
  * `subscriptions` has no write policy for `authenticated` -- only a
  * service-role client (billing webhooks, normally) can write it -- so this is
  * the one place in the app that reaches for `createSupabaseAdminClient()`.
- * Gated twice: the UI that calls this never renders in production, and this
- * refuses independently too, since a hidden button is not a security boundary.
+ * Gated three times: the UI that calls this never renders in production or
+ * for a non-platform-admin, and this refuses independently on both counts
+ * too, since a hidden button is not a security boundary. Platform-admin only
+ * (not just farm OWNER) -- see lib/auth/admin.ts's isPlatformAdmin -- since
+ * this bypasses billing entirely and an owner should not be able to grant
+ * their own account a paid plan for free, even in dev/staging.
  *
  * Also simulates a billing period: every change sets current_period_start/end
  * to a fresh 30-day window (real billing has no checkout yet, so there is no
@@ -139,12 +144,12 @@ export async function devSetSubscriptionAction(input: unknown): Promise<ActionRe
   if (isProduction) return failure("Not available.");
 
   const user = await requireUser();
-  const context = await getFarmContext();
-
-  if (!context) return failure("Set up your farm first.");
-  if (!canManageBilling(context)) {
-    return failure("Only the account owner can change the plan.");
+  if (!isPlatformAdmin(user.email)) {
+    return failure("Only a platform admin can change the plan this way.");
   }
+
+  const context = await getFarmContext();
+  if (!context) return failure("Set up your farm first.");
 
   const parsed = devSetSubscriptionSchema.safeParse(input);
   if (!parsed.success) {

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
-import { requireFarmContext } from "@/lib/auth/session";
+import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
+import { isPlatformAdmin } from "@/lib/auth/admin";
 import { isProduction } from "@/lib/config/env";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getManualPaymentsForOwner } from "@/lib/data/manual-payments";
@@ -31,6 +32,7 @@ export const metadata: Metadata = { title: "Billing" };
 export const dynamic = "force-dynamic";
 
 export default async function BillingPage() {
+  const user = await requireUser();
   const context = await requireFarmContext();
   const canManage = canManageBilling(context);
 
@@ -150,7 +152,7 @@ export default async function BillingPage() {
         </div>
       )}
 
-      {!isProduction && (
+      {!isProduction && isPlatformAdmin(user.email) && (
         <DevPlanSwitcher
           currentPlan={context.plan}
           currentStatus={context.subscriptionStatus}

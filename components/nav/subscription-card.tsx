@@ -12,16 +12,16 @@ export function SubscriptionCard({ plan }: { plan: SubscriptionPlan }) {
   const definition = PLANS[plan];
 
   return (
-    <div className="rounded-lg bg-primary/10 p-4">
+    <div className="rounded-lg bg-primary/10 p-3 lg:p-4">
       <p className="text-xs text-muted-foreground">Current plan</p>
-      <p className="mt-0.5 text-lg font-bold text-primary">{definition.name}</p>
+      <p className="mt-0.5 text-base font-bold text-primary lg:text-lg">{definition.name}</p>
       <p className="text-xs text-muted-foreground tabular">
         {formatPlanPrice(definition)} / month
       </p>
 
       <Link
         href="/pricing"
-        className="mt-3 flex min-h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        className="mt-2 flex min-h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 lg:mt-3"
       >
         {plan === "PRO" ? "Manage subscription" : "Upgrade plan"}
       </Link>

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database";
@@ -25,35 +26,49 @@ export { REMEMBER_ME_COOKIE } from "@/lib/supabase/cookies";
  * rewrite the cookie with Supabase's default (persistent) options on the very
  * next navigation, silently undoing the choice. `REMEMBER_ME_COOKIE` is how
  * that later, stateless request knows to keep stripping it too.
+ *
+ * Wrapped in React `cache()` so every call within one request's render --
+ * and every `lib/data/*.ts` function does call this independently -- shares
+ * one client instance instead of creating a new one each time. That matters
+ * beyond avoiding redundant work: Supabase rotates refresh tokens on every
+ * use (the old one is invalidated the moment a new one is issued). Without
+ * this memoization, a page that fans out N parallel data queries via
+ * Promise.all would create N independent clients, and if the access token
+ * was expired when the request started, each one would race to refresh with
+ * the *same* refresh token -- only the first wins, the rest fail with
+ * "Invalid Refresh Token: Already Used". One shared client means at most one
+ * in-flight refresh per request, not N racing ones.
  */
-export async function createSupabaseServerClient(options?: { persistSession?: boolean }) {
-  const persistSession = options?.persistSession ?? true;
-  const cookieStore = await cookies();
+export const createSupabaseServerClient = cache(
+  async (options?: { persistSession?: boolean }) => {
+    const persistSession = options?.persistSession ?? true;
+    const cookieStore = await cookies();
 
-  return createServerClient<Database>(
-    publicEnv.supabaseUrl,
-    publicEnv.supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-          try {
-            for (const { name, value, options: cookieOptions } of cookiesToSet) {
-              const finalOptions = { ...cookieOptions };
-              if (!persistSession) {
-                delete finalOptions.maxAge;
-                delete finalOptions.expires;
+    return createServerClient<Database>(
+      publicEnv.supabaseUrl,
+      publicEnv.supabaseAnonKey,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+            try {
+              for (const { name, value, options: cookieOptions } of cookiesToSet) {
+                const finalOptions = { ...cookieOptions };
+                if (!persistSession) {
+                  delete finalOptions.maxAge;
+                  delete finalOptions.expires;
+                }
+                cookieStore.set(name, value, finalOptions);
               }
-              cookieStore.set(name, value, finalOptions);
+            } catch {
+              // Server Components cannot set cookies. The middleware refreshes
+              // the session on every request, so it is safe to ignore here.
             }
-          } catch {
-            // Server Components cannot set cookies. The middleware refreshes
-            // the session on every request, so it is safe to ignore here.
-          }
+          },
         },
-      },
-    }
-  );
-}
+      }
+    );
+  }
+);

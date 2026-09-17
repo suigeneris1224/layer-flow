@@ -70,6 +70,9 @@ export function SettingsNav({
             <Link
               key={category.key}
               href={category.href}
+              // Same reasoning as sidebar-nav.tsx's NavRow: every tab here is
+              // in the viewport at once.
+              prefetch={false}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-0.5 pb-2.5 text-sm transition-colors",

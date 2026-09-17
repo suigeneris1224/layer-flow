@@ -88,6 +88,12 @@ function NavRow({
     <Link
       href={item.href}
       onClick={onNavigate}
+      // Every sidebar link is in the viewport at once, so Next's default
+      // viewport-prefetch would fire a burst of concurrent requests on
+      // every render -- exactly the kind of pile-up that races Supabase's
+      // refresh-token rotation (see lib/supabase/server.ts). Fetch on click
+      // only; a farmer navigating the sidebar doesn't need pre-warmed pages.
+      prefetch={false}
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm transition-colors",

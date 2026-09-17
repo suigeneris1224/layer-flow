@@ -62,6 +62,9 @@ function Tab({
     <li key={item.key}>
       <Link
         href={item.href}
+        // Same reasoning as the sidebar's NavRow: all 4 tabs are always in
+        // the viewport, so default prefetch would fire them all at once.
+        prefetch={false}
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex min-h-14 w-16 flex-col items-center justify-center gap-1 transition-colors pointer-coarse:transition-transform pointer-coarse:active:scale-[0.97]",

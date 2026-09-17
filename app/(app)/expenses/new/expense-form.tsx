@@ -11,6 +11,7 @@ import { StatusNote } from "@/components/ui/states";
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from "@/lib/domain/expenses";
 import { currencySymbol } from "@/lib/format";
 import type { ExpenseCategory } from "@/lib/types/database";
+import { useConnectivity } from "@/lib/offline/use-connectivity";
 import { recordExpenseAction } from "../actions";
 
 interface FlockOption {
@@ -28,6 +29,7 @@ export function ExpenseForm({
   currency: string;
 }) {
   const router = useRouter();
+  const online = useConnectivity();
   const [pending, startTransition] = useTransition();
   const [category, setCategory] = useState<ExpenseCategory>("FEED");
   const [description, setDescription] = useState("");
@@ -42,23 +44,41 @@ export function ExpenseForm({
     setFormError(null);
     setFieldErrors({});
 
+    // Unlike Production/Feed/Mortality, expenses don't queue offline -- this
+    // is a back-office entry, not a shed-floor one. But it still needs to
+    // fail politely: without this check, calling the server action with no
+    // connection throws an unhandled fetch error that crashes the whole page
+    // ("Application error: a client-side exception has occurred") instead of
+    // just saying so.
+    if (!online) {
+      setFormError("You're offline. Try again once you have a connection.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await recordExpenseAction({
-        category,
-        description,
-        amount,
-        expenseDate,
-        flockId,
-      });
+      try {
+        const result = await recordExpenseAction({
+          category,
+          description,
+          amount,
+          expenseDate,
+          flockId,
+        });
 
-      if (!result.ok) {
-        setFormError(result.error);
-        setFieldErrors(result.fieldErrors ?? {});
-        return;
+        if (!result.ok) {
+          setFormError(result.error);
+          setFieldErrors(result.fieldErrors ?? {});
+          return;
+        }
+
+        router.push("/expenses");
+        router.refresh();
+      } catch {
+        // The connection dropped mid-request, or something else genuinely
+        // unexpected happened -- same friendly fallback either way, not a
+        // crash.
+        setFormError("Something went wrong sending that. Check your connection and try again.");
       }
-
-      router.push("/expenses");
-      router.refresh();
     });
   }
 

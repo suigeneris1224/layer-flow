@@ -33,5 +33,19 @@
     "NEXT_PUBLIC_SUPABASE_URL": "https://dvsvanhbpbbmtqwaulyz.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_YPsnO1h2cnZ-zuVgPe2atw_eqj_ttA3",
     "NEXT_PUBLIC_APP_URL": "https://layerflow.marlonsinadjan89.workers.dev"
-  }
+  },
+
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "persist": true
+    }
+  },
 }

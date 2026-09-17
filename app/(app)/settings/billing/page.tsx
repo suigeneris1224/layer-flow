@@ -3,7 +3,6 @@ import type { Route } from "next";
 import { requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
 import { isPlatformAdmin } from "@/lib/auth/admin";
-import { isProduction } from "@/lib/config/env";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getManualPaymentsForOwner } from "@/lib/data/manual-payments";
 import { getUsageSummary } from "@/lib/data/usage";
@@ -152,7 +151,7 @@ export default async function BillingPage() {
         </div>
       )}
 
-      {!isProduction && isPlatformAdmin(user.email) && (
+      {isPlatformAdmin(user.email) && (
         <DevPlanSwitcher
           currentPlan={context.plan}
           currentStatus={context.subscriptionStatus}

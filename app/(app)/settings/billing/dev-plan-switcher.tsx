@@ -15,17 +15,18 @@ const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCE
 const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
 
 /**
- * Development-only: flip the account's plan/status without real billing.
+ * Platform-admin tool: flip the current account's plan/status without real
+ * billing. Available in production, not just dev -- name/styling are legacy
+ * from when this really was dev-only; the actual gate has always been
+ * `isPlatformAdmin` (lib/auth/admin.ts), not the environment.
  *
  * Subscriptions are account-wide, so this affects every farm the signed-in
  * account has, not just the one currently open.
  *
- * The page that renders this already checks `isProduction` and
- * `isPlatformAdmin` (lib/auth/admin.ts) -- a farm OWNER who isn't a platform
- * admin never sees this, even in dev -- and devSetSubscriptionAction refuses
- * independently on both counts too. The styling still marks it as scaffolding
- * rather than a real settings control, in case an admin stumbles onto it in a
- * preview/staging build.
+ * The page that renders this already checks `isPlatformAdmin` -- a farm
+ * OWNER who isn't a platform admin never sees this -- and
+ * devSetSubscriptionAction refuses independently too, since a hidden button
+ * is not a security boundary.
  */
 export function DevPlanSwitcher({
   currentPlan,
@@ -74,8 +75,8 @@ export function DevPlanSwitcher({
     <Panel title="Developer tools">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <StatusNote tone="warn">
-          Visible to platform admins in development only — never shown in production. Sets the
-          plan directly, bypassing billing, for every farm on this account.
+          Visible to platform admins only. Sets the plan directly, bypassing billing, for every
+          farm on this account.
         </StatusNote>
 
         {error && <StatusNote tone="bad">{error}</StatusNote>}

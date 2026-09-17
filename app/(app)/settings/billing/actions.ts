@@ -5,7 +5,6 @@ import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { isProduction } from "@/lib/config/env";
 import { getFarmNamesForOwner } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getFarmOwnerEmail } from "@/lib/data/billing-contacts";
@@ -119,20 +118,28 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
 }
 
 /**
- * Development-only: set the account's plan/status directly.
+ * Platform-admin shortcut: set the *current* account's plan/status directly,
+ * without real billing.
  *
  * Subscriptions are account-wide (keyed by `owner_id`), so this affects every
- * farm the caller owns, not just the one currently open.
+ * farm the caller owns, not just the one currently open. Same write and same
+ * gate as app/admin/actions.ts's adminSetSubscriptionAction (which targets
+ * any account from the /admin/subscriptions table) -- this one exists
+ * because a platform admin changing their own test account's plan
+ * shouldn't have to leave Settings to do it. Available in production, not
+ * just dev/staging: it was originally dev-only, but the real security
+ * boundary was always isPlatformAdmin below, not the environment, so once
+ * that landed there was nothing left for an isProduction gate to add.
  *
  * `subscriptions` has no write policy for `authenticated` -- only a
  * service-role client (billing webhooks, normally) can write it -- so this is
- * the one place in the app that reaches for `createSupabaseAdminClient()`.
- * Gated three times: the UI that calls this never renders in production or
- * for a non-platform-admin, and this refuses independently on both counts
- * too, since a hidden button is not a security boundary. Platform-admin only
- * (not just farm OWNER) -- see lib/auth/admin.ts's isPlatformAdmin -- since
- * this bypasses billing entirely and an owner should not be able to grant
- * their own account a paid plan for free, even in dev/staging.
+ * the one place in this file that reaches for `createSupabaseAdminClient()`.
+ * Gated twice: the UI that calls this never renders for a non-platform-admin,
+ * and this refuses independently too, since a hidden button is not a
+ * security boundary. Platform-admin only (not just farm OWNER) -- see
+ * lib/auth/admin.ts's isPlatformAdmin -- since this bypasses billing
+ * entirely and an owner should not be able to grant their own account a paid
+ * plan for free.
  *
  * Also simulates a billing period: every change sets current_period_start/end
  * to a fresh 30-day window (real billing has no checkout yet, so there is no
@@ -141,8 +148,6 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
  * persists. See lib/email/ and app/api/cron/subscription-emails/route.ts.
  */
 export async function devSetSubscriptionAction(input: unknown): Promise<ActionResult> {
-  if (isProduction) return failure("Not available.");
-
   const user = await requireUser();
   if (!isPlatformAdmin(user.email)) {
     return failure("Only a platform admin can change the plan this way.");

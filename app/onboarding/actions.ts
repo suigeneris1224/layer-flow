@@ -151,7 +151,11 @@ export async function createHouseAction(
   const parsed = createHouseSchema.safeParse({
     name: formData.get("name"),
     capacity: formData.get("capacity"),
-    notes: formData.get("notes"),
+    // This step's form has no Notes field at all -- formData.get() returns
+    // null, not undefined, for an absent key, and the schema's .optional()
+    // only accepts undefined. Without this, every submission fails validation
+    // on a field the user never sees, showing only the generic banner.
+    notes: formData.get("notes") ?? "",
   });
 
   if (!parsed.success) {
@@ -220,7 +224,9 @@ export async function createFlockAction(
     initialHens: formData.get("initialHens"),
     placementDate: formData.get("placementDate"),
     startLayingDate: formData.get("startLayingDate") ?? "",
-    notes: formData.get("notes"),
+    // Same null-vs-undefined gap as createHouseAction above -- this step's
+    // form has no Notes field either.
+    notes: formData.get("notes") ?? "",
   });
 
   if (!parsed.success) {

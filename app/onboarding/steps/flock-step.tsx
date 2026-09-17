@@ -27,6 +27,14 @@ export function FlockStep({ houses, today }: { houses: HouseOption[]; today: str
   // DateField is controlled; the values still post through its native input.
   const [placementDate, setPlacementDate] = useState(today);
   const [startLayingDate, setStartLayingDate] = useState("");
+  const [houseId, setHouseId] = useState(houses[0]?.id ?? "");
+  const [initialHens, setInitialHens] = useState("");
+
+  // Informational only -- capacity is a rough figure, not a hard ceiling a
+  // farmer can never cross, so this warns rather than blocking submission.
+  const selectedHouse = houses.find((house) => house.id === houseId);
+  const hensExceedCapacity =
+    selectedHouse !== undefined && Number(initialHens) > selectedHouse.capacity;
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,7 +77,13 @@ export function FlockStep({ houses, today }: { houses: HouseOption[]; today: str
         </Field>
 
         <Field label="House" htmlFor="houseId" error={fieldErrors?.houseId}>
-          <Select id="houseId" name="houseId" required defaultValue={houses[0]?.id ?? ""}>
+          <Select
+            id="houseId"
+            name="houseId"
+            required
+            value={houseId}
+            onChange={(event) => setHouseId(event.target.value)}
+          >
             {houses.map((house) => (
               <option key={house.id} value={house.id}>
                 {house.name} — holds {house.capacity.toLocaleString()}
@@ -89,9 +103,19 @@ export function FlockStep({ houses, today }: { houses: HouseOption[]; today: str
             min={1}
             required
             placeholder="1000"
+            value={initialHens}
+            onChange={(event) => setInitialHens(event.target.value)}
             aria-invalid={Boolean(fieldErrors?.initialHens)}
           />
         </Field>
+
+        {hensExceedCapacity && (
+          <StatusNote tone="warn">
+            That&apos;s more hens than {selectedHouse?.name} is built to hold (
+            {selectedHouse?.capacity.toLocaleString()}). You can still continue, but you may want
+            to double-check the count or the house.
+          </StatusNote>
+        )}
 
         <Field
           label="Placement date"

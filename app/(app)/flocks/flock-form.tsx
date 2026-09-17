@@ -27,6 +27,7 @@ interface FlockOption {
 interface HouseOption {
   id: string;
   name: string;
+  capacity: number;
 }
 
 const NEW = "__new__";
@@ -152,6 +153,15 @@ export function FlockForm({
 
   const canRetire = editing !== null && ACTIVE_STATUSES.includes(editing.status);
 
+  // Informational only -- capacity is a rough figure, not a hard ceiling a
+  // farmer can never cross (temporary overcrowding happens), so this warns
+  // rather than blocking submission.
+  const selectedHouse = houses.find((house) => house.id === houseId);
+  const hensExceedCapacity =
+    !editing &&
+    selectedHouse !== undefined &&
+    Number(initialHens) > selectedHouse.capacity;
+
   return (
     <>
       <Panel title={editing ? `Edit ${editing.name}` : "Add a flock"}>
@@ -207,6 +217,11 @@ export function FlockForm({
             <Field
               label="Number of hens"
               htmlFor="flock-hens"
+              hint={
+                selectedHouse
+                  ? `${selectedHouse.name} holds up to ${selectedHouse.capacity.toLocaleString()} hens.`
+                  : undefined
+              }
               error={fieldErrors.initialHens}
             >
               <NumberInput
@@ -217,6 +232,14 @@ export function FlockForm({
                 aria-invalid={!!fieldErrors.initialHens}
               />
             </Field>
+          )}
+
+          {hensExceedCapacity && (
+            <StatusNote tone="warn">
+              That&apos;s more hens than {selectedHouse?.name} is built to hold (
+              {selectedHouse?.capacity.toLocaleString()}). You can still continue, but you may want
+              to double-check the count or the house.
+            </StatusNote>
           )}
 
           {/*

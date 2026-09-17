@@ -129,6 +129,7 @@ export async function getActiveFlockCount(farmId: string): Promise<number> {
 export interface HouseOption {
   id: string;
   name: string;
+  capacity: number;
 }
 
 export async function getHouseOptions(farmId: string): Promise<HouseOption[]> {
@@ -136,7 +137,7 @@ export async function getHouseOptions(farmId: string): Promise<HouseOption[]> {
 
   const { data, error } = await supabase
     .from("houses")
-    .select("id, name")
+    .select("id, name, capacity")
     .eq("farm_id", farmId)
     .order("name");
 

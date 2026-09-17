@@ -9,6 +9,7 @@ import { Field, Input, NumberInput, Select } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { ADJUSTMENT_REASONS, validateAdjustment } from "@/lib/domain/inventory";
 import { recordAdjustmentAction } from "@/app/(app)/inventory/actions";
+import { safeAction } from "@/lib/client/safe-action";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -59,14 +60,16 @@ export function AdjustForm({ sizes, today }: { sizes: SizeOption[]; today: strin
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await recordAdjustmentAction({
-        eggSizeId,
-        direction,
-        quantity,
-        reason,
-        note,
-        adjustmentDate: today,
-      });
+      const result = await safeAction(() =>
+        recordAdjustmentAction({
+          eggSizeId,
+          direction,
+          quantity,
+          reason,
+          note,
+          adjustmentDate: today,
+        })
+      );
 
       if (!result.ok) {
         setFormError(result.error);

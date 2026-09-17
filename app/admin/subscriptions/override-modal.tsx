@@ -10,6 +10,7 @@ import { StatusNote } from "@/components/ui/states";
 import { PLAN_ORDER, PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
 import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import { adminSetSubscriptionAction } from "../actions";
+import { safeAction } from "@/lib/client/safe-action";
 import type { AdminAccountRowData } from "./subscription-row";
 
 const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED", "EXPIRED"];
@@ -59,7 +60,9 @@ export function OverrideModal({
     if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await adminSetSubscriptionAction(row.ownerId, { plan, status, billingPeriod });
+      const result = await safeAction(() =>
+        adminSetSubscriptionAction(row.ownerId, { plan, status, billingPeriod })
+      );
       if (!result.ok) {
         setError(result.error);
         return;

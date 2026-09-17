@@ -10,6 +10,7 @@ import { StatusNote } from "@/components/ui/states";
 import { PLAN_ORDER, PLANS } from "@/lib/subscriptions/plans";
 import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import { devSetSubscriptionAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 const STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED", "EXPIRED"];
 const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
@@ -61,7 +62,9 @@ export function DevPlanSwitcher({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await devSetSubscriptionAction({ plan, status, billingPeriod });
+      const result = await safeAction(() =>
+        devSetSubscriptionAction({ plan, status, billingPeriod })
+      );
       if (!result.ok) {
         setError(result.error);
         return;

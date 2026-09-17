@@ -9,6 +9,7 @@ import { Field, NumberInput } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { THRESHOLDS, type AlertThresholdOverrides } from "@/lib/domain/alerts";
 import { saveAlertThresholdsAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 interface ThresholdField {
   key: keyof AlertThresholdOverrides;
@@ -132,7 +133,7 @@ export function ThresholdForm({ overrides }: { overrides: AlertThresholdOverride
         })
       );
 
-      const result = await saveAlertThresholdsAction(payload);
+      const result = await safeAction(() => saveAlertThresholdsAction(payload));
 
       if (!result.ok) {
         setFormError(result.error);

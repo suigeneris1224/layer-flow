@@ -10,6 +10,7 @@ import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { StatusNote } from "@/components/ui/states";
 import { PASSWORD_MAX_LENGTH } from "@/lib/domain/password";
 import { changePasswordAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 export function ChangePasswordForm() {
   const [pending, startTransition] = useTransition();
@@ -26,7 +27,7 @@ export function ChangePasswordForm() {
     setSuccess(false);
 
     startTransition(async () => {
-      const result = await changePasswordAction({ password, confirmPassword });
+      const result = await safeAction(() => changePasswordAction({ password, confirmPassword }));
 
       if (!result.ok) {
         setFormError(result.error);

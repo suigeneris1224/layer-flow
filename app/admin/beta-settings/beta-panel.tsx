@@ -16,6 +16,7 @@ import {
   setBetaMaxTestersAction,
   setBetaModeAction,
 } from "../actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /**
  * Closed-beta toggle, the persisted tester-count cap, and the up-to-cap
@@ -54,7 +55,7 @@ export function BetaPanel({
     setPendingAction("toggle");
 
     startTransition(async () => {
-      const result = await setBetaModeAction(!localEnabled);
+      const result = await safeAction(() => setBetaModeAction(!localEnabled));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -68,7 +69,7 @@ export function BetaPanel({
     setPendingAction("maxTesters");
 
     startTransition(async () => {
-      const result = await setBetaMaxTestersAction({ maxTesters: maxTestersInput });
+      const result = await safeAction(() => setBetaMaxTestersAction({ maxTesters: maxTestersInput }));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -83,7 +84,7 @@ export function BetaPanel({
     setPendingAction("add");
 
     startTransition(async () => {
-      const result = await addBetaTesterAction({ email });
+      const result = await safeAction(() => addBetaTesterAction({ email }));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -98,7 +99,7 @@ export function BetaPanel({
     setPendingAction(`remove:${testerEmail}`);
 
     startTransition(async () => {
-      const result = await removeBetaTesterAction(testerEmail);
+      const result = await safeAction(() => removeBetaTesterAction(testerEmail));
       if (!result.ok) {
         setError(result.error);
         return;

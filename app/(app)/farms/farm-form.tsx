@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
+import { safeAction } from "@/lib/client/safe-action";
 import {
   createFarmAction,
   removeFarmPhotoAction,
@@ -65,7 +66,9 @@ export function FarmForm({
 
     startTransition(async () => {
       const result =
-        mode === "edit" ? await updateFarmAction(values) : await createFarmAction(values);
+        mode === "edit"
+          ? await safeAction(() => updateFarmAction(values))
+          : await safeAction(() => createFarmAction(values));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -93,7 +96,7 @@ export function FarmForm({
     data.set("photo", file);
 
     startPhotoTransition(async () => {
-      const result = await uploadFarmPhotoAction(data);
+      const result = await safeAction(() => uploadFarmPhotoAction(data));
       if (photoInput.current) photoInput.current.value = "";
 
       if (!result.ok) {
@@ -111,7 +114,7 @@ export function FarmForm({
     setSuccess(null);
 
     startPhotoTransition(async () => {
-      const result = await removeFarmPhotoAction();
+      const result = await safeAction(() => removeFarmPhotoAction());
       if (!result.ok) {
         setFormError(result.error);
         return;

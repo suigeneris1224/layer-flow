@@ -11,6 +11,7 @@ import { formatRelativeDay } from "@/lib/format";
 import { PLANS } from "@/lib/subscriptions/plans";
 import type { PendingManualPaymentRow } from "@/lib/data/manual-payments";
 import { adminApproveManualPaymentAction, adminRejectManualPaymentAction } from "../actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /** Pending manual QR/bank transfer payments awaiting review -- see app/admin/actions.ts. */
 export function ManualPaymentsPanel({ payments }: { payments: PendingManualPaymentRow[] }) {
@@ -29,7 +30,7 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
 
     setActingId(payment.id);
     startTransition(async () => {
-      const result = await adminApproveManualPaymentAction(payment.id);
+      const result = await safeAction(() => adminApproveManualPaymentAction(payment.id));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -46,7 +47,7 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
 
     setActingId(payment.id);
     startTransition(async () => {
-      const result = await adminRejectManualPaymentAction(payment.id, { reason });
+      const result = await safeAction(() => adminRejectManualPaymentAction(payment.id, { reason }));
       if (!result.ok) {
         setError(result.error);
         return;

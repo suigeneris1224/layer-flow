@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { StatusNote } from "@/components/ui/states";
 import { SUPPORTED_CURRENCIES, SUPPORTED_TIMEZONES } from "@/lib/domain/farm-config";
 import { updateFarmConfigAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 export function FarmConfigForm({
   currentCurrency,
@@ -32,7 +33,7 @@ export function FarmConfigForm({
     setSuccess(false);
 
     startTransition(async () => {
-      const result = await updateFarmConfigAction({ currency, timezone });
+      const result = await safeAction(() => updateFarmConfigAction({ currency, timezone }));
 
       if (!result.ok) {
         setFormError(result.error);

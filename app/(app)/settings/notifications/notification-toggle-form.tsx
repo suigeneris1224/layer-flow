@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusNote } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 import { saveNotificationPreferencesAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 export function NotificationToggleForm({
   initialFarmAlertsEnabled,
@@ -33,10 +34,12 @@ export function NotificationToggleForm({
     setSuccess(false);
 
     startTransition(async () => {
-      const result = await saveNotificationPreferencesAction({
-        farmAlertsEnabled,
-        inventoryAlertsEnabled,
-      });
+      const result = await safeAction(() =>
+        saveNotificationPreferencesAction({
+          farmAlertsEnabled,
+          inventoryAlertsEnabled,
+        })
+      );
 
       if (!result.ok) {
         setFormError(result.error);

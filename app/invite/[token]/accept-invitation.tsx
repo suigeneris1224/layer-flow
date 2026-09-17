@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusNote } from "@/components/ui/states";
 import { acceptInvitationAction } from "@/app/(app)/settings/team/actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /** The one button that turns a token into a membership. */
 export function AcceptInvitation({
@@ -22,7 +23,7 @@ export function AcceptInvitation({
   function onAccept() {
     setError(null);
     startTransition(async () => {
-      const result = await acceptInvitationAction(token);
+      const result = await safeAction(() => acceptInvitationAction(token));
 
       if (!result.ok) {
         setError(result.error);

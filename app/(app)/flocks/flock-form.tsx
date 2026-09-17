@@ -9,6 +9,7 @@ import { Field, Input, NumberInput, Select, Textarea } from "@/components/ui/fie
 import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import type { FlockStatus } from "@/lib/types/database";
+import { safeAction } from "@/lib/client/safe-action";
 import { createFlockAction, retireFlockAction, updateFlockAction } from "./actions";
 
 interface FlockOption {
@@ -101,23 +102,27 @@ export function FlockForm({
 
     startTransition(async () => {
       const result = editing
-        ? await updateFlockAction(editing.id, {
-            name,
-            breed,
-            houseId,
-            placementDate,
-            startLayingDate,
-            notes,
-          })
-        : await createFlockAction({
-            name,
-            breed,
-            houseId,
-            initialHens,
-            placementDate,
-            startLayingDate,
-            notes,
-          });
+        ? await safeAction(() =>
+            updateFlockAction(editing.id, {
+              name,
+              breed,
+              houseId,
+              placementDate,
+              startLayingDate,
+              notes,
+            })
+          )
+        : await safeAction(() =>
+            createFlockAction({
+              name,
+              breed,
+              houseId,
+              initialHens,
+              placementDate,
+              startLayingDate,
+              notes,
+            })
+          );
 
       if (!result.ok) {
         setFormError(result.error);
@@ -138,10 +143,12 @@ export function FlockForm({
 
     setFormError(null);
     startTransition(async () => {
-      const result = await retireFlockAction(editing.id, {
-        status: retireStatus,
-        notes: retireNotes,
-      });
+      const result = await safeAction(() =>
+        retireFlockAction(editing.id, {
+          status: retireStatus,
+          notes: retireNotes,
+        })
+      );
       if (!result.ok) {
         setFormError(result.error);
         return;

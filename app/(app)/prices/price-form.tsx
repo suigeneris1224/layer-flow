@@ -15,6 +15,7 @@ import {
   type CurrentPrice,
 } from "@/lib/domain/pricing";
 import { setPriceAction } from "@/app/(app)/prices/actions";
+import { safeAction } from "@/lib/client/safe-action";
 import { currencySymbol, formatCurrency, formatPercent } from "@/lib/format";
 
 interface SizeOption {
@@ -85,12 +86,14 @@ export function PriceForm({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await setPriceAction({
-        eggSizeId,
-        pricePerEgg,
-        pricePerTray,
-        effectiveFrom,
-      });
+      const result = await safeAction(() =>
+        setPriceAction({
+          eggSizeId,
+          pricePerEgg,
+          pricePerTray,
+          effectiveFrom,
+        })
+      );
 
       if (!result.ok) {
         setFormError(result.error);

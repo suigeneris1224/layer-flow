@@ -10,6 +10,7 @@ import { formatNumber } from "@/lib/format";
 import type { FarmRole } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 import { switchFarmAction } from "@/app/(app)/farms/actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 export interface FarmCardData {
   farmId: string;
@@ -50,7 +51,7 @@ export function FarmCards({
     setSuccess(null);
     setSwitchingId(farmId);
     startTransition(async () => {
-      const result = await switchFarmAction(farmId);
+      const result = await safeAction(() => switchFarmAction(farmId));
       if (!result.ok) {
         setError(result.error);
         return;

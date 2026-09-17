@@ -10,6 +10,7 @@ import { StatusNote } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 import { MANUAL_PAYMENT_METHODS } from "@/lib/subscriptions/manual-payment-config";
 import type { BillingPeriod, SubscriptionPlan } from "@/lib/types/database";
+import { safeAction } from "@/lib/client/safe-action";
 import { submitManualPaymentAction } from "./actions";
 
 const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf";
@@ -74,7 +75,7 @@ export function ManualQrPayment({
     formData.set("billingPeriod", billingPeriod);
 
     startTransition(async () => {
-      const result = await submitManualPaymentAction(formData);
+      const result = await safeAction(() => submitManualPaymentAction(formData));
       if (!result.ok) {
         setError(result.error);
         setFieldErrors(result.fieldErrors ?? {});

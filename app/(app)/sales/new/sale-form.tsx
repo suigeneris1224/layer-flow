@@ -17,6 +17,7 @@ import {
 } from "@/lib/domain/sales";
 import { saleItemSubtotal } from "@/lib/domain/calculations";
 import { createCustomerAction, recordSaleAction } from "@/app/(app)/sales/actions";
+import { safeAction } from "@/lib/client/safe-action";
 import { recordSaleSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { currencySymbol, formatCurrency, formatNumber } from "@/lib/format";
 import { PaymentBadge } from "@/app/(app)/sales/payment-badge";
@@ -181,7 +182,7 @@ export function SaleForm({
     }
 
     startTransition(async () => {
-      const result = await recordSaleAction(parsed.data);
+      const result = await safeAction(() => recordSaleAction(parsed.data));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -509,7 +510,7 @@ function CustomerPicker({
     setError(null);
 
     startTransition(async () => {
-      const result = await createCustomerAction({ name, phone });
+      const result = await safeAction(() => createCustomerAction({ name, phone }));
 
       if (!result.ok) {
         setError(result.error);

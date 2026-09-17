@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/field";
 import { formatRelativeDay } from "@/lib/format";
 import type { SupportRequestRow } from "@/lib/data/admin";
 import { replySupportRequestAction, resolveSupportRequestAction } from "../actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /** One request's thread plus a reply box -- shared by the open and resolved lists. */
 function RequestThread({ request }: { request: SupportRequestRow }) {
@@ -23,7 +24,7 @@ function RequestThread({ request }: { request: SupportRequestRow }) {
     setError(null);
 
     startTransition(async () => {
-      const result = await replySupportRequestAction(request.id, { body });
+      const result = await safeAction(() => replySupportRequestAction(request.id, { body }));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -82,7 +83,7 @@ export function SupportPanel({ requests }: { requests: SupportRequestRow[] }) {
     setResolvingId(id);
 
     startTransition(async () => {
-      const result = await resolveSupportRequestAction(id);
+      const result = await safeAction(() => resolveSupportRequestAction(id));
       if (!result.ok) {
         setError(result.error);
         return;

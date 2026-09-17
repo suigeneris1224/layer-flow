@@ -20,6 +20,7 @@ import {
   revokeInvitationAction,
   updateMemberRoleAction,
 } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /**
  * The whole team screen, client-side because every row has controls.
@@ -61,7 +62,7 @@ export function TeamManager({
     setFieldErrors({});
 
     startTransition(async () => {
-      const result = await inviteMemberAction({ email, role });
+      const result = await safeAction(() => inviteMemberAction({ email, role }));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -91,7 +92,7 @@ export function TeamManager({
   function onRoleChange(memberId: string, next: FarmRole) {
     setFormError(null);
     startTransition(async () => {
-      const result = await updateMemberRoleAction({ memberId, role: next });
+      const result = await safeAction(() => updateMemberRoleAction({ memberId, role: next }));
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -111,7 +112,7 @@ export function TeamManager({
 
     setFormError(null);
     startTransition(async () => {
-      const result = await removeMemberAction(member.id);
+      const result = await safeAction(() => removeMemberAction(member.id));
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -123,7 +124,7 @@ export function TeamManager({
   function onRevoke(invitation: PendingInvitation) {
     setFormError(null);
     startTransition(async () => {
-      const result = await revokeInvitationAction(invitation.id);
+      const result = await safeAction(() => revokeInvitationAction(invitation.id));
       if (!result.ok) {
         setFormError(result.error);
         return;

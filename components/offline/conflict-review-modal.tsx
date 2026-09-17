@@ -4,6 +4,7 @@ import { useEffect, useRef, useTransition } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { recordProductionAction } from "@/app/(app)/production/actions";
+import { safeAction } from "@/lib/client/safe-action";
 import { discardConflict, markSynced } from "@/lib/offline/queue";
 import type { PendingWrite } from "@/lib/offline/db";
 import type { DailyProductionInput } from "@/lib/validation/schemas";
@@ -77,7 +78,7 @@ export function ConflictReviewModal({
 
   function keepMine() {
     startTransition(async () => {
-      const result = await recordProductionAction(item.payload);
+      const result = await safeAction(() => recordProductionAction(item.payload));
       if (result.ok) {
         await markSynced(item.id);
         router.refresh();

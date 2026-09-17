@@ -11,6 +11,7 @@ import { formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { MySupportRequestRow } from "@/lib/data/support";
 import { replyToSupportRequestAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /** Same tone-chip technique as components/notifications/notification-row.tsx's NOTIFICATION_TONE. */
 const STATUS_TONE: Record<string, { label: string; chip: string }> = {
@@ -30,7 +31,7 @@ function RequestThread({ request, timezone }: { request: MySupportRequestRow; ti
     setError(null);
 
     startTransition(async () => {
-      const result = await replyToSupportRequestAction(request.id, { body });
+      const result = await safeAction(() => replyToSupportRequestAction(request.id, { body }));
       if (!result.ok) {
         setError(result.error);
         return;

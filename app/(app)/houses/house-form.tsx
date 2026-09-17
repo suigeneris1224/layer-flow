@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, NumberInput, Select, Textarea } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
+import { safeAction } from "@/lib/client/safe-action";
 import { createHouseAction, deleteHouseAction, updateHouseAction } from "./actions";
 
 interface HouseOption {
@@ -71,8 +72,8 @@ export function HouseForm({
     startTransition(async () => {
       const values = { name, capacity, notes };
       const result = editing
-        ? await updateHouseAction(editing.id, values)
-        : await createHouseAction(values);
+        ? await safeAction(() => updateHouseAction(editing.id, values))
+        : await safeAction(() => createHouseAction(values));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -96,7 +97,7 @@ export function HouseForm({
 
     setFormError(null);
     startTransition(async () => {
-      const result = await deleteHouseAction(editing.id);
+      const result = await safeAction(() => deleteHouseAction(editing.id));
       if (!result.ok) {
         setFormError(result.error);
         return;

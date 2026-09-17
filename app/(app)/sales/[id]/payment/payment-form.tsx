@@ -9,6 +9,7 @@ import { Field, NumberInput } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { currencySymbol } from "@/lib/format";
 import { recordSalePaymentAction } from "../../actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /**
  * Record a payment against a sale.
@@ -37,7 +38,7 @@ export function PaymentForm({
     setFieldError(undefined);
 
     startTransition(async () => {
-      const result = await recordSalePaymentAction(saleId, { amount });
+      const result = await safeAction(() => recordSalePaymentAction(saleId, { amount }));
       if (!result.ok) {
         setError(result.error);
         setFieldError(result.fieldErrors?.amount);

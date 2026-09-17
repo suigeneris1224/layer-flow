@@ -8,6 +8,7 @@ import { Field, Input, NumberInput } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { StatusNote } from "@/components/ui/states";
 import { saveFarmDefaultsAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 export function FarmDefaultsForm({
   currentCapacity,
@@ -31,10 +32,12 @@ export function FarmDefaultsForm({
     setSuccess(false);
 
     startTransition(async () => {
-      const result = await saveFarmDefaultsAction({
-        defaultHouseCapacity: capacity,
-        defaultFlockBreed: breed,
-      });
+      const result = await safeAction(() =>
+        saveFarmDefaultsAction({
+          defaultHouseCapacity: capacity,
+          defaultFlockBreed: breed,
+        })
+      );
 
       if (!result.ok) {
         setFormError(result.error);

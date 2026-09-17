@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, Select } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
+import { safeAction } from "@/lib/client/safe-action";
 import {
   createEggSizeAction,
   moveEggSizeAction,
@@ -59,8 +60,8 @@ export function EggSizeForm({ sizes }: { sizes: EggSizeOption[] }) {
 
     startTransition(async () => {
       const result = editing
-        ? await updateEggSizeAction(editing.id, { name })
-        : await createEggSizeAction({ name });
+        ? await safeAction(() => updateEggSizeAction(editing.id, { name }))
+        : await safeAction(() => createEggSizeAction({ name }));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -80,7 +81,7 @@ export function EggSizeForm({ sizes }: { sizes: EggSizeOption[] }) {
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await setEggSizeActiveAction(editing.id, !editing.isActive);
+      const result = await safeAction(() => setEggSizeActiveAction(editing.id, !editing.isActive));
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -96,7 +97,7 @@ export function EggSizeForm({ sizes }: { sizes: EggSizeOption[] }) {
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await moveEggSizeAction(editing.id, direction);
+      const result = await safeAction(() => moveEggSizeAction(editing.id, direction));
       if (!result.ok) {
         setFormError(result.error);
         return;

@@ -15,6 +15,7 @@ import {
   uploadAvatarAction,
   uploadCoverAction,
 } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /** Same initials the topbar draws, so removing an avatar looks like a return. */
 function initials(name: string, email: string): string {
@@ -54,7 +55,7 @@ export function ProfileForm({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await updateProfileAction({ fullName, phone });
+      const result = await safeAction(() => updateProfileAction({ fullName, phone }));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -78,7 +79,7 @@ export function ProfileForm({
     data.set("avatar", file);
 
     startTransition(async () => {
-      const result = await uploadAvatarAction(data);
+      const result = await safeAction(() => uploadAvatarAction(data));
       // Clear the picker either way, so choosing the same file again re-fires.
       if (fileInput.current) fileInput.current.value = "";
 
@@ -97,7 +98,7 @@ export function ProfileForm({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await removeAvatarAction();
+      const result = await safeAction(() => removeAvatarAction());
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -118,7 +119,7 @@ export function ProfileForm({
     data.set("cover", file);
 
     startTransition(async () => {
-      const result = await uploadCoverAction(data);
+      const result = await safeAction(() => uploadCoverAction(data));
       if (coverFileInput.current) coverFileInput.current.value = "";
 
       if (!result.ok) {
@@ -136,7 +137,7 @@ export function ProfileForm({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await removeCoverAction();
+      const result = await safeAction(() => removeCoverAction());
       if (!result.ok) {
         setFormError(result.error);
         return;

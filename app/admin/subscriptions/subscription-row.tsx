@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import { adminSetSubscriptionAction } from "../actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 const STATUS_TONE: Record<SubscriptionStatus, string> = {
   ACTIVE: "bg-[hsl(var(--status-good))]/15 text-[hsl(var(--status-good))]",
@@ -81,11 +82,13 @@ export function SubscriptionRow({
     if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await adminSetSubscriptionAction(row.ownerId, {
-        plan: "PRO",
-        status: "ACTIVE",
-        billingPeriod: row.billingPeriod,
-      });
+      const result = await safeAction(() =>
+        adminSetSubscriptionAction(row.ownerId, {
+          plan: "PRO",
+          status: "ACTIVE",
+          billingPeriod: row.billingPeriod,
+        })
+      );
       if (!result.ok) {
         setError(result.error);
         return;

@@ -12,6 +12,7 @@ import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from "@/lib/domain/expens
 import { currencySymbol } from "@/lib/format";
 import type { ExpenseCategory } from "@/lib/types/database";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
+import { safeAction } from "@/lib/client/safe-action";
 import { recordExpenseAction } from "../actions";
 
 interface FlockOption {
@@ -56,29 +57,24 @@ export function ExpenseForm({
     }
 
     startTransition(async () => {
-      try {
-        const result = await recordExpenseAction({
+      const result = await safeAction(() =>
+        recordExpenseAction({
           category,
           description,
           amount,
           expenseDate,
           flockId,
-        });
+        })
+      );
 
-        if (!result.ok) {
-          setFormError(result.error);
-          setFieldErrors(result.fieldErrors ?? {});
-          return;
-        }
-
-        router.push("/expenses");
-        router.refresh();
-      } catch {
-        // The connection dropped mid-request, or something else genuinely
-        // unexpected happened -- same friendly fallback either way, not a
-        // crash.
-        setFormError("Something went wrong sending that. Check your connection and try again.");
+      if (!result.ok) {
+        setFormError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
+        return;
       }
+
+      router.push("/expenses");
+      router.refresh();
     });
   }
 

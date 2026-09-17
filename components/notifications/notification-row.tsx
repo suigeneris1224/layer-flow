@@ -7,6 +7,7 @@ import type { Notification } from "@/lib/data/notifications";
 import type { AlertLevel } from "@/lib/domain/alerts";
 import { formatRelativeDay } from "@/lib/format";
 import { markNotificationReadAction } from "@/app/(app)/notifications/actions";
+import { safeAction } from "@/lib/client/safe-action";
 import { cn } from "@/lib/utils";
 
 export const NOTIFICATION_TONE: Record<AlertLevel, { chip: string; text: string }> = {
@@ -53,8 +54,9 @@ export function NotificationRow({
   function onClick() {
     if (!unread) return;
     startTransition(async () => {
-      await markNotificationReadAction(notification.id);
-      router.refresh();
+      // No error UI here either -- same reasoning as MarkAllReadButton.
+      const result = await safeAction(() => markNotificationReadAction(notification.id));
+      if (result.ok) router.refresh();
     });
   }
 

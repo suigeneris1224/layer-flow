@@ -8,6 +8,7 @@ import { Panel } from "@/components/ui/panel";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { submitSupportRequestAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /** Ask for help. Every plan can submit; the Pro perk is response priority, not access to the form. */
 export function SupportForm({ priority }: { priority: boolean }) {
@@ -26,7 +27,7 @@ export function SupportForm({ priority }: { priority: boolean }) {
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await submitSupportRequestAction({ subject, message });
+      const result = await safeAction(() => submitSupportRequestAction({ subject, message }));
 
       if (!result.ok) {
         setFormError(result.error);

@@ -10,6 +10,7 @@ import { DateField } from "@/components/ui/date-field";
 import { StatusNote } from "@/components/ui/states";
 import type { VaccinationEntry } from "@/lib/data/health";
 import type { FlockChoice } from "./flock-choice";
+import { safeAction } from "@/lib/client/safe-action";
 import {
   deleteVaccinationAction,
   recordVaccinationAction,
@@ -69,8 +70,8 @@ export function VaccinationForm({
     startTransition(async () => {
       const values = { flockId, vaccinationDate, vaccineName, notes };
       const result = editing
-        ? await updateVaccinationAction(editing.id, values)
-        : await recordVaccinationAction(values);
+        ? await safeAction(() => updateVaccinationAction(editing.id, values))
+        : await safeAction(() => recordVaccinationAction(values));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -93,7 +94,7 @@ export function VaccinationForm({
 
     setFormError(null);
     startTransition(async () => {
-      const result = await deleteVaccinationAction(editing.id);
+      const result = await safeAction(() => deleteVaccinationAction(editing.id));
       if (!result.ok) {
         setFormError(result.error);
         return;

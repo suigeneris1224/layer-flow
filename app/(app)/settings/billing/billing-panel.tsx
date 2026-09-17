@@ -8,6 +8,7 @@ import { StatusNote } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
 import type { BillingPeriod, SubscriptionStatus } from "@/lib/types/database";
 import { emailReceiptAction, sendPastDueReminderAction } from "./actions";
+import { safeAction } from "@/lib/client/safe-action";
 
 /**
  * Plan summary plus the two manual subscription-email buttons.
@@ -41,7 +42,9 @@ export function BillingPanel({
 
     startTransition(async () => {
       const result =
-        action === "receipt" ? await emailReceiptAction() : await sendPastDueReminderAction();
+        action === "receipt"
+          ? await safeAction(() => emailReceiptAction())
+          : await safeAction(() => sendPastDueReminderAction());
 
       if (!result.ok) {
         setError(result.error);

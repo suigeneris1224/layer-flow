@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
+import { safeAction } from "@/lib/client/safe-action";
 import { createCustomerAction, deleteCustomerAction, updateCustomerAction } from "./actions";
 
 interface CustomerOption {
@@ -67,8 +68,8 @@ export function CustomerForm({
     startTransition(async () => {
       const values = { name, phone, address, notes };
       const result = editing
-        ? await updateCustomerAction(editing.id, values)
-        : await createCustomerAction(values);
+        ? await safeAction(() => updateCustomerAction(editing.id, values))
+        : await safeAction(() => createCustomerAction(values));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -93,7 +94,7 @@ export function CustomerForm({
 
     setFormError(null);
     startTransition(async () => {
-      const result = await deleteCustomerAction(editing.id);
+      const result = await safeAction(() => deleteCustomerAction(editing.id));
       if (!result.ok) {
         setFormError(result.error);
         return;

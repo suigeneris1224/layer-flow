@@ -366,6 +366,23 @@ export async function adminApproveManualPaymentAction(paymentId: string): Promis
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + BILLING_PERIOD_DAYS[payment.billing_period]);
 
+    // Claim the row atomically -- the WHERE status='PENDING' guard, plus
+    // checking a row actually came back, is what closes the race two admins
+    // approving the same payment at once would otherwise hit: the earlier
+    // SELECT above can't stop both from proceeding, but only one UPDATE can
+    // ever match this WHERE clause. Claiming first, before touching
+    // subscriptions, means a losing second request bails here instead of
+    // granting the plan twice.
+    const { data: claimed, error: updateError } = await admin
+      .from("manual_payments")
+      .update({ status: "APPROVED", reviewed_by: user.id, reviewed_at: now.toISOString() })
+      .eq("id", paymentId)
+      .eq("status", "PENDING")
+      .select("id");
+
+    if (updateError) return describeDatabaseError(updateError, "adminApproveManualPaymentAction");
+    if (!claimed || claimed.length === 0) return failure("That payment was already reviewed.");
+
     const { error: subError } = await admin
       .from("subscriptions")
       .update({
@@ -380,13 +397,6 @@ export async function adminApproveManualPaymentAction(paymentId: string): Promis
       .eq("owner_id", payment.owner_id);
 
     if (subError) return describeDatabaseError(subError, "adminApproveManualPaymentAction");
-
-    const { error: updateError } = await admin
-      .from("manual_payments")
-      .update({ status: "APPROVED", reviewed_by: user.id, reviewed_at: now.toISOString() })
-      .eq("id", paymentId);
-
-    if (updateError) return describeDatabaseError(updateError, "adminApproveManualPaymentAction");
 
     await recordAuditLog(
       {
@@ -465,7 +475,7 @@ export async function adminRejectManualPaymentAction(
     if (payment.status !== "PENDING") return failure("That payment was already reviewed.");
 
     const now = new Date();
-    const { error: updateError } = await admin
+    const { data: claimed, error: updateError } = await admin
       .from("manual_payments")
       .update({
         status: "REJECTED",
@@ -473,9 +483,12 @@ export async function adminRejectManualPaymentAction(
         reviewed_at: now.toISOString(),
         rejection_reason: parsed.data.reason || null,
       })
-      .eq("id", paymentId);
+      .eq("id", paymentId)
+      .eq("status", "PENDING")
+      .select("id");
 
     if (updateError) return describeDatabaseError(updateError, "adminRejectManualPaymentAction");
+    if (!claimed || claimed.length === 0) return failure("That payment was already reviewed.");
 
     await recordAuditLog(
       {

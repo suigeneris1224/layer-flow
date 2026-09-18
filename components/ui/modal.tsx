@@ -12,16 +12,25 @@ import { Button } from "@/components/ui/button";
  * just promoted to a full modal for forms too big for an inline popover
  * (see app/admin/subscriptions/override-modal.tsx, the first caller).
  */
+const SIZES = {
+  md: "max-w-md",
+  lg: "max-w-lg",
+};
+
 export function Modal({
   open,
   onClose,
   title,
   children,
+  size = "md",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /** "lg" gives a dialog more room -- e.g. the image crop modal, which needs
+      space for the crop canvas. Every existing caller keeps the "md" default. */
+  size?: keyof typeof SIZES;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +67,10 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex w-full max-w-md flex-col rounded-lg border border-border bg-surface shadow-pop"
+        className={cn(
+          "flex w-full flex-col rounded-lg border border-border bg-surface shadow-pop",
+          SIZES[size]
+        )}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">{title}</h2>

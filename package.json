@@ -37,6 +37,7 @@
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-easy-crop": "^6.2.3",
     "react-hook-form": "^7.53.0",
     "recharts": "^2.13.0",
     "tailwind-merge": "^2.5.4",

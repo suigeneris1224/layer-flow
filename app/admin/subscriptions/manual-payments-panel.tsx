@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileText, Receipt, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Receipt, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
@@ -105,6 +105,13 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
                     <p className="text-xs text-muted-foreground">
                       Reference: <span className="tabular">{payment.referenceNumber}</span>
                     </p>
+                    {payment.isDuplicateReference && (
+                      <p className="mt-1 flex items-center gap-1 text-xs font-medium text-bad">
+                        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                        This reference number appears on another payment -- verify before
+                        approving.
+                      </p>
+                    )}
                     {payment.receiptSignedUrl && (
                       <a
                         href={payment.receiptSignedUrl}

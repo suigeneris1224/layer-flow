@@ -78,6 +78,15 @@ export interface PendingManualPaymentRow extends ManualPaymentRow {
   farmName: string | null;
   /** Time-limited (1 hour): the bucket is private, so this is generated per admin-panel load. */
   receiptSignedUrl: string | null;
+  /**
+   * True when this reference number appears on more than one manual_payments
+   * row (any status, any account) -- a real GCash/bank reference number is
+   * only ever used once, so a repeat is either an honest resubmission or
+   * someone reusing/guessing a reference number they observed elsewhere.
+   * Purely a signal for the admin reviewing the receipt, not an automatic
+   * rejection -- that call still needs a human looking at the actual proof.
+   */
+  isDuplicateReference: boolean;
 }
 
 interface PendingManualPaymentDbRow extends ManualPaymentDbRow {
@@ -117,6 +126,28 @@ export async function getPendingManualPayments(): Promise<PendingManualPaymentRo
   const emailById = new Map(usersResult.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
   const rows = (paymentsResult.data ?? []) as unknown as PendingManualPaymentDbRow[];
 
+  // Count every row (any status, any account) sharing each pending row's
+  // reference number -- a plain count, not scoped to PENDING, since the
+  // scam pattern this catches is reusing a number that was already approved
+  // (or rejected) somewhere else, not just a duplicate within the queue.
+  const referenceNumbers = [...new Set(rows.map((row) => row.reference_number))];
+  const duplicateCounts = new Map<string, number>();
+  if (referenceNumbers.length > 0) {
+    const { data: matches, error: dupError } = await admin
+      .from("manual_payments")
+      .select("reference_number")
+      .in("reference_number", referenceNumbers);
+
+    if (dupError) {
+      logger.error("duplicate reference lookup failed", { reason: dupError.message });
+    } else {
+      for (const match of matches ?? []) {
+        const key = (match as { reference_number: string }).reference_number;
+        duplicateCounts.set(key, (duplicateCounts.get(key) ?? 0) + 1);
+      }
+    }
+  }
+
   return Promise.all(
     rows.map(async (row) => {
       const { data: signed } = await admin.storage
@@ -136,6 +167,7 @@ export async function getPendingManualPayments(): Promise<PendingManualPaymentRo
         status: row.status,
         createdAt: row.created_at,
         receiptSignedUrl: signed?.signedUrl ?? null,
+        isDuplicateReference: (duplicateCounts.get(row.reference_number) ?? 0) > 1,
       };
     })
   );

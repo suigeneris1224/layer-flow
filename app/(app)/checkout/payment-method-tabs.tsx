@@ -34,32 +34,36 @@ export function PaymentMethodTabs({
       <div
         role="group"
         aria-label="Payment method"
-        className="inline-flex flex-col gap-2 rounded-lg border border-border bg-surface p-1 sm:flex-row"
+        className="inline-flex gap-2 rounded-lg border border-border bg-surface p-1"
       >
         <button
           type="button"
           disabled
           aria-pressed={false}
-          className="flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground opacity-60"
+          className="flex flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium text-muted-foreground opacity-60 sm:gap-2 sm:px-4"
         >
-          <CreditCard className="size-4" aria-hidden />
-          Card / GCash Automated (PayMongo)
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-            Coming soon
+          <CreditCard className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">E-wallets / Cards</span>
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+            <span className="sm:hidden">Soon</span>
+            <span className="hidden sm:inline">Coming soon</span>
           </span>
         </button>
         <button
           type="button"
           aria-pressed={method === "manual"}
           className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors",
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:gap-2 sm:px-4",
             method === "manual"
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          <QrCode className="size-4" aria-hidden />
-          Manual QR / Bank Transfer
+          <QrCode className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">
+            <span className="sm:hidden">Manual</span>
+            <span className="hidden sm:inline">Manual QR / Bank Transfer</span>
+          </span>
         </button>
       </div>
 

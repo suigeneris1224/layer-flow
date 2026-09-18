@@ -14,6 +14,8 @@ import {
   failure,
   type ActionResult,
 } from "@/lib/errors";
+import { consumeRateLimit } from "@/lib/data/rate-limit";
+import { formatRetryMessage } from "@/lib/domain/rate-limit";
 
 const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
 const RECEIPT_TYPES: Record<string, string> = {
@@ -21,6 +23,35 @@ const RECEIPT_TYPES: Record<string, string> = {
   "image/png": "png",
   "application/pdf": "pdf",
 };
+
+/**
+ * First bytes of each accepted format. `file.type` is just a client-supplied
+ * header on the multipart request -- trivially spoofed by anyone calling this
+ * action directly rather than through the file picker's `accept` attribute
+ * (a UI hint only). Checking the actual bytes closes that gap without adding
+ * a dependency.
+ */
+const FILE_SIGNATURES: Record<string, (head: Uint8Array) => boolean> = {
+  "image/jpeg": (head) => head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff,
+  "image/png": (head) =>
+    head[0] === 0x89 &&
+    head[1] === 0x50 &&
+    head[2] === 0x4e &&
+    head[3] === 0x47 &&
+    head[4] === 0x0d &&
+    head[5] === 0x0a &&
+    head[6] === 0x1a &&
+    head[7] === 0x0a,
+  "application/pdf": (head) =>
+    head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46, // "%PDF"
+};
+
+async function matchesFileSignature(file: File, mimeType: string): Promise<boolean> {
+  const check = FILE_SIGNATURES[mimeType];
+  if (!check) return false;
+  const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  return check(head);
+}
 
 /**
  * Submit a manual QR/bank transfer payment for review.
@@ -39,6 +70,11 @@ export async function submitManualPaymentAction(formData: FormData): Promise<Act
   if (!context) return failure("Set up your farm first.");
   if (!canManageBilling(context)) {
     return failure("Only the account owner can submit a payment.");
+  }
+
+  const limit = await consumeRateLimit(context.ownerId, "manual_payment");
+  if (!limit.allowed) {
+    return failure(formatRetryMessage(limit.retryAfterSeconds));
   }
 
   const parsed = manualPaymentSubmitSchema.safeParse({
@@ -62,6 +98,9 @@ export async function submitManualPaymentAction(formData: FormData): Promise<Act
   }
   if (file.size > RECEIPT_MAX_BYTES) {
     return failure("That file is larger than 5 MB. Please choose a smaller one.");
+  }
+  if (!(await matchesFileSignature(file, file.type))) {
+    return failure("That file doesn't look like a valid JPG, PNG, or PDF.");
   }
 
   try {

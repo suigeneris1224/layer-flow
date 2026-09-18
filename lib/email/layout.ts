@@ -118,7 +118,31 @@ export interface RenderEmailOptions {
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Quotes too, not just &/</>: every current call site lands this as plain
+  // text content, where quotes are harmless, but escaping them here as well
+  // means a future caller can safely reuse this for an attribute value
+  // (see escapeHtmlAttr below) without anyone having to remember a second,
+  // stricter helper exists.
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * For a value placed inside a double-quoted HTML attribute (e.g. `href="..."`),
+ * not text content. `escapeHtml` alone isn't enough there: it protects
+ * against breaking out of the attribute, but a URL should also be
+ * percent-encoded first so the two don't interact. `cta.href` is the one
+ * attribute value in this file built from a template literal rather than a
+ * static string -- every caller today only ever passes a server-built
+ * `${publicEnv.appUrl}/...` URL, never raw user text, but nothing enforced
+ * that, so this closes the gap defensively.
+ */
+function escapeHtmlAttr(url: string): string {
+  return escapeHtml(encodeURI(url));
 }
 
 function paragraph(html: string, extraStyle = ""): string {
@@ -203,7 +227,7 @@ function ctaBlock(cta: EmailCta, secondaryNote?: string): string {
       <table role="presentation" cellpadding="0" cellspacing="0">
         <tr>
           <td align="center" style="border-radius:999px;background:${EMAIL_COLORS.primary};">
-            <a href="${cta.href}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:${EMAIL_COLORS.white};text-decoration:none;border-radius:999px;">${escapeHtml(cta.label)} &rarr;</a>
+            <a href="${escapeHtmlAttr(cta.href)}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:${EMAIL_COLORS.white};text-decoration:none;border-radius:999px;">${escapeHtml(cta.label)} &rarr;</a>
           </td>
         </tr>
       </table>

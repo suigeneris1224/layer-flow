@@ -12,20 +12,29 @@ export interface RateLimitRule {
   max: number;
 }
 
-export type RateLimitAction = "login" | "signup" | "password_reset" | "invite";
+export type RateLimitAction =
+  | "login"
+  | "signup"
+  | "password_reset"
+  | "invite"
+  | "manual_payment";
 
 /**
  * Generous enough that a farmer fumbling their password, or an owner
  * re-sending a few invites, never trips these -- tight enough to blunt a
  * credential-stuffing or email-bombing script. `invite` is scoped per farm
  * (see lib/data/rate-limit.ts's call sites), not per invitee, since the goal
- * is capping how many invites one farm can fire off.
+ * is capping how many invites one farm can fire off. `manual_payment` is
+ * scoped per account owner the same way -- 5 submissions in a day covers a
+ * farmer retrying a typo'd reference number several times over, without
+ * leaving the upload+admin-review pipeline open to unbounded spam.
  */
 export const RATE_LIMITS: Record<RateLimitAction, RateLimitRule> = {
   login: { windowSeconds: 15 * 60, max: 10 },
   signup: { windowSeconds: 60 * 60, max: 5 },
   password_reset: { windowSeconds: 15 * 60, max: 3 },
   invite: { windowSeconds: 60 * 60, max: 20 },
+  manual_payment: { windowSeconds: 24 * 60 * 60, max: 5 },
 };
 
 export interface RateLimitDecision {

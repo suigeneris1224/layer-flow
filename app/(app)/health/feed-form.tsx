@@ -119,16 +119,23 @@ export function FeedForm({
       }
 
       startTransition(async () => {
-        const clientId = generateWriteId();
-        await enqueueWrite({
-          id: clientId,
-          kind: "feed_usage",
-          payload: { ...parsed.data, clientId },
-        });
-        setSuccess("Saved. It will sync when you have signal.");
-        setQuantityKg("");
-        setFeedType("");
-        setNotes("");
+        try {
+          const clientId = generateWriteId();
+          await enqueueWrite({
+            id: clientId,
+            kind: "feed_usage",
+            payload: { ...parsed.data, clientId },
+          });
+          setSuccess("Saved. It will sync when you have signal.");
+          setQuantityKg("");
+          setFeedType("");
+          setNotes("");
+        } catch {
+          // IndexedDB can be unavailable (private browsing, or blocked
+          // entirely) -- without this, that throws uncaught and crashes the
+          // page exactly where offline saving is supposed to still work.
+          setFormError("Couldn't save this on your device. Try again.");
+        }
       });
       return;
     }

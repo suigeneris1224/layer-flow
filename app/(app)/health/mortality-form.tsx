@@ -92,16 +92,22 @@ export function MortalityForm({
       }
 
       startTransition(async () => {
-        const clientId = generateWriteId();
-        await enqueueWrite({
-          id: clientId,
-          kind: "mortality",
-          payload: { ...parsed.data, clientId },
-        });
-        setSuccess("Saved. It will sync when you have signal.");
-        setQuantity("");
-        setReason("");
-        setNotes("");
+        try {
+          const clientId = generateWriteId();
+          await enqueueWrite({
+            id: clientId,
+            kind: "mortality",
+            payload: { ...parsed.data, clientId },
+          });
+          setSuccess("Saved. It will sync when you have signal.");
+          setQuantity("");
+          setReason("");
+          setNotes("");
+        } catch {
+          // Same reasoning as feed-form.tsx: IndexedDB can be unavailable
+          // (private browsing, or blocked), and that must not crash the page.
+          setFormError("Couldn't save this on your device. Try again.");
+        }
       });
       return;
     }

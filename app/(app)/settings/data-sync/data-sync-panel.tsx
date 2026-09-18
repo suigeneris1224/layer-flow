@@ -52,8 +52,14 @@ export function DataSyncPanel({ offlineEnabled }: { offlineEnabled: boolean }) {
 
   async function syncNow() {
     setSyncingNow(true);
-    await drainQueue();
-    setSyncingNow(false);
+    try {
+      await drainQueue();
+    } finally {
+      // finally, not just after the try: drainQueue only guards the network
+      // call inside it, not the IndexedDB bookkeeping around it -- if that
+      // throws, this still must run or the button spins forever.
+      setSyncingNow(false);
+    }
   }
 
   return (

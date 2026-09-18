@@ -305,16 +305,23 @@ export function ProductionForm({
      */
     if (!online && offlineEnabled) {
       startTransition(async () => {
-        await enqueueWrite({
-          id: generateWriteId(),
-          kind: "daily_production",
-          payload: parsed.data,
-        });
-        setQueuedOffline(true);
-        // Stays on this screen rather than navigating to the dashboard, which
-        // needs a connection to load anything meaningful (offline covers
-        // recording, not reading, per docs/offline-sync.md).
-        reset(emptyDay(selectedFlockId, selectedDate));
+        try {
+          await enqueueWrite({
+            id: generateWriteId(),
+            kind: "daily_production",
+            payload: parsed.data,
+          });
+          setQueuedOffline(true);
+          // Stays on this screen rather than navigating to the dashboard,
+          // which needs a connection to load anything meaningful (offline
+          // covers recording, not reading, per docs/offline-sync.md).
+          reset(emptyDay(selectedFlockId, selectedDate));
+        } catch {
+          // Same reasoning as feed-form.tsx/mortality-form.tsx: IndexedDB
+          // can be unavailable (private browsing, or blocked), and that must
+          // not crash the page.
+          setFormError("Couldn't save this on your device. Try again.");
+        }
       });
       return;
     }

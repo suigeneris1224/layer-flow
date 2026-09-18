@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
-import { ImageCropModal } from "@/components/ui/image-crop-modal";
+import { normalizeImageFile } from "@/lib/client/heic";
+import { resizeImage } from "@/lib/client/resize-image";
 import {
   removeAvatarAction,
   removeCoverAction,
@@ -48,8 +49,6 @@ export function ProfileForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<string | null>(null);
-  const [avatarCropFile, setAvatarCropFile] = useState<File | null>(null);
-  const [coverCropFile, setCoverCropFile] = useState<File | null>(null);
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -71,25 +70,27 @@ export function ProfileForm({
     });
   }
 
-  function onAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function onAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0];
+    if (!picked) return;
     // Clear the picker either way, so choosing the same file again re-fires.
     if (fileInput.current) fileInput.current.value = "";
-    setAvatarCropFile(file);
-  }
-
-  function onAvatarCropped(cropped: File) {
-    setAvatarCropFile(null);
     setFormError(null);
     setSuccess(null);
 
-    const data = new FormData();
-    data.set("avatar", cropped);
-
     startTransition(async () => {
-      const result = await safeAction(() => uploadAvatarAction(data));
+      let file: File;
+      try {
+        file = await resizeImage(await normalizeImageFile(picked), 512);
+      } catch {
+        setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
+        return;
+      }
 
+      const data = new FormData();
+      data.set("avatar", file);
+
+      const result = await safeAction(() => uploadAvatarAction(data));
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -115,24 +116,29 @@ export function ProfileForm({
     });
   }
 
-  function onCoverChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function onCoverChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0];
+    if (!picked) return;
     if (coverFileInput.current) coverFileInput.current.value = "";
-    setCoverCropFile(file);
-  }
-
-  function onCoverCropped(cropped: File) {
-    setCoverCropFile(null);
     setFormError(null);
     setSuccess(null);
 
-    const data = new FormData();
-    data.set("cover", cropped);
-
     startTransition(async () => {
-      const result = await safeAction(() => uploadCoverAction(data));
+      let file: File;
+      try {
+        // 4:1 banner -- capped on the long edge only, so a portrait photo
+        // isn't force-cropped square; the display frame already clips it
+        // with CSS `object-cover`.
+        file = await resizeImage(await normalizeImageFile(picked), 1600);
+      } catch {
+        setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
+        return;
+      }
 
+      const data = new FormData();
+      data.set("cover", file);
+
+      const result = await safeAction(() => uploadCoverAction(data));
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -190,7 +196,7 @@ export function ProfileForm({
                 ref={coverFileInput}
                 id="cover"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                 className="sr-only"
                 onChange={onCoverChange}
               />
@@ -253,7 +259,7 @@ export function ProfileForm({
                 ref={fileInput}
                 id="avatar"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                 className="sr-only"
                 onChange={onAvatarChange}
               />
@@ -326,25 +332,6 @@ export function ProfileForm({
           </Button>
         </div>
       </form>
-
-      <ImageCropModal
-        file={avatarCropFile}
-        aspect={1}
-        round
-        outputWidth={512}
-        outputHeight={512}
-        onCancel={() => setAvatarCropFile(null)}
-        onCropped={onAvatarCropped}
-      />
-
-      <ImageCropModal
-        file={coverCropFile}
-        aspect={4}
-        outputWidth={1600}
-        outputHeight={400}
-        onCancel={() => setCoverCropFile(null)}
-        onCropped={onCoverCropped}
-      />
     </Panel>
   );
 }

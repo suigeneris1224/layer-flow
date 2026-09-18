@@ -9,6 +9,7 @@ import { canManageFarmSettings } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
 import { getFarmCountForUser } from "@/lib/data/farms";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
+import { resolveUploadType } from "@/lib/upload/file-signature";
 import { createFarmSchema, toFieldErrors, updateFarmSchema } from "@/lib/validation/schemas";
 import {
   describeDatabaseError,
@@ -90,7 +91,7 @@ export async function uploadFarmPhotoAction(formData: FormData): Promise<ActionR
     return failure("Choose an image to upload.");
   }
 
-  const extension = FARM_PHOTO_TYPES[file.type];
+  const extension = await resolveUploadType(file, FARM_PHOTO_TYPES);
   if (!extension) {
     return failure("Use a JPG, PNG or WebP image.");
   }

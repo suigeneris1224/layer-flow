@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
+import { resolveUploadType } from "@/lib/upload/file-signature";
 import { securePasswordField, toFieldErrors, updateProfileSchema } from "@/lib/validation/schemas";
 import {
   describeAuthError,
@@ -102,7 +103,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
     return failure("Choose an image to upload.");
   }
 
-  const extension = AVATAR_TYPES[file.type];
+  const extension = await resolveUploadType(file, AVATAR_TYPES);
   if (!extension) {
     return failure("Use a JPG, PNG or WebP image.");
   }
@@ -183,7 +184,7 @@ export async function uploadCoverAction(formData: FormData): Promise<ActionResul
     return failure("Choose an image to upload.");
   }
 
-  const extension = COVER_TYPES[file.type];
+  const extension = await resolveUploadType(file, COVER_TYPES);
   if (!extension) {
     return failure("Use a JPG, PNG or WebP image.");
   }

@@ -9,10 +9,12 @@ import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { MANUAL_PAYMENT_METHODS } from "@/lib/subscriptions/manual-payment-config";
 import type { BillingPeriod, SubscriptionPlan } from "@/lib/types/database";
+import { looksLikeHeic, normalizeImageFile } from "@/lib/client/heic";
 import { safeAction } from "@/lib/client/safe-action";
 import { submitManualPaymentAction } from "./actions";
 
-const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf";
+const RECEIPT_ACCEPT =
+  ".jpg,.jpeg,.png,.pdf,.heic,.heif,image/jpeg,image/png,application/pdf,image/heic,image/heif";
 const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
 
 /**
@@ -53,6 +55,7 @@ export function ManualQrPayment({
   const [payerName, setPayerName] = useState(payerNameDefault);
   const [referenceNumber, setReferenceNumber] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -72,20 +75,40 @@ export function ManualQrPayment({
     }
   }
 
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
+  async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0];
+    if (!picked) {
       setFileName(null);
+      setReceiptFile(null);
       return;
     }
+
+    // PDFs pass through untouched; a HEIC photo (an iPhone's default camera
+    // format) is converted to JPEG here, since neither the admin review
+    // panel's thumbnail nor most non-Apple browsers can render HEIC.
+    let file = picked;
+    if (looksLikeHeic(picked)) {
+      try {
+        file = await normalizeImageFile(picked);
+      } catch {
+        setError("That photo's format isn't supported. Please try a JPG, PNG, or PDF.");
+        event.target.value = "";
+        setFileName(null);
+        setReceiptFile(null);
+        return;
+      }
+    }
+
     if (file.size > RECEIPT_MAX_BYTES) {
       setError("That file is larger than 5 MB. Please choose a smaller one.");
       event.target.value = "";
       setFileName(null);
+      setReceiptFile(null);
       return;
     }
     setError(null);
     setFileName(file.name);
+    setReceiptFile(file);
   }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -93,9 +116,16 @@ export function ManualQrPayment({
     setError(null);
     setFieldErrors({});
 
+    if (!receiptFile) {
+      setError("Attach your proof of payment.");
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     formData.set("plan", plan);
     formData.set("billingPeriod", billingPeriod);
+    // Overrides the native input's raw file with the (possibly HEIC-converted) one above.
+    formData.set("receipt", receiptFile);
 
     startTransition(async () => {
       const result = await safeAction(() => submitManualPaymentAction(formData));

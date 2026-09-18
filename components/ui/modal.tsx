@@ -28,8 +28,7 @@ export function Modal({
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  /** "lg" gives a dialog more room -- e.g. the image crop modal, which needs
-      space for the crop canvas. Every existing caller keeps the "md" default. */
+  /** "lg" gives a dialog more room. Every existing caller keeps the "md" default. */
   size?: keyof typeof SIZES;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -44,11 +43,21 @@ export function Modal({
 
     // Body scroll is locked while a modal covers the page, restored on close
     // -- otherwise the page behind it scrolls along with the dialog on touch.
+    // `overflow: hidden` alone is a well-known no-op for touch scrolling on
+    // iOS Safari, which still lets the page rubber-band/scroll underneath a
+    // finger dragging inside the modal (e.g. to reposition a photo crop) --
+    // a non-passive `touchmove` listener is needed to actually stop it there.
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    const onTouchMove = (event: TouchEvent) => {
+      if (!panelRef.current?.contains(event.target as Node)) event.preventDefault();
+    };
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("touchmove", onTouchMove);
       document.body.style.overflow = previousOverflow;
     };
   }, [open, onClose]);

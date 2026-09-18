@@ -25,7 +25,7 @@
   // `wrangler secret put`), never here. See docs/deployment.md.
   "vars": {
     "ADMIN_EMAILS": "marlonsinadjan89@gmail.com",
-    "EMAIL_FROM": "marlonsinadjan89@gmail.com",
+    "EMAIL_FROM": "LayerFlow <marlonsinadjan89@gmail.com>",
     "EMAIL_PROVIDER": "brevo",
     // Safe to commit -- meant to be public/embedded in the client bundle.
     // Needed at runtime too (e.g. next.config.ts's CSP header generation),

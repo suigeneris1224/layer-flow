@@ -73,7 +73,12 @@ function icon(
   { size = 20, tone = "primary" }: { size?: number; tone?: EmailIconTone } = {}
 ): string {
   const src = `${publicEnv.appUrl}/icons/email/${name}-${tone}.png`;
-  return `<img src="${src}" width="${size}" height="${size}" alt="" style="display:block;border:0;width:${size}px;height:${size}px;" />`;
+  // margin:0 auto alongside display:block: a block-level image ignores its
+  // container's align="center" (that only centers inline content), which is
+  // why the hero badge's icon was leaning left in its circle -- this is the
+  // standard cross-client fix (Outlook's Word engine, Gmail, Apple Mail all
+  // respect it).
+  return `<img src="${src}" width="${size}" height="${size}" alt="" style="display:block;margin:0 auto;border:0;width:${size}px;height:${size}px;" />`;
 }
 
 export interface EmailInfoRow {
@@ -257,8 +262,8 @@ function brandMessageBlock(): string {
     <td align="center" class="lf-px" style="padding:18px 40px 32px;text-align:center;">
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
         <tr>
-          <td valign="middle">${icon("leaf", { size: 15, tone: "medium" })}</td>
-          <td valign="middle" style="padding-left:6px;font-size:12.5px;line-height:1.6;color:${EMAIL_COLORS.muted};text-align:center;">
+          <td valign="top">${icon("leaf", { size: 15, tone: "medium" })}</td>
+          <td valign="top" style="padding-left:6px;font-size:12.5px;line-height:1.6;color:${EMAIL_COLORS.muted};text-align:center;">
             Every farm on Layer Flow is one less spreadsheet and one clearer picture of what the flock actually earns.
           </td>
         </tr>

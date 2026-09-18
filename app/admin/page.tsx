@@ -100,7 +100,7 @@ export default async function AdminOverviewPage() {
 
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground">Annual plans</h2>
-        <div className="mt-2 grid grid-cols-3 gap-3">
+        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Panel title="Annual accounts" bodyClassName="p-4">
             <p className="text-2xl font-bold tabular">{annualRows.length}</p>
             <p className="text-xs text-muted-foreground">

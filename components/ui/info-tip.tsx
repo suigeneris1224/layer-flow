@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,33 @@ export function InfoTip({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Horizontal offset (px, relative to the wrapper's own left edge) the
+  // tooltip is nudged by so it stays fully on-screen. `null` until measured,
+  // which renders as the plain `left-0` default for one frame.
+  //
+  // A left/right binary flip (an earlier version of this fix) isn't enough:
+  // a trigger sitting in the *middle* of a narrow phone screen can have too
+  // little room on both sides for the full tooltip width, so "flip to the
+  // other side" just moves the overflow from one edge to the other instead
+  // of fixing it. Clamping the actual position is the general fix -- it
+  // works whether the trigger is near an edge or dead center.
+  const [nudge, setNudge] = useState<number | null>(null);
   const wrapper = useRef<HTMLSpanElement>(null);
+
+  // Runs before the browser paints, so the tooltip never flashes at the
+  // un-nudged position for a frame -- it appears already in its final spot.
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const TOOLTIP_WIDTH = 256; // w-64
+    const EDGE_MARGIN = 16;
+    const rect = wrapper.current?.getBoundingClientRect();
+    if (rect) {
+      const maxLeft = Math.max(EDGE_MARGIN, window.innerWidth - TOOLTIP_WIDTH - EDGE_MARGIN);
+      const clampedViewportLeft = Math.min(Math.max(rect.left, EDGE_MARGIN), maxLeft);
+      setNudge(clampedViewportLeft - rect.left);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -58,6 +84,7 @@ export function InfoTip({
       {open && (
         <div
           role="tooltip"
+          style={nudge !== null ? { left: nudge } : undefined}
           className="absolute left-0 top-full z-40 mt-1.5 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-2.5 text-xs font-normal leading-relaxed text-muted-foreground shadow-pop"
         >
           {children}

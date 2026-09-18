@@ -71,7 +71,7 @@ export function AdminMobileNav() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm transition-colors",
+              "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm transition-colors",
               active
                 ? "border-primary bg-primary font-medium text-primary-foreground"
                 : "border-input bg-surface hover:border-foreground/30 hover:bg-muted"

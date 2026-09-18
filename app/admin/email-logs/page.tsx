@@ -74,7 +74,7 @@ export default async function AdminEmailLogsPage({
             </StatusNote>
           </div>
         ) : (
-          <div className="scroll-x">
+          <div className="scroll-x-flush">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <caption className="sr-only">Brevo delivery events, newest first</caption>
               <thead>
@@ -104,7 +104,7 @@ export default async function AdminEmailLogsPage({
         <EmptyState icon={Mail} title="No emails sent yet" message="Nothing has gone out yet." />
       ) : (
         <Panel title={`Sent (last ${totalItems})`} bodyClassName="p-0">
-          <div className="scroll-x">
+          <div className="scroll-x-flush">
             <table className="w-full min-w-[40rem] border-collapse text-sm">
               <caption className="sr-only">Subscription emails sent, newest first</caption>
               <thead>

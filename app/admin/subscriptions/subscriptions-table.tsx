@@ -14,7 +14,7 @@ export function SubscriptionsTable({ rows }: { rows: AdminAccountRowData[] }) {
 
   return (
     <>
-      <div className="scroll-x">
+      <div className="scroll-x-flush">
         <table className="w-full min-w-[48rem] border-collapse text-sm">
           <caption className="sr-only">Every account&apos;s subscription, soonest-expiring first</caption>
           <thead>

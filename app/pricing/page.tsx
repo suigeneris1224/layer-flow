@@ -59,9 +59,16 @@ export default function PricingPage() {
         <section aria-label="Plan comparison" className="mt-10">
           <h2 className="text-xl font-semibold">Compare plans</h2>
 
-          {/* Wide table on a narrow phone: scroll the table, never the page. */}
-          <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[32rem] border-collapse bg-surface text-sm">
+          {/* Wide table on a narrow phone: scroll the table, never the page.
+              scroll-x-flush gives it the same edge-fade "more to see" cue as
+              every other wide table, without .scroll-x's negative margin --
+              the border here lives on this div itself, not an outer Panel.
+              bg-surface moved here from the table: the fade needs to show
+              through an otherwise-transparent table, the same way every
+              other .scroll-x table in the app relies on its Panel ancestor's
+              surface fill instead of setting its own. */}
+          <div className="mt-3 scroll-x-flush rounded-lg border border-border bg-surface">
+            <table className="w-full min-w-[32rem] border-collapse text-sm">
               <caption className="sr-only">Features and limits by plan</caption>
               <thead>
                 <tr className="border-b border-border">

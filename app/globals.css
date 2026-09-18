@@ -250,8 +250,8 @@
    * self-cancels exactly when there's nothing left to scroll that way,
    * with no JS or scroll-position tracking needed.
    */
-  .scroll-x {
-    @apply -mx-4 overflow-x-auto px-4;
+  .scroll-x,
+  .scroll-x-flush {
     background-repeat: no-repeat;
     background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
     background-position: left center, right center, left center, right center;
@@ -261,5 +261,21 @@
       linear-gradient(to left, hsl(var(--surface)), hsl(var(--surface) / 0)),
       linear-gradient(to right, hsl(var(--foreground) / 0.16), hsl(var(--foreground) / 0)),
       linear-gradient(to left, hsl(var(--foreground) / 0.16), hsl(var(--foreground) / 0));
+  }
+
+  .scroll-x {
+    @apply -mx-4 overflow-x-auto px-4;
+  }
+
+  /*
+   * Same edge-fade indicator as .scroll-x, for a table that's already flush
+   * against its container -- a Panel with `bodyClassName="p-0"`, or a div
+   * that already carries its own border/rounding -- so there's no padding to
+   * cancel via negative margin. Using .scroll-x's -mx-4 in one of these
+   * pushes the scroll area past the container's actual edge instead of
+   * keeping it contained.
+   */
+  .scroll-x-flush {
+    @apply overflow-x-auto;
   }
 }

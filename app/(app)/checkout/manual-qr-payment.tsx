@@ -2,12 +2,11 @@
 
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { Check, Copy, UploadCloud } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
-import { cn } from "@/lib/utils";
 import { MANUAL_PAYMENT_METHODS } from "@/lib/subscriptions/manual-payment-config";
 import type { BillingPeriod, SubscriptionPlan } from "@/lib/types/database";
 import { safeAction } from "@/lib/client/safe-action";
@@ -15,6 +14,28 @@ import { submitManualPaymentAction } from "./actions";
 
 const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf";
 const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Hidden by default, matching how GCash itself displays a recipient on a
+ * payment request or QR share -- full details are one tap away, not gone,
+ * since this app's "Copy" button and manual bank/InstaPay senders still need
+ * the real number to actually send money. Masking is a privacy default for
+ * anyone glancing at the screen, not an access control.
+ */
+function maskAccountName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return parts[0] ?? name;
+  const lastInitial = parts[parts.length - 1]?.[0]?.toUpperCase() ?? "";
+  return `${parts[0]} ${lastInitial}.`;
+}
+
+function maskAccountNumber(number: string): string {
+  const digits = number.replace(/\s+/g, "");
+  if (digits.length <= 6) return number;
+  const start = digits.slice(0, 4);
+  const end = digits.slice(-2);
+  return `${start} ${"*".repeat(digits.length - 6)} ${end}`;
+}
 
 export function ManualQrPayment({
   plan,
@@ -27,8 +48,8 @@ export function ManualQrPayment({
   payerNameDefault: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [methodId, setMethodId] = useState(MANUAL_PAYMENT_METHODS[0].id);
   const [copied, setCopied] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [payerName, setPayerName] = useState(payerNameDefault);
   const [referenceNumber, setReferenceNumber] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -37,7 +58,9 @@ export function ManualQrPayment({
   const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const method = MANUAL_PAYMENT_METHODS.find((m) => m.id === methodId) ?? MANUAL_PAYMENT_METHODS[0];
+  // Exactly one payment method -- no picker needed. See
+  // lib/subscriptions/manual-payment-config.ts.
+  const method = MANUAL_PAYMENT_METHODS[0];
 
   async function copyAccountNumber() {
     try {
@@ -99,25 +122,6 @@ export function ManualQrPayment({
   return (
     <Panel title="Manual QR / Bank Transfer">
       <div className="flex flex-col gap-4">
-        <div role="group" aria-label="Payment channel" className="flex flex-wrap gap-2">
-          {MANUAL_PAYMENT_METHODS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              aria-pressed={m.id === methodId}
-              onClick={() => setMethodId(m.id)}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-                m.id === methodId
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
         <div className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center">
           <Image
             src={method.qrImageSrc}
@@ -130,12 +134,16 @@ export function ManualQrPayment({
           <dl className="flex flex-1 flex-col gap-2 text-sm">
             <div>
               <dt className="text-muted-foreground">Account name</dt>
-              <dd className="font-medium">{method.accountName}</dd>
+              <dd className="font-medium">
+                {revealed ? method.accountName : maskAccountName(method.accountName)}
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{method.label}</dt>
               <dd className="flex items-center gap-2 font-medium">
-                <span className="tabular">{method.accountNumber}</span>
+                <span className="tabular">
+                  {revealed ? method.accountNumber : maskAccountNumber(method.accountNumber)}
+                </span>
                 <Button
                   type="button"
                   variant="outline"
@@ -152,6 +160,18 @@ export function ManualQrPayment({
                 </Button>
               </dd>
             </div>
+            <button
+              type="button"
+              onClick={() => setRevealed((value) => !value)}
+              className="mt-1 flex w-fit items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+            >
+              {revealed ? (
+                <EyeOff className="size-3.5" aria-hidden />
+              ) : (
+                <Eye className="size-3.5" aria-hidden />
+              )}
+              {revealed ? "Hide full details" : "Show full details"}
+            </button>
           </dl>
         </div>
 

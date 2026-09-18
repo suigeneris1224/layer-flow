@@ -3,8 +3,12 @@
  *
  * Static, like lib/subscriptions/plans.ts's PLANS -- there is exactly one set
  * of receiving accounts for the whole platform, not one per plan or per farm.
- * Fill in the real account details and drop the QR image(s) under /public
+ * Fill in the real account details and drop the QR image under /public
  * before shipping this to real customers.
+ *
+ * One QR code, not one per channel -- `MANUAL_PAYMENT_METHODS` stays an
+ * array (not a single object) so app/(app)/checkout/manual-qr-payment.tsx
+ * doesn't need reshaping if a second method is ever genuinely needed later.
  */
 
 export interface ManualPaymentMethod {
@@ -12,30 +16,16 @@ export interface ManualPaymentMethod {
   label: string;
   accountName: string;
   accountNumber: string;
-  /** Path under /public, e.g. "/payments/gcash-qr.png". */
+  /** Path under /public, e.g. "/payments/qr.png". */
   qrImageSrc: string;
 }
 
 export const MANUAL_PAYMENT_METHODS: ManualPaymentMethod[] = [
   {
-    id: "gcash",
-    label: "GCash",
+    id: "qr",
+    label: "Gcash QR",
     accountName: "Marlon Sinadjan",
     accountNumber: "0927 365 3513",
-    qrImageSrc: "/payments/gcash-qr.png",
-  },
-  {
-    id: "maya",
-    label: "Maya",
-    accountName: "Marlon Sinadjan",
-    accountNumber: "0927 365 3513",
-    qrImageSrc: "/payments/maya-qr.png",
-  },
-  {
-    id: "bank",
-    label: "Bank Transfer",
-    accountName: "Marlon Sinadjan",
-    accountNumber: "0012 3456 7890",
-    qrImageSrc: "/payments/bank-qr.png",
+    qrImageSrc: "/payments/qr.png",
   },
 ];

@@ -31,6 +31,7 @@ export type SubscriptionPlan = Public["Enums"]["subscription_plan"];
 export type SubscriptionStatus = Public["Enums"]["subscription_status"];
 export type BillingPeriod = Public["Enums"]["billing_period"];
 export type ManualPaymentStatus = Public["Enums"]["manual_payment_status"];
+export type AccountDeletionStatus = Public["Enums"]["account_deletion_status"];
 
 // ---------------------------------------------------------------------------
 // Rows

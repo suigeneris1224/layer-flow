@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { BILLING_PERIOD_DAYS } from "@/lib/subscriptions/plans";
 import {
+  accountDeletionRejectSchema,
   addBetaTesterSchema,
   devSetSubscriptionSchema,
   manualPaymentRejectSchema,
@@ -22,6 +23,8 @@ import {
 } from "@/lib/errors";
 import { sendEmail } from "@/lib/email/client";
 import {
+  buildAccountDeletionCompletedEmail,
+  buildAccountDeletionRejectedEmail,
   buildManualPaymentApprovedEmail,
   buildManualPaymentRejectedEmail,
   buildSupportReplyEmail,
@@ -558,5 +561,210 @@ export async function removeBetaTesterAction(email: string): Promise<ActionResul
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "removeBetaTesterAction");
+  }
+}
+
+/** Remove every object under `<bucket>/<prefix>/` -- storage has no cascade
+ *  relationship with Postgres rows, so a farm/account deletion has to clear
+ *  it out explicitly or the files become permanently orphaned. */
+async function removeStorageFolder(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  bucket: string,
+  prefix: string
+): Promise<void> {
+  const { data: files } = await admin.storage.from(bucket).list(prefix);
+  if (!files || files.length === 0) return;
+  await admin.storage.from(bucket).remove(files.map((file) => `${prefix}/${file.name}`));
+}
+
+/**
+ * Approve a pending account deletion request: the actual, irreversible work.
+ *
+ * Order matters. `farms.owner_id` is `on delete restrict`
+ * (supabase/migrations/20250101000000_core.sql), so every farm the requester
+ * owns must be gone before `auth.admin.deleteUser` can succeed. Deleting a
+ * farm row cascades everything farm-scoped in one statement -- houses,
+ * flocks, production, sales, expenses, egg sizes/inventory, customers,
+ * notifications, alert thresholds, farm members/invitations, support
+ * requests, subscriptions -- confirmed safe against the RESTRICT edges inside
+ * that subgraph (they're all between two tables that both cascade from the
+ * same farm). Storage is untouched by any of this and must be cleared
+ * explicitly, both here and for the user's own avatar/cover/receipts.
+ */
+export async function adminApproveAccountDeletionAction(requestId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { data: request, error: fetchError } = await admin
+      .from("account_deletion_requests")
+      .select("id, owner_id, email, status")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (fetchError) return describeDatabaseError(fetchError, "adminApproveAccountDeletionAction");
+    if (!request) return failure("That request no longer exists.");
+    if (request.status !== "PENDING") return failure("That request was already reviewed.");
+    if (!request.owner_id) return failure("This account no longer exists -- nothing left to delete.");
+
+    const ownerId = request.owner_id;
+
+    const { data: farms, error: farmsError } = await admin
+      .from("farms")
+      .select("id")
+      .eq("owner_id", ownerId);
+
+    if (farmsError) return describeDatabaseError(farmsError, "adminApproveAccountDeletionAction");
+
+    for (const farm of farms ?? []) {
+      await removeStorageFolder(admin, "farm-photos", farm.id);
+      const { error: farmDeleteError } = await admin.from("farms").delete().eq("id", farm.id);
+      if (farmDeleteError) {
+        return describeDatabaseError(farmDeleteError, "adminApproveAccountDeletionAction");
+      }
+    }
+
+    await removeStorageFolder(admin, "avatars", ownerId);
+    await removeStorageFolder(admin, "covers", ownerId);
+    await removeStorageFolder(admin, "manual-payment-receipts", ownerId);
+
+    logger.warn("account deleted", {
+      ownerId,
+      email: request.email,
+      farmCount: (farms ?? []).length,
+    });
+
+    // Best-effort, and deliberately before deleteUser -- this is the last
+    // moment an email can reach this address through the app.
+    const completedEmail = buildAccountDeletionCompletedEmail();
+    const sent = await sendEmail({
+      to: { email: request.email },
+      subject: completedEmail.subject,
+      htmlContent: completedEmail.html,
+      textContent: completedEmail.text,
+      tags: ["account_deletion_completed"],
+    });
+    if (!sent.ok) {
+      logger.warn("account deletion completed email failed", { reason: sent.error });
+    }
+
+    const { error: deleteUserError } = await admin.auth.admin.deleteUser(ownerId);
+    if (deleteUserError) {
+      logger.error("auth user deletion failed after farm cleanup", {
+        ownerId,
+        reason: deleteUserError.message,
+      });
+      return failure(
+        "Farm data was removed, but the account itself couldn't be deleted. Check the server logs."
+      );
+    }
+
+    // owner_id is already null by now (on delete set null cascaded it) --
+    // this row is the surviving audit trail that the request existed and was
+    // handled, matched by id, not owner_id.
+    const { error: updateError } = await admin
+      .from("account_deletion_requests")
+      .update({ status: "COMPLETED", reviewed_by: user.id, reviewed_at: new Date().toISOString() })
+      .eq("id", requestId);
+
+    if (updateError) {
+      logger.warn("account deletion request status update failed", {
+        reason: updateError.message,
+      });
+    }
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.ACCOUNT_DELETION_APPROVED,
+        entityType: "account_deletion_request",
+        entityId: requestId,
+        metadata: { deletedEmail: request.email, farmCount: (farms ?? []).length },
+      },
+      admin
+    );
+
+    revalidatePath("/admin/subscriptions");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "adminApproveAccountDeletionAction");
+  }
+}
+
+/** Reject a pending account deletion request. Touches no data. */
+export async function adminRejectAccountDeletionAction(
+  requestId: string,
+  input: unknown
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isPlatformAdmin(user.email)) return failure("Not authorized.");
+
+  const parsed = accountDeletionRejectSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+
+    const { data: request, error: fetchError } = await admin
+      .from("account_deletion_requests")
+      .select("id, email, status")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (fetchError) return describeDatabaseError(fetchError, "adminRejectAccountDeletionAction");
+    if (!request) return failure("That request no longer exists.");
+    if (request.status !== "PENDING") return failure("That request was already reviewed.");
+
+    const now = new Date();
+    const { data: claimed, error: updateError } = await admin
+      .from("account_deletion_requests")
+      .update({
+        status: "REJECTED",
+        reviewed_by: user.id,
+        reviewed_at: now.toISOString(),
+        rejection_reason: parsed.data.reason || null,
+      })
+      .eq("id", requestId)
+      .eq("status", "PENDING")
+      .select("id");
+
+    if (updateError) return describeDatabaseError(updateError, "adminRejectAccountDeletionAction");
+    if (!claimed || claimed.length === 0) return failure("That request was already reviewed.");
+
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: user.id,
+        action: AUDIT_ACTIONS.ACCOUNT_DELETION_REJECTED,
+        entityType: "account_deletion_request",
+        entityId: requestId,
+        metadata: { reason: parsed.data.reason || null },
+      },
+      admin
+    );
+
+    const email = buildAccountDeletionRejectedEmail({ reason: parsed.data.reason || undefined });
+    const sent = await sendEmail({
+      to: { email: request.email },
+      subject: email.subject,
+      htmlContent: email.html,
+      textContent: email.text,
+      tags: ["account_deletion_rejected"],
+    });
+    if (!sent.ok) {
+      logger.warn("account deletion rejection email failed", { reason: sent.error });
+    }
+
+    revalidatePath("/admin/subscriptions");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "adminRejectAccountDeletionAction");
   }
 }

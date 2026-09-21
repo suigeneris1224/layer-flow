@@ -3,6 +3,8 @@ import { EXPENSE_CATEGORY_LABELS } from "@/lib/domain/expenses";
 import { money, type CsvColumn } from "@/lib/export/csv";
 import type { SaleEntry } from "@/lib/data/sales";
 import type { ExpenseEntry } from "@/lib/data/expenses";
+import { PLANS } from "@/lib/subscriptions/plans";
+import type { ManualPaymentHistoryRow } from "@/lib/data/manual-payments";
 
 /**
  * The shape each dataset takes in a spreadsheet.
@@ -162,5 +164,62 @@ export function expensesToRows(
     flock: expense.flockName,
     amount: expense.amount,
     currency,
+  }));
+}
+
+export interface PaymentHistoryRow {
+  submittedDate: string;
+  paymentId: string;
+  payerName: string;
+  farm: string | null;
+  ownerEmail: string | null;
+  plan: string;
+  billingPeriod: string;
+  amount: number;
+  referenceNumber: string;
+  paymentNote: string | null;
+  status: string;
+  reviewedDate: string | null;
+  currency: string;
+}
+
+export const MANUAL_PAYMENT_HISTORY_COLUMNS: readonly CsvColumn<PaymentHistoryRow>[] = [
+  { header: "Submitted date", value: (row) => row.submittedDate },
+  { header: "Payment ID", value: (row) => row.paymentId },
+  { header: "Payer name", value: (row) => row.payerName },
+  { header: "Farm", value: (row) => row.farm },
+  { header: "Owner email", value: (row) => row.ownerEmail },
+  { header: "Plan", value: (row) => row.plan },
+  { header: "Billing period", value: (row) => row.billingPeriod },
+  { header: "Amount", value: (row) => money(row.amount), numeric: true },
+  { header: "Currency", value: (row) => row.currency },
+  { header: "Reference number", value: (row) => row.referenceNumber },
+  { header: "Payment note", value: (row) => row.paymentNote },
+  { header: "Status", value: (row) => row.status },
+  { header: "Reviewed date", value: (row) => row.reviewedDate },
+];
+
+/**
+ * A cross-tenant dataset -- unlike sales/expenses, `currency` isn't a single
+ * farm's setting, so it's fixed at PHP here: every manual payment amount
+ * (lib/subscriptions/plans.ts's priceCentavosFor) is quoted in PHP already.
+ */
+export function manualPaymentHistoryToRows(
+  payments: readonly ManualPaymentHistoryRow[]
+): PaymentHistoryRow[] {
+  return payments.map((payment) => ({
+    submittedDate: payment.createdAt,
+    paymentId: payment.id,
+    payerName: payment.payerName,
+    farm: payment.farmName,
+    ownerEmail: payment.ownerEmail,
+    plan: PLANS[payment.plan].name,
+    billingPeriod: payment.billingPeriod === "ANNUAL" ? "Annual" : "Monthly",
+    amount: payment.amountCentavos / 100,
+    referenceNumber: payment.referenceNumber,
+    paymentNote: payment.paymentNote,
+    status: payment.status,
+    reviewedDate: payment.reviewedAt,
+    currency: "PHP",
   }));
 }

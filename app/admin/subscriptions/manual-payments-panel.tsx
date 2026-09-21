@@ -66,29 +66,29 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {payments.map((payment) => (
-              <li key={payment.id} className="flex flex-col gap-3 py-3 first:pt-0 sm:flex-row">
-                {payment.receiptSignedUrl && (
-                  <a
-                    href={payment.receiptSignedUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted"
-                  >
-                    {/^.*\.pdf(\?|$)/i.test(payment.receiptSignedUrl) ? (
-                      <FileText className="size-8 text-muted-foreground" aria-hidden />
-                    ) : (
-                      // A short-lived Supabase signed URL isn't worth next/image's remote-pattern config for a thumbnail this small.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={payment.receiptSignedUrl}
-                        alt={`Proof of payment from ${payment.payerName}`}
-                        className="size-full object-cover"
-                      />
-                    )}
-                  </a>
-                )}
+              <li key={payment.id} className="flex flex-col gap-3 py-3 first:pt-0">
+                <div className="flex gap-3">
+                  {payment.receiptSignedUrl && (
+                    <a
+                      href={payment.receiptSignedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted sm:size-20"
+                    >
+                      {/^.*\.pdf(\?|$)/i.test(payment.receiptSignedUrl) ? (
+                        <FileText className="size-8 text-muted-foreground" aria-hidden />
+                      ) : (
+                        // A short-lived Supabase signed URL isn't worth next/image's remote-pattern config for a thumbnail this small.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={payment.receiptSignedUrl}
+                          alt={`Proof of payment from ${payment.payerName}`}
+                          className="size-full object-cover"
+                        />
+                      )}
+                    </a>
+                  )}
 
-                <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{payment.payerName}</p>
                     <p className="text-xs text-muted-foreground">
@@ -105,6 +105,12 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
                     <p className="text-xs text-muted-foreground">
                       Reference: <span className="tabular">{payment.referenceNumber}</span>
                     </p>
+                    {payment.paymentNote && (
+                      <p className="text-xs text-muted-foreground">
+                        Expected note: <span className="tabular">{payment.paymentNote}</span> --
+                        compare against GCash&apos;s incoming note.
+                      </p>
+                    )}
                     {payment.isDuplicateReference && (
                       <p className="mt-1 flex items-center gap-1 text-xs font-medium text-bad">
                         <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
@@ -124,30 +130,32 @@ export function ManualPaymentsPanel({ payments }: { payments: PendingManualPayme
                       </a>
                     )}
                   </div>
+                </div>
 
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      loading={pending && actingId === payment.id}
-                      disabled={pending}
-                      onClick={() => onReject(payment)}
-                    >
-                      <XCircle className="size-4" aria-hidden />
-                      Reject
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      loading={pending && actingId === payment.id}
-                      disabled={pending}
-                      onClick={() => onApprove(payment)}
-                    >
-                      <CheckCircle2 className="size-4" aria-hidden />
-                      Approve
-                    </Button>
-                  </div>
+                <div className="flex gap-2 sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    className="flex-1 sm:flex-none"
+                    loading={pending && actingId === payment.id}
+                    disabled={pending}
+                    onClick={() => onReject(payment)}
+                  >
+                    <XCircle className="size-4" aria-hidden />
+                    Reject
+                  </Button>
+                  <Button
+                    type="button"
+                    size="md"
+                    className="flex-1 sm:flex-none"
+                    loading={pending && actingId === payment.id}
+                    disabled={pending}
+                    onClick={() => onApprove(payment)}
+                  >
+                    <CheckCircle2 className="size-4" aria-hidden />
+                    Approve
+                  </Button>
                 </div>
               </li>
             ))}

@@ -43,14 +43,17 @@ export function ManualQrPayment({
   plan,
   billingPeriod,
   payerNameDefault,
+  paymentNote,
 }: {
   plan: SubscriptionPlan;
   billingPeriod: BillingPeriod;
   amountCentavos: number;
   payerNameDefault: string;
+  /** Stable per-account code from generatePaymentNote -- see lib/domain/manual-payment-note.ts. */
+  paymentNote: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<"account" | "note" | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [payerName, setPayerName] = useState(payerNameDefault);
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -65,13 +68,13 @@ export function ManualQrPayment({
   // lib/subscriptions/manual-payment-config.ts.
   const method = MANUAL_PAYMENT_METHODS[0];
 
-  async function copyAccountNumber() {
+  async function copyToClipboard(value: string, field: "account" | "note") {
     try {
-      await navigator.clipboard.writeText(method.accountNumber);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      window.setTimeout(() => setCopiedField(null), 2000);
     } catch {
-      setError("Couldn't copy automatically — select the number and copy it.");
+      setError("Couldn't copy automatically — select the text and copy it.");
     }
   }
 
@@ -156,12 +159,12 @@ export function ManualQrPayment({
           <Image
             src={method.qrImageSrc}
             alt={`${method.label} QR code`}
-            width={160}
-            height={160}
+            width={192}
+            height={192}
             unoptimized
-            className="size-40 shrink-0 rounded-md border border-border bg-white object-contain"
+            className="size-48 shrink-0 rounded-md border border-border bg-white object-contain"
           />
-          <dl className="flex flex-1 flex-col gap-2 text-sm">
+          <dl className="flex w-full flex-col gap-2 text-sm sm:flex-1">
             <div>
               <dt className="text-muted-foreground">Account name</dt>
               <dd className="font-medium">
@@ -176,19 +179,42 @@ export function ManualQrPayment({
                 </span>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={copyAccountNumber}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => copyToClipboard(method.accountNumber, "account")}
                   aria-label={`Copy ${method.label} account number`}
+                  title={`Copy ${method.label} account number`}
                 >
-                  {copied ? (
-                    <Check className="size-3.5" aria-hidden />
+                  {copiedField === "account" ? (
+                    <Check className="size-4" aria-hidden />
                   ) : (
-                    <Copy className="size-3.5" aria-hidden />
+                    <Copy className="size-4" aria-hidden />
                   )}
-                  {copied ? "Copied" : "Copy"}
                 </Button>
               </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Note to include</dt>
+              <dd className="flex items-center gap-2 font-medium">
+                <span className="tabular">{paymentNote}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => copyToClipboard(paymentNote, "note")}
+                  aria-label="Copy note to include"
+                  title="Copy note to include"
+                >
+                  {copiedField === "note" ? (
+                    <Check className="size-4" aria-hidden />
+                  ) : (
+                    <Copy className="size-4" aria-hidden />
+                  )}
+                </Button>
+              </dd>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Paste this in GCash/Maya&apos;s own message field when you send.
+              </p>
             </div>
             <button
               type="button"
@@ -229,10 +255,19 @@ export function ManualQrPayment({
               id="referenceNumber"
               name="referenceNumber"
               value={referenceNumber}
-              onChange={(event) => setReferenceNumber(event.target.value)}
+              // Internal spaces are never part of a real reference number --
+              // stripped as typed so a spaced-out paste ("1234 5678 9012")
+              // doesn't silently eat into the character limit. Mirrors the
+              // same strip the server applies (manualPaymentSubmitSchema).
+              onChange={(event) => setReferenceNumber(event.target.value.replace(/\s+/g, ""))}
               required
               maxLength={100}
             />
+            {referenceNumber.length > 0 && /[^0-9]/.test(referenceNumber) && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Most GCash/Maya references are numbers only — double-check before submitting.
+              </p>
+            )}
           </Field>
 
           <Field

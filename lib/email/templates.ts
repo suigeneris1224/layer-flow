@@ -248,6 +248,60 @@ export function buildManualPaymentRejectedEmail(
   return { subject: `We couldn't verify your payment`, html, text: wrapText(bodyLines) };
 }
 
+/** Sent when an admin rejects an account deletion request -- see app/admin/actions.ts. */
+export function buildAccountDeletionRejectedEmail(ctx: { reason?: string }): BuiltEmail {
+  const bodyLines = [
+    `We received your request to delete your LayerFlow account, but we couldn't process it yet${
+      ctx.reason ? `: ${ctx.reason}` : "."
+    }`,
+    `Your account and farm data are untouched. Contact support if you'd like to try again.`,
+  ];
+
+  const html = renderEmailHtml({
+    preheader: "We couldn't process your account deletion request.",
+    eyebrow: "DELETION REQUEST",
+    headline: "We couldn't process your request",
+    heroMessage: ctx.reason ?? "Your account and farm data are untouched.",
+    heroIcon: "alert-circle",
+    infoCard: ctx.reason
+      ? { title: "Reason", rows: [{ icon: "note", label: "Details", value: ctx.reason }] }
+      : undefined,
+    intro: [`Your account and farm data are untouched. Contact support if you'd like to try again.`],
+    cta: { label: "Contact support", href: `${publicEnv.appUrl}/settings/support` },
+  });
+
+  return {
+    subject: "We couldn't process your account deletion request",
+    html,
+    text: wrapText(bodyLines),
+  };
+}
+
+/**
+ * Sent right before the account is actually removed -- the last moment an
+ * email can reach this address through the app, since the user row (and so
+ * every farm-scoped notification preference) is gone immediately after.
+ */
+export function buildAccountDeletionCompletedEmail(): BuiltEmail {
+  const bodyLines = [
+    `Your LayerFlow account and all associated farm data have been permanently deleted, as requested.`,
+    `If this wasn't you, or you change your mind, you're welcome to sign up again -- this doesn't block that.`,
+  ];
+
+  const html = renderEmailHtml({
+    preheader: "Your LayerFlow account has been deleted.",
+    eyebrow: "ACCOUNT DELETED",
+    headline: "Your account has been deleted",
+    heroMessage: "Your account and all associated farm data have been permanently removed.",
+    heroIcon: "check-circle",
+    intro: [
+      `If this wasn't you, or you change your mind, you're welcome to sign up again -- this doesn't block that.`,
+    ],
+  });
+
+  return { subject: "Your LayerFlow account has been deleted", html, text: wrapText(bodyLines) };
+}
+
 /** Notifies the support inbox of a new request -- see app/(app)/settings/support/actions.ts. */
 export function buildSupportRequestNotificationEmail(ctx: {
   farmName: string;

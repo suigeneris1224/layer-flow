@@ -107,4 +107,7 @@ export const AUDIT_ACTIONS = {
   MANUAL_PAYMENT_SUBMITTED: "manual_payment.submitted",
   MANUAL_PAYMENT_APPROVED: "manual_payment.approved",
   MANUAL_PAYMENT_REJECTED: "manual_payment.rejected",
+  ACCOUNT_DELETION_REQUESTED: "account_deletion.requested",
+  ACCOUNT_DELETION_APPROVED: "account_deletion.approved",
+  ACCOUNT_DELETION_REJECTED: "account_deletion.rejected",
 } as const;

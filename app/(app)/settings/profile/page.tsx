@@ -4,11 +4,13 @@ import { ROLE_LABELS } from "@/lib/auth/permissions";
 import { PLANS } from "@/lib/subscriptions/plans";
 import { effectivePlan } from "@/lib/subscriptions/entitlements";
 import { getProfile } from "@/lib/data/profile";
+import { getAccountDeletionRequestForOwner } from "@/lib/data/account-deletion";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { ProfileForm } from "./profile-form";
 import { ChangePasswordForm } from "./change-password-form";
+import { DeleteAccountPanel } from "./delete-account-panel";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -20,6 +22,7 @@ export default async function ProfilePage() {
 
   const profile = await getProfile(user.id);
   const plan = PLANS[effectivePlan(context.plan, context.subscriptionStatus)];
+  const deletionRequest = await getAccountDeletionRequestForOwner(user.id);
 
   return (
     <>
@@ -72,6 +75,8 @@ export default async function ProfilePage() {
           </Panel>
 
           <ChangePasswordForm />
+
+          <DeleteAccountPanel initialStatus={deletionRequest?.status ?? null} />
         </div>
       </div>
     </>

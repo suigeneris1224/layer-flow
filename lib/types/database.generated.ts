@@ -1000,6 +1000,45 @@ export type Database = {
           },
         ]
       }
+      account_deletion_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          owner_id: string | null
+          reason: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["account_deletion_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          owner_id?: string | null
+          reason?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["account_deletion_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          owner_id?: string | null
+          reason?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["account_deletion_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_payments: {
         Row: {
           amount_centavos: number
@@ -1009,6 +1048,7 @@ export type Database = {
           id: string
           owner_id: string
           payer_name: string
+          payment_note: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
           receipt_storage_path: string
           reference_number: string
@@ -1026,6 +1066,7 @@ export type Database = {
           id?: string
           owner_id: string
           payer_name: string
+          payment_note?: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
           receipt_storage_path: string
           reference_number: string
@@ -1043,6 +1084,7 @@ export type Database = {
           id?: string
           owner_id?: string
           payer_name?: string
+          payment_note?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           receipt_storage_path?: string
           reference_number?: string
@@ -1540,6 +1582,7 @@ export type Database = {
         | "OTHER"
       farm_role: "OWNER" | "MANAGER" | "WORKER"
       flock_status: "GROWING" | "PRODUCING" | "SOLD" | "CLOSED"
+      account_deletion_status: "PENDING" | "COMPLETED" | "REJECTED"
       manual_payment_status: "PENDING" | "APPROVED" | "REJECTED"
       payment_status: "PAID" | "PARTIAL" | "UNPAID"
       subscription_plan: "FREE" | "STARTER" | "PRO"
@@ -1691,6 +1734,7 @@ export const Constants = {
       ],
       farm_role: ["OWNER", "MANAGER", "WORKER"],
       flock_status: ["GROWING", "PRODUCING", "SOLD", "CLOSED"],
+      account_deletion_status: ["PENDING", "COMPLETED", "REJECTED"],
       manual_payment_status: ["PENDING", "APPROVED", "REJECTED"],
       payment_status: ["PAID", "PARTIAL", "UNPAID"],
       subscription_plan: ["FREE", "STARTER", "PRO"],

@@ -6,7 +6,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { resolveUploadType } from "@/lib/upload/file-signature";
-import { securePasswordField, toFieldErrors, updateProfileSchema } from "@/lib/validation/schemas";
+import {
+  accountDeletionRequestSchema,
+  securePasswordField,
+  toFieldErrors,
+  updateProfileSchema,
+} from "@/lib/validation/schemas";
+import { getAccountDeletionRequestForOwner } from "@/lib/data/account-deletion";
 import {
   describeAuthError,
   describeDatabaseError,
@@ -283,5 +289,56 @@ export async function changePasswordAction(input: unknown): Promise<ActionResult
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "changePasswordAction");
+  }
+}
+
+/**
+ * File a request to delete this account for good.
+ *
+ * Deliberately a *request*, not an instant delete: `farms.owner_id` is
+ * `on delete restrict`, and an irreversible self-service delete deserves a
+ * human reviewing what it would actually take out (see
+ * app/admin/actions.ts's adminApproveAccountDeletionAction, which does the
+ * real work once approved). This just files the request -- nothing is
+ * deleted yet.
+ */
+export async function requestAccountDeletionAction(input: unknown): Promise<ActionResult> {
+  const user = await requireUser();
+
+  const existing = await getAccountDeletionRequestForOwner(user.id);
+  if (existing && existing.status === "PENDING") {
+    return failure("You already have a deletion request pending review.");
+  }
+
+  const parsed = accountDeletionRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Please check the form below.", toFieldErrors(parsed.error));
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase.from("account_deletion_requests").insert({
+      owner_id: user.id,
+      email: user.email,
+      reason: parsed.data.reason || null,
+    });
+
+    if (error) return describeDatabaseError(error, "requestAccountDeletionAction");
+
+    const context = await getFarmContext();
+    await recordAuditLog({
+      farmId: context?.farmId ?? null,
+      userId: user.id,
+      action: AUDIT_ACTIONS.ACCOUNT_DELETION_REQUESTED,
+      entityType: "account_deletion_request",
+      entityId: user.id,
+    });
+
+    revalidatePath("/settings/profile");
+
+    return { ok: true };
+  } catch (error) {
+    return describeUnknownError(error, "requestAccountDeletionAction");
   }
 }

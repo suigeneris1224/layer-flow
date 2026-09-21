@@ -17,6 +17,7 @@ import {
 import { consumeRateLimit } from "@/lib/data/rate-limit";
 import { formatRetryMessage } from "@/lib/domain/rate-limit";
 import { resolveUploadType } from "@/lib/upload/file-signature";
+import { generatePaymentNote } from "@/lib/domain/manual-payment-note";
 
 const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
 const RECEIPT_TYPES: Record<string, string> = {
@@ -97,6 +98,10 @@ export async function submitManualPaymentAction(formData: FormData): Promise<Act
       amount_centavos: amountCentavos,
       payer_name: parsed.data.payerName,
       reference_number: parsed.data.referenceNumber,
+      // Server-computed, not read from the client -- same reasoning as
+      // amountCentavos above -- so a farmer can't submit an arbitrary value
+      // an admin might mistake for the real reconciliation code.
+      payment_note: generatePaymentNote(context.ownerId),
       receipt_storage_path: path,
       status: "PENDING",
     });

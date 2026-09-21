@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageBilling } from "@/lib/auth/permissions";
 import { PLANS, PLAN_ORDER, formatPlanPrice, priceCentavosFor } from "@/lib/subscriptions/plans";
+import { generatePaymentNote } from "@/lib/domain/manual-payment-note";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
 import { Panel } from "@/components/ui/panel";
@@ -50,6 +51,7 @@ export default async function CheckoutPage({
   const plan = PLANS[planParam];
   const amount = formatPlanPrice(plan, periodParam);
   const amountCentavos = priceCentavosFor(plan, periodParam);
+  const paymentNote = generatePaymentNote(context.ownerId);
 
   return (
     <PageShell width="reading">
@@ -79,6 +81,7 @@ export default async function CheckoutPage({
         billingPeriod={periodParam}
         amountCentavos={amountCentavos}
         payerNameDefault={context.farmName}
+        paymentNote={paymentNote}
       />
     </PageShell>
   );

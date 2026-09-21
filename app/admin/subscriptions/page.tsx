@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAllSubscriptions } from "@/lib/data/admin";
 import { getPendingManualPayments } from "@/lib/data/manual-payments";
+import { getPendingAccountDeletionRequests } from "@/lib/data/account-deletion";
 import { searchFarms, paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
 import type { Route } from "next";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
@@ -12,6 +13,7 @@ import { BillingPeriodFilter } from "./billing-period-filter";
 import { AdminPagination } from "../pagination";
 import { SubscriptionsTable } from "./subscriptions-table";
 import { ManualPaymentsPanel } from "./manual-payments-panel";
+import { AccountDeletionPanel } from "./account-deletion-panel";
 
 export const metadata: Metadata = { title: "Admin — Subscriptions" };
 
@@ -19,9 +21,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Tenant subscriptions: search/filter/paginate every account, plus the
- * queue of manual GCash/bank payments waiting on an admin's approve/reject.
- * Only fetches what this page needs -- the platform-wide stat aggregates
- * live on the Overview route instead.
+ * queues of manual GCash/bank payments and account deletion requests
+ * waiting on an admin's approve/reject. Only fetches what this page needs --
+ * the platform-wide stat aggregates live on the Overview route instead.
  */
 export default async function AdminSubscriptionsPage({
   searchParams,
@@ -29,9 +31,10 @@ export default async function AdminSubscriptionsPage({
   searchParams: Promise<{ q?: string; page?: string; period?: string }>;
 }) {
   const { q = "", page: pageParam, period = "all" } = await searchParams;
-  const [rows, pendingManualPayments] = await Promise.all([
+  const [rows, pendingManualPayments, pendingDeletionRequests] = await Promise.all([
     getAllSubscriptions(),
     getPendingManualPayments(),
+    getPendingAccountDeletionRequests(),
   ]);
 
   const annualRows = rows.filter((row) => row.billingPeriod === "ANNUAL");
@@ -68,6 +71,7 @@ export default async function AdminSubscriptionsPage({
       />
 
       <ManualPaymentsPanel payments={pendingManualPayments} />
+      <AccountDeletionPanel requests={pendingDeletionRequests} />
 
       {rows.length === 0 ? (
         <EmptyState icon={Building2} title="No accounts yet" message="Nothing to monitor yet." />

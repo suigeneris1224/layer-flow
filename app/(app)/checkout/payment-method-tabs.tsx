@@ -21,11 +21,13 @@ export function PaymentMethodTabs({
   billingPeriod,
   amountCentavos,
   payerNameDefault,
+  paymentNote,
 }: {
   plan: SubscriptionPlan;
   billingPeriod: BillingPeriod;
   amountCentavos: number;
   payerNameDefault: string;
+  paymentNote: string;
 }) {
   const [method] = useState<PaymentMethod>("manual");
 
@@ -73,6 +75,7 @@ export function PaymentMethodTabs({
           billingPeriod={billingPeriod}
           amountCentavos={amountCentavos}
           payerNameDefault={payerNameDefault}
+          paymentNote={paymentNote}
         />
       )}
     </div>

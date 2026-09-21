@@ -353,7 +353,18 @@ export const devSetSubscriptionSchema = z.object({
 /** Submitting a manual QR/bank transfer payment for review -- see app/(app)/checkout/actions.ts. */
 export const manualPaymentSubmitSchema = z.object({
   payerName: z.string().trim().min(1, "Enter a name").max(200),
-  referenceNumber: z.string().trim().min(1, "Enter the payment reference number").max(100),
+  // Internal spaces are never part of a real reference number -- farmers
+  // sometimes paste one formatted like "1234 5678 9012". Stripped before the
+  // length check, not just trimmed, so a spaced-out paste doesn't eat into
+  // the 100-char cap. Deliberately not restricted to digits-only: real
+  // bank/InstaPay references can legitimately include letters, only GCash/
+  // Maya's are reliably numeric -- see manual-qr-payment.tsx's soft,
+  // non-blocking hint for that case instead of a hard rule here.
+  referenceNumber: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/\s+/g, ""))
+    .pipe(z.string().min(1, "Enter the payment reference number").max(100)),
   plan: z.enum(
     PLAN_ORDER.filter((id) => id !== "FREE") as [SubscriptionPlan, ...SubscriptionPlan[]],
     { errorMap: () => ({ message: "Choose a plan" }) }
@@ -371,6 +382,20 @@ export const manualPaymentRejectSchema = z.object({
 });
 
 export type ManualPaymentRejectInput = z.infer<typeof manualPaymentRejectSchema>;
+
+/** Requesting account deletion -- see app/(app)/settings/profile/actions.ts. */
+export const accountDeletionRequestSchema = z.object({
+  reason: z.string().trim().max(500).optional().default(""),
+});
+
+export type AccountDeletionRequestInput = z.infer<typeof accountDeletionRequestSchema>;
+
+/** Rejecting an account deletion request -- see app/admin/actions.ts. */
+export const accountDeletionRejectSchema = z.object({
+  reason: z.string().trim().max(500).optional().default(""),
+});
+
+export type AccountDeletionRejectInput = z.infer<typeof accountDeletionRejectSchema>;
 
 export const supportRequestSchema = z.object({
   subject: z.string().trim().min(1, "Enter a subject").max(150),

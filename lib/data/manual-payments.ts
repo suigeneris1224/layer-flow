@@ -87,10 +87,14 @@ export interface PendingManualPaymentRow extends ManualPaymentRow {
    * rejection -- that call still needs a human looking at the actual proof.
    */
   isDuplicateReference: boolean;
+  /** Server-computed at submission (generatePaymentNote) -- compare against
+   *  the note on the actual incoming GCash payment before approving. */
+  paymentNote: string | null;
 }
 
 interface PendingManualPaymentDbRow extends ManualPaymentDbRow {
   farm_id: string | null;
+  payment_note: string | null;
   receipt_storage_path: string;
   farms: { name: string } | { name: string }[] | null;
 }
@@ -108,7 +112,7 @@ export async function getPendingManualPayments(): Promise<PendingManualPaymentRo
     admin
       .from("manual_payments")
       .select(
-        "id, owner_id, farm_id, plan, billing_period, amount_centavos, payer_name, reference_number, receipt_storage_path, status, created_at, farms(name)"
+        "id, owner_id, farm_id, plan, billing_period, amount_centavos, payer_name, reference_number, payment_note, receipt_storage_path, status, created_at, farms(name)"
       )
       .eq("status", "PENDING")
       .order("created_at", { ascending: true }),
@@ -168,7 +172,75 @@ export async function getPendingManualPayments(): Promise<PendingManualPaymentRo
         createdAt: row.created_at,
         receiptSignedUrl: signed?.signedUrl ?? null,
         isDuplicateReference: (duplicateCounts.get(row.reference_number) ?? 0) > 1,
+        paymentNote: row.payment_note,
       };
     })
   );
+}
+
+export interface ManualPaymentHistoryRow extends ManualPaymentRow {
+  ownerEmail: string | null;
+  farmName: string | null;
+  paymentNote: string | null;
+  reviewedAt: string | null;
+}
+
+interface ManualPaymentHistoryDbRow extends ManualPaymentDbRow {
+  payment_note: string | null;
+  reviewed_at: string | null;
+  farms: { name: string } | { name: string }[] | null;
+}
+
+/**
+ * Every manual payment (PENDING, APPROVED, REJECTED alike), newest first,
+ * optionally bounded by `created_at` -- for app/admin/payment-history/'s
+ * bookkeeping view and CSV export. Unlike getPendingManualPayments, this
+ * skips signed receipt URLs and duplicate-reference detection: both are
+ * per-row storage/query costs that only earn their keep on the small active
+ * review queue, not a potentially years-long history list.
+ */
+export async function getManualPaymentsHistory(window: {
+  from?: string;
+  to?: string;
+}): Promise<ManualPaymentHistoryRow[]> {
+  const admin = createSupabaseAdminClient();
+
+  let query = admin
+    .from("manual_payments")
+    .select(
+      "id, owner_id, farm_id, plan, billing_period, amount_centavos, payer_name, reference_number, payment_note, receipt_storage_path, status, reviewed_at, created_at, farms(name)"
+    )
+    .order("created_at", { ascending: false });
+
+  if (window.from) query = query.gte("created_at", window.from);
+  if (window.to) query = query.lte("created_at", `${window.to}T23:59:59.999Z`);
+
+  const [paymentsResult, usersResult] = await Promise.all([query, admin.auth.admin.listUsers()]);
+
+  if (paymentsResult.error) {
+    logger.error("manual payments history lookup failed", { reason: paymentsResult.error.message });
+    return [];
+  }
+  if (usersResult.error) {
+    logger.error("admin user list lookup failed", { reason: usersResult.error.message });
+  }
+
+  const emailById = new Map(usersResult.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
+  const rows = (paymentsResult.data ?? []) as unknown as ManualPaymentHistoryDbRow[];
+
+  return rows.map((row) => ({
+    id: row.id,
+    ownerId: row.owner_id,
+    ownerEmail: emailById.get(row.owner_id) ?? null,
+    farmName: one(row.farms)?.name ?? null,
+    plan: row.plan,
+    billingPeriod: row.billing_period,
+    amountCentavos: row.amount_centavos,
+    payerName: row.payer_name,
+    referenceNumber: row.reference_number,
+    status: row.status,
+    createdAt: row.created_at,
+    paymentNote: row.payment_note,
+    reviewedAt: row.reviewed_at,
+  }));
 }

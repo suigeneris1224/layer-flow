@@ -14,6 +14,7 @@ import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { loadProductionAction, recordProductionAction } from "@/app/(app)/production/actions";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
 import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
+import { safeAction } from "@/lib/client/safe-action";
 import {
   eggsToTrays,
   feedCost,
@@ -326,8 +327,19 @@ export function ProductionForm({
       return;
     }
 
+    // Free plan (no offline_mode entitlement) falls through here even while
+    // offline, since the guard above only matches the entitled case. Without
+    // this, calling the server action with no connection throws an unhandled
+    // fetch error that crashes the whole page ("Application error: a
+    // client-side exception has occurred") instead of just saying so --
+    // same fix as expense-form.tsx's identical comment.
+    if (!online) {
+      setFormError("You're offline. Try again once you have a connection.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await recordProductionAction(parsed.data);
+      const result = await safeAction(() => recordProductionAction(parsed.data));
 
       if (!result.ok) {
         setFormError(result.error);

@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
  * without navigating. That means no client JavaScript, no `as Route` cast
  * around a typed route, and no prefetch of a file.
  *
- * A page with no date filter of its own (Expenses) gets its own range picker
- * here, since exporting "what the page shows" would hand somebody ten rows.
- * A page that already has one (Sales History's own range select) passes
- * `fixedRange` instead: Export then downloads exactly what's on screen,
- * rather than showing a second, differently-worded dropdown that would only
- * ever affect the file and never the list next to it.
+ * A page with no date filter of its own gets its own range picker here,
+ * since exporting "what the page shows" would hand somebody ten rows. A page
+ * that already has one (Sales History, Expenses) passes `fixedRange`
+ * instead: Export then downloads exactly what's on screen, rather than
+ * showing a second, differently-worded dropdown that would only ever affect
+ * the file and never the list next to it.
  */
 
 const RANGES = [

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
+import { ImageCropModal } from "@/components/ui/image-crop-modal";
 import { normalizeImageFile } from "@/lib/client/heic";
 import { resizeImage } from "@/lib/client/resize-image";
 import { safeAction } from "@/lib/client/safe-action";
@@ -55,6 +56,7 @@ export function FarmForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [open, setOpen] = useState(mode === "edit" || !!forceOpen);
   const [values, setValues] = useState<FarmValues>(initial ?? EMPTY);
+  const [photoCropFile, setPhotoCropFile] = useState<File | null>(null);
 
   function set<K extends keyof FarmValues>(key: K, value: FarmValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -94,18 +96,25 @@ export function FarmForm({
     setFormError(null);
     setSuccess(null);
 
+    try {
+      // HEIC -> JPEG, then a pre-shrink well under WebKit's canvas-size
+      // ceiling -- a full-resolution phone photo drawn straight to canvas
+      // can render solid black on mobile Safari (react-easy-crop#91).
+      setPhotoCropFile(await resizeImage(await normalizeImageFile(picked), 2400));
+    } catch {
+      setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
+    }
+  }
+
+  function onPhotoCropped(cropped: File) {
+    setPhotoCropFile(null);
+    setFormError(null);
+    setSuccess(null);
+
+    const data = new FormData();
+    data.set("photo", cropped);
+
     startPhotoTransition(async () => {
-      let file: File;
-      try {
-        file = await resizeImage(await normalizeImageFile(picked), 1600);
-      } catch {
-        setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
-        return;
-      }
-
-      const data = new FormData();
-      data.set("photo", file);
-
       const result = await safeAction(() => uploadFarmPhotoAction(data));
       if (!result.ok) {
         setFormError(result.error);
@@ -256,6 +265,15 @@ export function FarmForm({
           )}
         </div>
       </form>
+
+      <ImageCropModal
+        file={photoCropFile}
+        aspect={1}
+        outputWidth={512}
+        outputHeight={512}
+        onCancel={() => setPhotoCropFile(null)}
+        onCropped={onPhotoCropped}
+      />
     </Panel>
   );
 }

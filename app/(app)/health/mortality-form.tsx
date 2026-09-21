@@ -18,6 +18,7 @@ import {
 import { mortalityRecordSchema, toFieldErrors } from "@/lib/validation/schemas";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
 import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
+import { safeAction } from "@/lib/client/safe-action";
 
 const NEW = "__new__";
 
@@ -112,10 +113,20 @@ export function MortalityForm({
       return;
     }
 
+    // Free plan (no offline_mode entitlement) falls through here even while
+    // offline, since the guard above only matches the entitled case. Without
+    // this, calling the server action with no connection throws an unhandled
+    // fetch error that crashes the whole page -- same fix as
+    // expense-form.tsx's identical comment.
+    if (!online) {
+      setFormError("You're offline. Try again once you have a connection.");
+      return;
+    }
+
     startTransition(async () => {
       const result = editing
-        ? await updateMortalityAction(editing.id, values)
-        : await recordMortalityAction(values);
+        ? await safeAction(() => updateMortalityAction(editing.id, values))
+        : await safeAction(() => recordMortalityAction(values));
 
       if (!result.ok) {
         setFormError(result.error);

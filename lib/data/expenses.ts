@@ -34,6 +34,16 @@ export interface ExpensesRange {
   offset?: number;
 }
 
+/** Mirrors SalesHistoryRangeValue/SALES_HISTORY_RANGES in lib/data/sales.ts. */
+export type ExpensesHistoryRangeValue = "week" | "month" | "year" | "all";
+
+export const EXPENSES_HISTORY_RANGES: readonly ExpensesHistoryRangeValue[] = [
+  "week",
+  "month",
+  "year",
+  "all",
+];
+
 const EXPENSES_PAGE_LIMIT = 100;
 
 type ExpenseJoin = {

@@ -86,6 +86,17 @@ export async function signUpAction(
 
   const next = String(formData.get("next") ?? "");
 
+  /*
+   * Where the user lands once they've confirmed their email. Somebody following
+   * an invitation is joining an existing farm and must NOT be sent to
+   * onboarding, which would have them create a second one. Everyone else starts
+   * onboarding. Passed through safeRedirect so only in-app paths survive, and
+   * encoded so the path (e.g. /invite/<token>) can't inject extra query params
+   * into the callback URL. The callback re-validates it as well.
+   */
+  const destination = next ? safeRedirect(next) : "/onboarding";
+  let hasSession = false;
+
   try {
     // Closed beta: while free-tier infra can't absorb open growth, only the
     // handful of listed testers may register. No session exists yet, so RLS
@@ -102,27 +113,35 @@ export async function signUpAction(
     }
 
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
         data: { full_name: parsed.data.fullName },
-        emailRedirectTo: `${publicEnv.appUrl}/auth/callback`,
+        emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(destination)}`,
       },
     });
 
     if (error) return describeAuthError(error.message, "signUp");
+    hasSession = Boolean(data.session);
   } catch (error) {
     return describeUnknownError(error, "signUpAction");
   }
 
   /*
-   * With local email confirmation off the user already has a session. Where
-   * they land depends on why they signed up: somebody following an invitation
-   * is joining an existing farm and must NOT be sent to onboarding, which
-   * would have them create a second one. Everyone else starts onboarding.
+   * With "Confirm email" on, signUp() creates an unconfirmed account and no
+   * session: the user only gets one by clicking the emailed link, which lands
+   * on /auth/callback and continues to `destination`. Redirecting here would
+   * bounce them off the auth wall. A session only exists when confirmation is
+   * off (local dev), in which case there is nothing to wait for.
    */
-  redirect(next ? safeRedirect(next) : "/onboarding");
+  if (hasSession) redirect(destination);
+
+  return {
+    ok: true,
+    message:
+      "Almost there! We've sent a confirmation link to your email. Open it to confirm your account and continue.",
+  };
 }
 
 export async function signInAction(

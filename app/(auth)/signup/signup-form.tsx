@@ -18,6 +18,21 @@ export function SignupForm({ next }: { next: string }) {
   );
   const [password, setPassword] = useState("");
 
+  // The account exists but is unconfirmed; the next step is the email, not
+  // this form, so swap it out rather than leave a submittable form on screen.
+  if (state?.ok) {
+    return (
+      <div className="flex flex-col gap-4">
+        <StatusNote tone="good" title="Check your email">
+          {state.message}
+        </StatusNote>
+        <Link href="/login" className="text-center text-sm text-primary hover:underline">
+          Back to sign in
+        </Link>
+      </div>
+    );
+  }
+
   const fieldErrors = state && !state.ok ? state.fieldErrors : undefined;
 
   return (

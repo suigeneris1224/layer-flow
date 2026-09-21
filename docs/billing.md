@@ -96,26 +96,39 @@ Everything else talks to the `subscriptions` table and the entitlement functions
 
 ### Current state
 
-`BILLING_PROVIDER=mock`. **The provider implementation is not written yet** — this slice ships
-plan definitions, entitlement enforcement and the pricing page, but no checkout.
+Two paths coexist on `/checkout`:
 
-A development-only plan switcher **is built**: `app/(app)/farms/dev-plan-switcher.tsx` with
+- **Manual QR/bank transfer** (`app/(app)/checkout/manual-qr-payment.tsx`) — a farmer pays outside
+  the app and uploads a receipt; an admin approves it by hand
+  (`app/admin/actions.ts`'s `adminApproveManualPaymentAction`). Always available, no dependency on
+  anything below.
+- **Automated GCash checkout via PayMongo** (`app/(app)/checkout/automated-checkout.tsx`,
+  `lib/subscriptions/paymongo.ts`) — `BILLING_PROVIDER=paymongo` creates a PayMongo Link and
+  activates the plan the moment `app/api/webhooks/paymongo/route.ts` confirms payment, no admin
+  step. Built against **PayMongo's test-mode keys** (`sk_test_...`) since the account isn't yet
+  approved for live/business use — see `docs/deployment.md`'s env var table for the go-live swap
+  (test → live keys, no code change). GCash only at launch; cards/GrabPay/Maya are not wired up.
+
+PayMongo has **no native recurring-subscription object** — a Link only ever pays for one billing
+cycle. `subscriptions.current_period_end` stays the sole source of truth for renewal timing,
+exactly as it already was for the manual flow; the existing renewal-reminder cron
+(`app/api/cron/subscription-emails/route.ts`) needs no changes, since it queries `subscriptions`
+generically regardless of how the last payment was made.
+
+A development-only plan switcher also exists: `app/(app)/farms/dev-plan-switcher.tsx` with
 `devSetSubscriptionAction` in `app/(app)/farms/actions.ts`. It renders on `/farms` only when
 `!isProduction()` and the user can manage billing, so it can never appear on a live site, and it
 writes through the service-role client because `subscriptions` has no client write policy.
 
-### When real billing lands
-
-**PayMongo** is the better first choice for the Philippines: it supports GCash, GrabPay, Maya and
-local cards, which is how this market actually pays. Stripe is the fallback for cards
-internationally.
-
-Webhook handling notes:
+### Webhook handling notes
 
 - Webhooks have **no user session**, so they are the legitimate use of the service-role client.
 - **Verify the signature before trusting the payload.** An unverified billing webhook is an
-  unauthenticated write to your subscriptions table.
+  unauthenticated write to your subscriptions table. `lib/subscriptions/paymongo.ts`'s
+  `verifyWebhookSignature` does this for PayMongo's `Paymongo-Signature` header.
 - Make handlers **idempotent** — providers retry, and will send the same event twice.
+  `paymongo_payments.provider_link_id` is unique and doubles as the idempotency key: a retry finds
+  zero `PENDING` rows left to claim and is a safe no-op.
 - `subscriptions` has **no client write policy**. Only the webhook path, running as service role,
   writes it.
 - Log every plan change to `audit_logs`.

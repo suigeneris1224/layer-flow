@@ -5,6 +5,7 @@ import { CreditCard, QrCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BillingPeriod, SubscriptionPlan } from "@/lib/types/database";
 import { ManualQrPayment } from "./manual-qr-payment";
+import { AutomatedCheckout } from "./automated-checkout";
 
 type PaymentMethod = "automated" | "manual";
 
@@ -12,9 +13,10 @@ type PaymentMethod = "automated" | "manual";
  * Payment-method selector for /checkout.
  *
  * Styled like components/pricing/billing-period-toggle.tsx (there is no
- * formal Tabs component in this codebase). "Automated" is disabled --
- * PayMongo isn't wired up yet, see docs/billing.md -- kept visible so the
- * option reads as "coming soon", not missing.
+ * formal Tabs component in this codebase). "Automated" now runs a PayMongo
+ * GCash checkout (test-mode keys until the business account is approved --
+ * see lib/subscriptions/paymongo.ts); Manual QR stays fully available as a
+ * fallback.
  */
 export function PaymentMethodTabs({
   plan,
@@ -29,7 +31,7 @@ export function PaymentMethodTabs({
   payerNameDefault: string;
   paymentNote: string;
 }) {
-  const [method] = useState<PaymentMethod>("manual");
+  const [method, setMethod] = useState<PaymentMethod>("automated");
 
   return (
     <div className="flex flex-col gap-4">
@@ -40,20 +42,25 @@ export function PaymentMethodTabs({
       >
         <button
           type="button"
-          disabled
-          aria-pressed={false}
-          className="flex flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium text-muted-foreground opacity-60 sm:gap-2 sm:px-4"
+          aria-pressed={method === "automated"}
+          onClick={() => setMethod("automated")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:gap-2 sm:px-4",
+            method === "automated"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
           <CreditCard className="size-4 shrink-0" aria-hidden />
-          <span className="truncate">E-wallets / Cards</span>
-          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-            <span className="sm:hidden">Soon</span>
-            <span className="hidden sm:inline">Coming soon</span>
+          <span className="truncate">
+            <span className="sm:hidden">GCash</span>
+            <span className="hidden sm:inline">Pay with GCash</span>
           </span>
         </button>
         <button
           type="button"
           aria-pressed={method === "manual"}
+          onClick={() => setMethod("manual")}
           className={cn(
             "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:gap-2 sm:px-4",
             method === "manual"
@@ -69,7 +76,9 @@ export function PaymentMethodTabs({
         </button>
       </div>
 
-      {method === "manual" && (
+      {method === "automated" ? (
+        <AutomatedCheckout plan={plan} billingPeriod={billingPeriod} />
+      ) : (
         <ManualQrPayment
           plan={plan}
           billingPeriod={billingPeriod}

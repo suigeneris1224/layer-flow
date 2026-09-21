@@ -45,6 +45,20 @@ function isPublicPath(pathname: string): boolean {
 }
 
 /**
+ * Callers that authenticate with a shared secret inside the route handler and
+ * never carry a Supabase session. Building a client and calling getUser() for
+ * them is pure CPU cost on every cron tick and webhook delivery, which matters
+ * on Workers where CPU time per request is capped.
+ */
+const SESSIONLESS_PATHS = ["/api/cron", "/api/webhooks"];
+
+function isSessionlessPath(pathname: string): boolean {
+  return SESSIONLESS_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+}
+
+/**
  * Refreshes the Supabase session cookie and bounces anonymous users away from
  * app routes.
  *
@@ -53,6 +67,10 @@ function isPublicPath(pathname: string): boolean {
  * data.
  */
 export async function updateSession(request: NextRequest) {
+  if (isSessionlessPath(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   // "Remember me" was unchecked at sign-in. Without this, refreshing the

@@ -4,16 +4,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { getManualPaymentsHistory } from "@/lib/data/manual-payments";
+import { getPaymongoPaymentsHistory } from "@/lib/data/paymongo-payments";
+import { mergePaymentHistory } from "@/lib/domain/payment-history";
 import { resolveReportRange } from "@/lib/domain/reports";
 import { farmToday } from "@/lib/format";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { describeUnknownError } from "@/lib/errors";
 import { toCsv } from "@/lib/export/csv";
 import { exportFilename } from "@/lib/export/filename";
-import { MANUAL_PAYMENT_HISTORY_COLUMNS, manualPaymentHistoryToRows } from "@/lib/export/datasets";
+import { PAYMENT_HISTORY_COLUMNS, paymentHistoryToRows } from "@/lib/export/datasets";
 
 /**
- * Every manual payment (any status) as a spreadsheet, for the platform admin.
+ * Every payment -- manual and PayMongo, any status -- as a spreadsheet, for the platform admin.
  *
  * Deliberately not `handleExport` (lib/export/route.ts) -- that helper is
  * wired to one farm's FarmContext (entitlement checks, farm timezone/currency,
@@ -43,9 +45,13 @@ export async function GET(request: NextRequest) {
     const to = range?.to ?? today;
     const window = { from, to };
 
-    const payments = await getManualPaymentsHistory(window);
-    const rows = manualPaymentHistoryToRows(payments);
-    const csv = toCsv(rows, MANUAL_PAYMENT_HISTORY_COLUMNS);
+    const [manualPayments, paymongoPayments] = await Promise.all([
+      getManualPaymentsHistory(window),
+      getPaymongoPaymentsHistory(window),
+    ]);
+    const payments = mergePaymentHistory(manualPayments, paymongoPayments);
+    const rows = paymentHistoryToRows(payments);
+    const csv = toCsv(rows, PAYMENT_HISTORY_COLUMNS);
 
     await recordAuditLog({
       farmId: null,

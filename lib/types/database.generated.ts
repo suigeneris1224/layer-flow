@@ -1039,6 +1039,65 @@ export type Database = {
         }
         Relationships: []
       }
+      paymongo_payments: {
+        Row: {
+          amount_centavos: number
+          billing_period: Database["public"]["Enums"]["billing_period"]
+          checkout_url: string
+          created_at: string
+          farm_id: string | null
+          id: string
+          owner_id: string
+          paid_at: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider_link_id: string
+          provider_payment_id: string | null
+          raw_webhook_payload: Json | null
+          status: Database["public"]["Enums"]["paymongo_payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_centavos: number
+          billing_period: Database["public"]["Enums"]["billing_period"]
+          checkout_url: string
+          created_at?: string
+          farm_id?: string | null
+          id?: string
+          owner_id: string
+          paid_at?: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider_link_id: string
+          provider_payment_id?: string | null
+          raw_webhook_payload?: Json | null
+          status?: Database["public"]["Enums"]["paymongo_payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_centavos?: number
+          billing_period?: Database["public"]["Enums"]["billing_period"]
+          checkout_url?: string
+          created_at?: string
+          farm_id?: string | null
+          id?: string
+          owner_id?: string
+          paid_at?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          provider_link_id?: string
+          provider_payment_id?: string | null
+          raw_webhook_payload?: Json | null
+          status?: Database["public"]["Enums"]["paymongo_payment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paymongo_payments_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_payments: {
         Row: {
           amount_centavos: number
@@ -1584,6 +1643,7 @@ export type Database = {
       flock_status: "GROWING" | "PRODUCING" | "SOLD" | "CLOSED"
       account_deletion_status: "PENDING" | "COMPLETED" | "REJECTED"
       manual_payment_status: "PENDING" | "APPROVED" | "REJECTED"
+      paymongo_payment_status: "PENDING" | "PAID" | "FAILED" | "EXPIRED"
       payment_status: "PAID" | "PARTIAL" | "UNPAID"
       subscription_plan: "FREE" | "STARTER" | "PRO"
       subscription_status:
@@ -1736,6 +1796,7 @@ export const Constants = {
       flock_status: ["GROWING", "PRODUCING", "SOLD", "CLOSED"],
       account_deletion_status: ["PENDING", "COMPLETED", "REJECTED"],
       manual_payment_status: ["PENDING", "APPROVED", "REJECTED"],
+      paymongo_payment_status: ["PENDING", "PAID", "FAILED", "EXPIRED"],
       payment_status: ["PAID", "PARTIAL", "UNPAID"],
       subscription_plan: ["FREE", "STARTER", "PRO"],
       subscription_status: [

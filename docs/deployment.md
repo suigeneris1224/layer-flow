@@ -79,8 +79,9 @@ Cloudflare splits environment variables into two buckets, both needed:
 | `NEXT_PUBLIC_APP_URL` | Build var + runtime var | `https://yourdomain.com` (or the `*.workers.dev` URL before a custom domain is attached) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret | **Server only. Never prefix with `NEXT_PUBLIC_`.** |
 | `STORAGE_BUCKET` | Runtime var | `layerflow` |
-| `BILLING_PROVIDER` | Runtime var | `paymongo` or `stripe` when real billing lands |
-| `BILLING_SECRET_KEY` | Secret | Server only |
+| `BILLING_PROVIDER` | Runtime var | `paymongo` to enable the automated checkout tab; `mock` (default) keeps it off manual-only |
+| `PAYMONGO_SECRET_KEY` | Secret | `sk_test_...` while the business account isn't yet approved; `sk_live_...` after — no code change needed to switch |
+| `PAYMONGO_WEBHOOK_SECRET` | Secret | From PayMongo Dashboard → Developers → Webhooks. Verifies `/api/webhooks/paymongo` — see the callout below |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | Runtime var | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
 | `BREVO_API_KEY` | Secret | Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
 | `CRON_SECRET` | Secret | The scheduled Worker (`workers/cron-worker.ts`) sends it as `Authorization: Bearer <value>` — same value the route already expected under Vercel Cron |
@@ -123,6 +124,17 @@ or the "Trigger Cron" button on the Worker's dashboard page once deployed.
 > ```
 > Until this is done, the "sent" log (audit_logs) still works — only the delivery-events table
 > stays empty, with a note to that effect shown in the admin UI.
+
+> **PayMongo webhook.** The "Pay with GCash" tab on `/checkout` creates a payment Link, but
+> nothing activates the farmer's plan until PayMongo's webhook reaches `/api/webhooks/paymongo`.
+> After deploying, go to PayMongo Dashboard → **Developers → Webhooks** and add:
+> ```
+> https://yourdomain.com/api/webhooks/paymongo
+> ```
+> with `link.payment.paid` and `link.payment.failed` selected, then copy the generated signing
+> secret into `PAYMONGO_WEBHOOK_SECRET`. Until this is set up, a farmer can pay but their plan
+> never updates — the Manual QR tab has no such dependency, which is why it stays available as a
+> fallback.
 
 ## 6. Domain and HTTPS
 

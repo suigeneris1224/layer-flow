@@ -4,7 +4,7 @@ import { money, type CsvColumn } from "@/lib/export/csv";
 import type { SaleEntry } from "@/lib/data/sales";
 import type { ExpenseEntry } from "@/lib/data/expenses";
 import { PLANS } from "@/lib/subscriptions/plans";
-import type { ManualPaymentHistoryRow } from "@/lib/data/manual-payments";
+import type { PaymentHistoryRow as MergedPaymentHistoryRow } from "@/lib/domain/payment-history";
 
 /**
  * The shape each dataset takes in a spreadsheet.
@@ -167,25 +167,27 @@ export function expensesToRows(
   }));
 }
 
-export interface PaymentHistoryRow {
+export interface PaymentHistoryCsvRow {
   submittedDate: string;
   paymentId: string;
-  payerName: string;
+  source: string;
+  payerName: string | null;
   farm: string | null;
   ownerEmail: string | null;
   plan: string;
   billingPeriod: string;
   amount: number;
-  referenceNumber: string;
+  referenceNumber: string | null;
   paymentNote: string | null;
   status: string;
-  reviewedDate: string | null;
+  settledDate: string | null;
   currency: string;
 }
 
-export const MANUAL_PAYMENT_HISTORY_COLUMNS: readonly CsvColumn<PaymentHistoryRow>[] = [
+export const PAYMENT_HISTORY_COLUMNS: readonly CsvColumn<PaymentHistoryCsvRow>[] = [
   { header: "Submitted date", value: (row) => row.submittedDate },
   { header: "Payment ID", value: (row) => row.paymentId },
+  { header: "Source", value: (row) => row.source },
   { header: "Payer name", value: (row) => row.payerName },
   { header: "Farm", value: (row) => row.farm },
   { header: "Owner email", value: (row) => row.ownerEmail },
@@ -196,20 +198,26 @@ export const MANUAL_PAYMENT_HISTORY_COLUMNS: readonly CsvColumn<PaymentHistoryRo
   { header: "Reference number", value: (row) => row.referenceNumber },
   { header: "Payment note", value: (row) => row.paymentNote },
   { header: "Status", value: (row) => row.status },
-  { header: "Reviewed date", value: (row) => row.reviewedDate },
+  { header: "Settled date", value: (row) => row.settledDate },
 ];
+
+const SOURCE_LABELS: Record<MergedPaymentHistoryRow["source"], string> = {
+  manual: "Manual",
+  paymongo: "GCash (PayMongo)",
+};
 
 /**
  * A cross-tenant dataset -- unlike sales/expenses, `currency` isn't a single
- * farm's setting, so it's fixed at PHP here: every manual payment amount
+ * farm's setting, so it's fixed at PHP here: every payment amount
  * (lib/subscriptions/plans.ts's priceCentavosFor) is quoted in PHP already.
  */
-export function manualPaymentHistoryToRows(
-  payments: readonly ManualPaymentHistoryRow[]
-): PaymentHistoryRow[] {
+export function paymentHistoryToRows(
+  payments: readonly MergedPaymentHistoryRow[]
+): PaymentHistoryCsvRow[] {
   return payments.map((payment) => ({
     submittedDate: payment.createdAt,
     paymentId: payment.id,
+    source: SOURCE_LABELS[payment.source],
     payerName: payment.payerName,
     farm: payment.farmName,
     ownerEmail: payment.ownerEmail,
@@ -219,7 +227,7 @@ export function manualPaymentHistoryToRows(
     referenceNumber: payment.referenceNumber,
     paymentNote: payment.paymentNote,
     status: payment.status,
-    reviewedDate: payment.reviewedAt,
+    settledDate: payment.settledAt,
     currency: "PHP",
   }));
 }

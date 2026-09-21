@@ -103,6 +103,31 @@ export const serverEnv = {
     return secret;
   },
   /**
+   * PayMongo's secret key -- `sk_test_...` while BILLING_PROVIDER=paymongo is
+   * running in test mode, `sk_live_...` once the business account is
+   * approved. The key prefix alone selects test vs live; nothing in
+   * lib/subscriptions/paymongo.ts branches on isProduction.
+   */
+  get paymongoSecretKey(): string {
+    const key = process.env.PAYMONGO_SECRET_KEY;
+    if (!key) {
+      throw new Error(
+        "PAYMONGO_SECRET_KEY is not set. It is required when BILLING_PROVIDER=paymongo."
+      );
+    }
+    return key;
+  },
+  /** Shared secret PayMongo signs webhook payloads with -- see app/api/webhooks/paymongo/route.ts. */
+  get paymongoWebhookSecret(): string {
+    const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    if (!secret) {
+      throw new Error(
+        "PAYMONGO_WEBHOOK_SECRET is not set. It is required to authenticate PayMongo's webhook."
+      );
+    }
+    return secret;
+  },
+  /**
    * LayerFlow's own operators, lowercased -- not a farmer role. Gates
    * app/admin/ (see lib/auth/admin.ts). Unset means nobody is admin, which is
    * the safe default for anyone else running this codebase.

@@ -110,4 +110,7 @@ export const AUDIT_ACTIONS = {
   ACCOUNT_DELETION_REQUESTED: "account_deletion.requested",
   ACCOUNT_DELETION_APPROVED: "account_deletion.approved",
   ACCOUNT_DELETION_REJECTED: "account_deletion.rejected",
+  PAYMONGO_CHECKOUT_CREATED: "paymongo.checkout_created",
+  PAYMONGO_PAYMENT_ACTIVATED: "paymongo.payment_activated",
+  PAYMONGO_PAYMENT_FAILED: "paymongo.payment_failed",
 } as const;

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { Route } from "next";
 import { History } from "lucide-react";
 import { getManualPaymentsHistory } from "@/lib/data/manual-payments";
+import { getPaymongoPaymentsHistory } from "@/lib/data/paymongo-payments";
+import { mergePaymentHistory } from "@/lib/domain/payment-history";
 import { resolveReportRange } from "@/lib/domain/reports";
 import { farmToday } from "@/lib/format";
 import { paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
@@ -39,7 +41,11 @@ export default async function AdminPaymentHistoryPage({
   const resolved = unbounded ? null : resolveReportRange(range, today);
   const window = { from: resolved?.from, to: resolved?.to ?? today };
 
-  const rows = await getManualPaymentsHistory(window);
+  const [manualRows, paymongoRows] = await Promise.all([
+    getManualPaymentsHistory(window),
+    getPaymongoPaymentsHistory(window),
+  ]);
+  const rows = mergePaymentHistory(manualRows, paymongoRows);
   const { items: pageRows, page, totalPages, totalItems } = paginate(
     rows,
     Number(pageParam) || 1,
@@ -58,7 +64,7 @@ export default async function AdminPaymentHistoryPage({
     <PageShell>
       <PageHeader
         title="Payment history"
-        description="Every manual GCash/bank payment ever submitted, for bookkeeping and export."
+        description="Every manual and automated payment ever submitted, for bookkeeping and export."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <PaymentHistoryRangeSelect value={range} />

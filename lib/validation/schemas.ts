@@ -350,8 +350,22 @@ export const devSetSubscriptionSchema = z.object({
     .default("MONTHLY"),
 });
 
+/**
+ * The plan/billingPeriod pair every /checkout payment path (manual or
+ * PayMongo) needs to validate -- shared so the two don't drift apart.
+ */
+export const checkoutPlanSchema = z.object({
+  plan: z.enum(
+    PLAN_ORDER.filter((id) => id !== "FREE") as [SubscriptionPlan, ...SubscriptionPlan[]],
+    { errorMap: () => ({ message: "Choose a plan" }) }
+  ),
+  billingPeriod: z.enum(BILLING_PERIODS as [BillingPeriod, ...BillingPeriod[]], {
+    errorMap: () => ({ message: "Choose a billing period" }),
+  }),
+});
+
 /** Submitting a manual QR/bank transfer payment for review -- see app/(app)/checkout/actions.ts. */
-export const manualPaymentSubmitSchema = z.object({
+export const manualPaymentSubmitSchema = checkoutPlanSchema.extend({
   payerName: z.string().trim().min(1, "Enter a name").max(200),
   // Internal spaces are never part of a real reference number -- farmers
   // sometimes paste one formatted like "1234 5678 9012". Stripped before the
@@ -365,13 +379,6 @@ export const manualPaymentSubmitSchema = z.object({
     .trim()
     .transform((value) => value.replace(/\s+/g, ""))
     .pipe(z.string().min(1, "Enter the payment reference number").max(100)),
-  plan: z.enum(
-    PLAN_ORDER.filter((id) => id !== "FREE") as [SubscriptionPlan, ...SubscriptionPlan[]],
-    { errorMap: () => ({ message: "Choose a plan" }) }
-  ),
-  billingPeriod: z.enum(BILLING_PERIODS as [BillingPeriod, ...BillingPeriod[]], {
-    errorMap: () => ({ message: "Choose a billing period" }),
-  }),
 });
 
 export type ManualPaymentSubmitInput = z.infer<typeof manualPaymentSubmitSchema>;

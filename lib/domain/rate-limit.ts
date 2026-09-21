@@ -17,7 +17,8 @@ export type RateLimitAction =
   | "signup"
   | "password_reset"
   | "invite"
-  | "manual_payment";
+  | "manual_payment"
+  | "paymongo_checkout";
 
 /**
  * Generous enough that a farmer fumbling their password, or an owner
@@ -35,6 +36,10 @@ export const RATE_LIMITS: Record<RateLimitAction, RateLimitRule> = {
   password_reset: { windowSeconds: 15 * 60, max: 3 },
   invite: { windowSeconds: 60 * 60, max: 20 },
   manual_payment: { windowSeconds: 24 * 60 * 60, max: 5 },
+  // A PayMongo checkout redirect is cheap for a farmer to retry (e.g. after
+  // backing out of the hosted page), so this is generous -- PayMongo's own
+  // API throttles abusive request volume before this rule would ever matter.
+  paymongo_checkout: { windowSeconds: 60 * 60, max: 20 },
 };
 
 export interface RateLimitDecision {

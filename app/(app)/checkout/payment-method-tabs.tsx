@@ -13,10 +13,14 @@ type PaymentMethod = "automated" | "manual";
  * Payment-method selector for /checkout.
  *
  * Styled like components/pricing/billing-period-toggle.tsx (there is no
- * formal Tabs component in this codebase). "Automated" now runs a PayMongo
- * GCash checkout (test-mode keys until the business account is approved --
- * see lib/subscriptions/paymongo.ts); Manual QR stays fully available as a
- * fallback.
+ * formal Tabs component in this codebase). "Pay online" is disabled/"Coming
+ * soon" here on purpose -- the PayMongo integration underneath
+ * (createPaymongoCheckoutAction, AutomatedCheckout, the webhook route) is
+ * fully built and works against PayMongo's test-mode keys, but is only
+ * switched live on the tab itself once BILLING_PROVIDER=paymongo runs with
+ * real (sk_live_...) keys in production -- see docs/billing.md. Flip
+ * `disabled`/the "Coming soon" badge off here when that's ready; nothing
+ * else needs to change.
  */
 export function PaymentMethodTabs({
   plan,
@@ -31,7 +35,7 @@ export function PaymentMethodTabs({
   payerNameDefault: string;
   paymentNote: string;
 }) {
-  const [method, setMethod] = useState<PaymentMethod>("automated");
+  const [method, setMethod] = useState<PaymentMethod>("manual");
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,19 +46,15 @@ export function PaymentMethodTabs({
       >
         <button
           type="button"
-          aria-pressed={method === "automated"}
-          onClick={() => setMethod("automated")}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:gap-2 sm:px-4",
-            method === "automated"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
+          disabled
+          aria-pressed={false}
+          className="flex flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium text-muted-foreground opacity-60 sm:gap-2 sm:px-4"
         >
           <CreditCard className="size-4 shrink-0" aria-hidden />
-          <span className="truncate">
-            <span className="sm:hidden">GCash</span>
-            <span className="hidden sm:inline">Pay with GCash</span>
+          <span className="truncate">Pay online</span>
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+            <span className="sm:hidden">Soon</span>
+            <span className="hidden sm:inline">Coming soon</span>
           </span>
         </button>
         <button

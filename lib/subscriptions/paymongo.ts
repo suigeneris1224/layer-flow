@@ -119,7 +119,7 @@ export async function getSubscription(providerReferenceId: string): Promise<Paym
   return "unknown";
 }
 
-export type PaymongoEventType = "payment.paid" | "payment.failed" | "unhandled";
+export type PaymongoEventType = "payment.paid" | "unhandled";
 
 export interface PaymongoWebhookEvent {
   type: PaymongoEventType;
@@ -183,16 +183,14 @@ export function parseWebhookEvent(rawBody: string): PaymongoWebhookEvent {
   const eventType = payload.data?.attributes?.type;
   const resource = payload.data?.attributes?.data;
 
-  // Exact event name to confirm against PayMongo's current docs at
-  // implementation/testing time -- "link.payment.paid" is PayMongo's
-  // documented shape for a Link resource's payment webhook as of this
-  // writing, but must be verified against a real test-mode delivery.
-  const type: PaymongoEventType =
-    eventType === "link.payment.paid"
-      ? "payment.paid"
-      : eventType === "link.payment.failed"
-        ? "payment.failed"
-        : "unhandled";
+  // "link.payment.paid" is the only Link-scoped event PayMongo's dashboard
+  // exposes (confirmed against the live event picker) -- there is no
+  // link.payment.failed/expired event. A Link that's never paid just stays
+  // PENDING in paymongo_payments; the farmer can start a fresh checkout,
+  // same as an ignored manual-payment reference number never getting
+  // reviewed. Register only this one event in PayMongo Dashboard ->
+  // Developers -> Webhooks.
+  const type: PaymongoEventType = eventType === "link.payment.paid" ? "payment.paid" : "unhandled";
 
   return {
     type,

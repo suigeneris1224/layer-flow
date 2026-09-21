@@ -12,7 +12,10 @@ import { createPaymongoCheckoutAction } from "./actions";
 /**
  * The "Automated" tab on /checkout: one button that creates a PayMongo Link
  * for this billing cycle and redirects to PayMongo's hosted checkout page.
- * GCash only at launch -- see lib/subscriptions/paymongo.ts.
+ * PayMongo's Links API has no per-request payment-method restriction -- the
+ * hosted page shows whichever methods (GCash, Maya, cards, ...) are enabled
+ * in the PayMongo Dashboard's Payment Methods settings, and the customer
+ * picks there. See lib/subscriptions/paymongo.ts.
  */
 export function AutomatedCheckout({
   plan,
@@ -39,16 +42,17 @@ export function AutomatedCheckout({
   }
 
   return (
-    <Panel title="Pay with GCash">
+    <Panel title="Pay online">
       <div className="flex flex-col gap-4">
         {error && <StatusNote tone="bad">{error}</StatusNote>}
         <p className="text-sm text-muted-foreground">
-          You&apos;ll be taken to PayMongo&apos;s secure checkout to pay with GCash. Your plan
-          updates automatically the moment payment confirms — no waiting for review.
+          You&apos;ll be taken to PayMongo&apos;s secure checkout, where you can pay with GCash,
+          Maya, or a card. Your plan updates automatically the moment payment confirms — no
+          waiting for review.
         </p>
         <Button type="button" loading={pending} onClick={onPay} className="w-fit">
           <CreditCard className="size-4" aria-hidden />
-          Pay with GCash
+          Continue to checkout
         </Button>
       </div>
     </Panel>

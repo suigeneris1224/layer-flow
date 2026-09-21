@@ -102,12 +102,15 @@ Two paths coexist on `/checkout`:
   the app and uploads a receipt; an admin approves it by hand
   (`app/admin/actions.ts`'s `adminApproveManualPaymentAction`). Always available, no dependency on
   anything below.
-- **Automated GCash checkout via PayMongo** (`app/(app)/checkout/automated-checkout.tsx`,
+- **Automated checkout via PayMongo** (`app/(app)/checkout/automated-checkout.tsx`,
   `lib/subscriptions/paymongo.ts`) — `BILLING_PROVIDER=paymongo` creates a PayMongo Link and
   activates the plan the moment `app/api/webhooks/paymongo/route.ts` confirms payment, no admin
   step. Built against **PayMongo's test-mode keys** (`sk_test_...`) since the account isn't yet
   approved for live/business use — see `docs/deployment.md`'s env var table for the go-live swap
-  (test → live keys, no code change). GCash only at launch; cards/GrabPay/Maya are not wired up.
+  (test → live keys, no code change). PayMongo's Links API has no per-request payment-method
+  restriction: the hosted checkout page shows whichever methods (GCash, Maya, cards, ...) are
+  enabled in the PayMongo Dashboard's Payment Methods settings — this app's copy just says "Pay
+  online" rather than naming a specific method.
 
 PayMongo has **no native recurring-subscription object** — a Link only ever pays for one billing
 cycle. `subscriptions.current_period_end` stays the sole source of truth for renewal timing,

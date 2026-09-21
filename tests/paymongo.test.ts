@@ -64,9 +64,9 @@ describe("parseWebhookEvent", () => {
     expect(event.paymentId).toBe("pay_123");
   });
 
-  it("maps link.payment.failed to payment.failed", () => {
+  it("maps link.payment.failed to unhandled -- PayMongo has no such event, but a stray delivery shouldn't crash", () => {
     const event = parseWebhookEvent(linkPayload("link.payment.failed", "link_abc", "pay_123"));
-    expect(event.type).toBe("payment.failed");
+    expect(event.type).toBe("unhandled");
   });
 
   it("maps an unrecognized event type to unhandled", () => {

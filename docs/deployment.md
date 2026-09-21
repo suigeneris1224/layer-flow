@@ -131,8 +131,9 @@ or the "Trigger Cron" button on the Worker's dashboard page once deployed.
 > ```
 > https://yourdomain.com/api/webhooks/paymongo
 > ```
-> with `link.payment.paid` and `link.payment.failed` selected, then copy the generated signing
-> secret into `PAYMONGO_WEBHOOK_SECRET`. Until this is set up, a farmer can pay but their plan
+> with only `link.payment.paid` selected (PayMongo's event picker has no link-scoped failure/expiry
+> event -- an unpaid Link just stays PENDING, and the farmer can start a fresh checkout), then copy
+> the generated signing secret into `PAYMONGO_WEBHOOK_SECRET`. Until this is set up, a farmer can pay but their plan
 > never updates — the Manual QR tab has no such dependency, which is why it stays available as a
 > fallback.
 

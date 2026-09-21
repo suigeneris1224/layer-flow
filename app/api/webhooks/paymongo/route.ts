@@ -14,7 +14,8 @@ import type { BillingPeriod, Json, SubscriptionPlan } from "@/lib/types/database
  * PayMongo's payment webhook: no user session, so signature verification is
  * the only gate (see lib/subscriptions/paymongo.ts's verifyWebhookSignature).
  * Set this route's URL in PayMongo Dashboard -> Developers -> Webhooks with
- * `link.payment.paid`/`link.payment.failed` selected.
+ * only `link.payment.paid` selected -- PayMongo's event picker has no
+ * link-scoped failure/expiry event.
  *
  * Reads the raw body as text, not `.json()`, because the signature is an
  * HMAC over the exact bytes PayMongo sent -- parsing first and
@@ -45,22 +46,11 @@ export async function POST(request: NextRequest) {
 
   const admin = createSupabaseAdminClient();
 
-  if (event.type === "payment.failed") {
-    const { error } = await admin
-      .from("paymongo_payments")
-      .update({ status: "FAILED", raw_webhook_payload: event.raw as Json })
-      .eq("provider_link_id", event.linkId)
-      .eq("status", "PENDING");
-
-    if (error) {
-      logger.error("paymongo webhook: failed-status update failed", { reason: error.message });
-    }
-    return new Response("ok", { status: 200 });
-  }
-
-  // payment.paid -- claim the row atomically. A duplicate delivery of the
-  // same event finds zero PENDING rows to claim on the second attempt, which
-  // is exactly the idempotency docs/billing.md requires.
+  // payment.paid is the only event this route ever receives (PayMongo has no
+  // link.payment.failed/expired event -- see parseWebhookEvent). Claim the
+  // row atomically: a duplicate delivery of the same event finds zero
+  // PENDING rows to claim on the second attempt, which is exactly the
+  // idempotency docs/billing.md requires.
   const now = new Date();
   const { data: claimed, error: claimError } = await admin
     .from("paymongo_payments")

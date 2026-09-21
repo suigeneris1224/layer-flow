@@ -5,9 +5,12 @@ import { cn } from "@/lib/utils";
 /**
  * Wordmark plus tagline, used at the top of the sidebar and the drawer.
  *
- * The mark is imported rather than referenced by path so Next can size it at
- * build time and serve a resized, modern-format version -- the source file is
- * 1254px square and would otherwise ship in full for a 48px slot.
+ * The mark is imported rather than referenced by path so Next knows its
+ * intrinsic size at build time (no layout shift while it loads), even though
+ * `unoptimized` means it ships as-is rather than resized -- Cloudflare
+ * Workers only serves `next/image`'s resized/reformatted output through a
+ * paid Images binding this app doesn't have, same as every other `<Image>`
+ * here (avatar, cover, farm photo).
  *
  * It sits directly on the surface with no tile behind it: the PNG is genuinely
  * transparent, so on the light theme it reads as part of the sidebar. See the
@@ -32,6 +35,7 @@ export function Brand({
         width={size === "lg" ? 64 : 48}
         height={size === "lg" ? 64 : 48}
         priority
+        unoptimized
         className={cn(
           "shrink-0 object-contain",
           compact ? "size-8" : size === "lg" ? "size-16" : "size-12"

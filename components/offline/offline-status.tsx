@@ -82,10 +82,33 @@ export function OfflineStatus({ offlineEnabled }: { offlineEnabled: boolean }) {
   const waiting = items.filter((item) => item.status === "pending").length;
 
   if (!online) {
+    // Leftover queue from before a downgrade (or before losing connectivity
+    // again while still entitled) -- factual either way, no promise about
+    // what happens to a *new* record right now.
+    if (items.length > 0) {
+      return (
+        <Banner tone="warn" icon={CloudOff}>
+          Offline. {items.length} {items.length === 1 ? "record" : "records"} saved earlier still
+          need to sync.
+        </Banner>
+      );
+    }
+
+    if (offlineEnabled) {
+      return (
+        <Banner tone="warn" icon={CloudOff}>
+          Offline — your records are saved on this phone.
+        </Banner>
+      );
+    }
+
+    // Not entitled to offline_mode and nothing queued -- the plain, honest
+    // message, matching what the record forms themselves already show
+    // (production-form.tsx et al.). Must not claim records are saved: on
+    // this plan they aren't, forms reject the submission instead.
     return (
       <Banner tone="warn" icon={CloudOff}>
-        Offline — your records are saved on this phone.
-        {items.length > 0 && ` (${items.length} waiting to sync.)`}
+        You&apos;re offline. Try again once you have a connection.
       </Banner>
     );
   }

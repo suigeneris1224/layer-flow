@@ -88,8 +88,12 @@ export function ProfileForm({
       // the final 512x512 size -- that's applied by the crop step below, so
       // there's still room to reposition within the source image.
       setAvatarCropFile(await resizeImage(await normalizeImageFile(picked), 2400));
-    } catch {
-      setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
+    } catch (error) {
+      setFormError(
+        `That photo's format isn't supported. Please try a JPG, PNG, or WebP.${
+          error instanceof Error ? ` (${error.message})` : ""
+        }`
+      );
     }
   }
 
@@ -137,8 +141,12 @@ export function ProfileForm({
 
     try {
       setCoverCropFile(await resizeImage(await normalizeImageFile(picked), 2400));
-    } catch {
-      setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
+    } catch (error) {
+      setFormError(
+        `That photo's format isn't supported. Please try a JPG, PNG, or WebP.${
+          error instanceof Error ? ` (${error.message})` : ""
+        }`
+      );
     }
   }
 

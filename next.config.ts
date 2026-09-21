@@ -28,11 +28,17 @@ const scriptSrc = process.env.NODE_ENV === "production"
   ? "script-src 'self' 'unsafe-inline'"
   : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
 
+// `blob:` on img-src is for the client-only photo crop/resize pipeline
+// (lib/client/resize-image.ts, components/ui/image-crop-modal.tsx) -- it
+// previews a picked file via `URL.createObjectURL(file)` before anything is
+// ever uploaded, and without `blob:` here the browser silently refuses to
+// load it: the <img>'s onerror fires exactly like a real decode failure, and
+// there's no network request for either end's logs to ever show.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   scriptSrc,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: ${supabaseOrigin}`,
+  `img-src 'self' data: blob: ${supabaseOrigin}`,
   "font-src 'self' data:",
   `connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin}`,
   "frame-ancestors 'none'",

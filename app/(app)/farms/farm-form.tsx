@@ -101,8 +101,12 @@ export function FarmForm({
       // ceiling -- a full-resolution phone photo drawn straight to canvas
       // can render solid black on mobile Safari (react-easy-crop#91).
       setPhotoCropFile(await resizeImage(await normalizeImageFile(picked), 2400));
-    } catch {
-      setFormError("That photo's format isn't supported. Please try a JPG, PNG, or WebP.");
+    } catch (error) {
+      setFormError(
+        `That photo's format isn't supported. Please try a JPG, PNG, or WebP.${
+          error instanceof Error ? ` (${error.message})` : ""
+        }`
+      );
     }
   }
 

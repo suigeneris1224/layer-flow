@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { getAllSubscriptions } from "@/lib/data/admin";
 import { getPendingManualPayments } from "@/lib/data/manual-payments";
-import { getPendingAccountDeletionRequests } from "@/lib/data/account-deletion";
+import {
+  getAccountDeletionHistory,
+  getPendingAccountDeletionRequests,
+} from "@/lib/data/account-deletion";
 import { searchFarms, paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
 import type { Route } from "next";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
@@ -14,6 +17,7 @@ import { AdminPagination } from "../pagination";
 import { SubscriptionsTable } from "./subscriptions-table";
 import { ManualPaymentsPanel } from "./manual-payments-panel";
 import { AccountDeletionPanel } from "./account-deletion-panel";
+import { AccountDeletionHistoryPanel } from "./account-deletion-history-panel";
 
 export const metadata: Metadata = { title: "Admin — Subscriptions" };
 
@@ -31,11 +35,13 @@ export default async function AdminSubscriptionsPage({
   searchParams: Promise<{ q?: string; page?: string; period?: string }>;
 }) {
   const { q = "", page: pageParam, period = "all" } = await searchParams;
-  const [rows, pendingManualPayments, pendingDeletionRequests] = await Promise.all([
-    getAllSubscriptions(),
-    getPendingManualPayments(),
-    getPendingAccountDeletionRequests(),
-  ]);
+  const [rows, pendingManualPayments, pendingDeletionRequests, deletionHistory] =
+    await Promise.all([
+      getAllSubscriptions(),
+      getPendingManualPayments(),
+      getPendingAccountDeletionRequests(),
+      getAccountDeletionHistory(),
+    ]);
 
   const annualRows = rows.filter((row) => row.billingPeriod === "ANNUAL");
 
@@ -72,6 +78,7 @@ export default async function AdminSubscriptionsPage({
 
       <ManualPaymentsPanel payments={pendingManualPayments} />
       <AccountDeletionPanel requests={pendingDeletionRequests} />
+      <AccountDeletionHistoryPanel requests={deletionHistory} />
 
       {rows.length === 0 ? (
         <EmptyState icon={Building2} title="No accounts yet" message="Nothing to monitor yet." />

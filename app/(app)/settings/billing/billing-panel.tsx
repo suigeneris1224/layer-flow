@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
-import type { BillingPeriod, SubscriptionStatus } from "@/lib/types/database";
+import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 import { emailReceiptAction, sendPastDueReminderAction } from "./actions";
 import { safeAction } from "@/lib/client/safe-action";
 
@@ -18,12 +18,14 @@ import { safeAction } from "@/lib/client/safe-action";
  * actually PAST_DUE, matching what the server action itself refuses.
  */
 export function BillingPanel({
+  plan,
   planName,
   price,
   billingPeriod,
   status,
   currentPeriodEnd,
 }: {
+  plan: SubscriptionPlan;
   planName: string;
   price: string;
   billingPeriod: BillingPeriod;
@@ -91,16 +93,18 @@ export function BillingPanel({
       )}
 
       <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          loading={pending && pendingAction === "receipt"}
-          disabled={pending}
-          onClick={() => run("receipt")}
-        >
-          <Mail className="size-4" aria-hidden />
-          Email me a receipt
-        </Button>
+        {plan !== "FREE" && (
+          <Button
+            variant="outline"
+            size="sm"
+            loading={pending && pendingAction === "receipt"}
+            disabled={pending}
+            onClick={() => run("receipt")}
+          >
+            <Mail className="size-4" aria-hidden />
+            Email me a receipt
+          </Button>
+        )}
 
         {status === "PAST_DUE" && (
           <Button

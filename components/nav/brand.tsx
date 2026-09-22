@@ -15,6 +15,11 @@ import { cn } from "@/lib/utils";
  * It sits directly on the surface with no tile behind it: the PNG is genuinely
  * transparent, so on the light theme it reads as part of the sidebar. See the
  * note in docs/design-system.md about how it behaves on the dark theme.
+ *
+ * Deliberately not `priority`: that injects a `<link rel="preload">` on every
+ * page, but this renders in several places that are not on screen at load (the
+ * sidebar is `hidden` below `lg`, the footer is below the fold), so browsers
+ * warned the preload went unused. It is a 48px mark and never the LCP element.
  */
 export function Brand({
   compact = false,
@@ -34,7 +39,6 @@ export function Brand({
         alt=""
         width={size === "lg" ? 64 : 48}
         height={size === "lg" ? 64 : 48}
-        priority
         unoptimized
         className={cn(
           "shrink-0 object-contain",

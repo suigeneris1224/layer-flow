@@ -85,6 +85,7 @@ export default async function BillingPage() {
       )}
 
       <BillingPanel
+        plan={context.plan}
         planName={PLANS[context.plan].name}
         price={formatPlanPrice(PLANS[context.plan], billingPeriod)}
         billingPeriod={billingPeriod}

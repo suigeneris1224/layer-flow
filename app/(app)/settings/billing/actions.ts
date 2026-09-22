@@ -31,6 +31,9 @@ export async function emailReceiptAction(): Promise<ActionResult> {
 
   if (!context) return failure("Set up your farm first.");
   if (!canManageBilling(context)) return failure("Only the account owner can request a receipt.");
+  if (context.plan === "FREE") {
+    return failure("Receipts are available on Starter and Pro plans.");
+  }
 
   try {
     const [{ currentPeriodEnd, billingPeriod }, farmNames] = await Promise.all([

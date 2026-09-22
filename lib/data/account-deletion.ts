@@ -124,3 +124,58 @@ export async function getPendingAccountDeletionRequests(): Promise<
     })
   );
 }
+
+export interface AccountDeletionHistoryRow {
+  id: string;
+  email: string;
+  status: Extract<AccountDeletionStatus, "COMPLETED" | "REJECTED">;
+  reason: string | null;
+  rejectionReason: string | null;
+  reviewedByEmail: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * Every account deletion request that's been reviewed, newest first -- the
+ * tracker for what `adminApproveAccountDeletionAction`/
+ * `adminRejectAccountDeletionAction` (app/admin/actions.ts) already recorded
+ * but nothing surfaced: those actions update this same row to COMPLETED/
+ * REJECTED rather than deleting it (see the migration's own comment on why),
+ * so the history was always in the database, just never queried for display.
+ */
+export async function getAccountDeletionHistory(): Promise<AccountDeletionHistoryRow[]> {
+  const admin = createSupabaseAdminClient();
+
+  const [requestsResult, usersResult] = await Promise.all([
+    admin
+      .from("account_deletion_requests")
+      .select("id, email, status, reason, rejection_reason, reviewed_by, reviewed_at, created_at")
+      .neq("status", "PENDING")
+      .order("reviewed_at", { ascending: false }),
+    admin.auth.admin.listUsers(),
+  ]);
+
+  if (requestsResult.error) {
+    logger.error("account deletion history lookup failed", {
+      reason: requestsResult.error.message,
+    });
+    return [];
+  }
+  if (usersResult.error) {
+    logger.error("admin user list lookup failed", { reason: usersResult.error.message });
+  }
+
+  const emailById = new Map(usersResult.data?.users.map((u) => [u.id, u.email ?? null]) ?? []);
+
+  return (requestsResult.data ?? []).map((request) => ({
+    id: request.id,
+    email: request.email,
+    status: request.status as Extract<AccountDeletionStatus, "COMPLETED" | "REJECTED">,
+    reason: request.reason,
+    rejectionReason: request.rejection_reason,
+    reviewedByEmail: request.reviewed_by ? (emailById.get(request.reviewed_by) ?? null) : null,
+    reviewedAt: request.reviewed_at,
+    createdAt: request.created_at,
+  }));
+}

@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     })
     .eq("provider_link_id", event.linkId)
     .eq("status", "PENDING")
-    .select("id, owner_id, plan, billing_period")
+    .select("id, owner_id, plan, billing_period, amount_centavos")
     .maybeSingle();
 
   if (claimError) {
@@ -123,7 +123,15 @@ export async function POST(request: NextRequest) {
   const { data: owner } = await admin.auth.admin.getUserById(claimed.owner_id);
   const ownerEmail = owner?.user?.email;
   if (ownerEmail) {
-    const email = buildManualPaymentApprovedEmail({ plan, billingPeriod });
+    const email = buildManualPaymentApprovedEmail({
+      plan,
+      billingPeriod,
+      amountCentavos: claimed.amount_centavos,
+      // PayMongo's own payment id -- falls back to our ledger row id in the
+      // extremely unlikely case the webhook payload omitted it.
+      transactionId: event.paymentId ?? claimed.id,
+      paidAt: now.toISOString(),
+    });
     const sent = await sendEmail({
       to: { email: ownerEmail },
       subject: email.subject,

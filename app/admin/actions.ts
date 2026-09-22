@@ -357,7 +357,7 @@ export async function adminApproveManualPaymentAction(paymentId: string): Promis
 
     const { data: payment, error: fetchError } = await admin
       .from("manual_payments")
-      .select("id, owner_id, plan, billing_period, status")
+      .select("id, owner_id, plan, billing_period, status, reference_number, amount_centavos")
       .eq("id", paymentId)
       .maybeSingle();
 
@@ -430,6 +430,9 @@ export async function adminApproveManualPaymentAction(paymentId: string): Promis
       const email = buildManualPaymentApprovedEmail({
         plan: payment.plan,
         billingPeriod: payment.billing_period,
+        amountCentavos: payment.amount_centavos,
+        transactionId: payment.reference_number,
+        paidAt: now.toISOString(),
       });
       const sent = await sendEmail({
         to: { email: ownerEmail },

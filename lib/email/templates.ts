@@ -1,6 +1,6 @@
 import { publicEnv } from "@/lib/config/env";
 import { PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
-import { formatDate } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { renderEmailHtml } from "@/lib/email/layout";
 import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
@@ -188,12 +188,30 @@ export interface ManualPaymentEmailContext {
   billingPeriod: BillingPeriod;
 }
 
-/** Sent when an admin approves a manual QR/bank transfer payment -- see app/admin/actions.ts. */
-export function buildManualPaymentApprovedEmail(ctx: ManualPaymentEmailContext): BuiltEmail {
+/**
+ * Sent when a payment is confirmed -- either an admin approving a manual
+ * QR/bank transfer (app/admin/actions.ts) or PayMongo's webhook confirming an
+ * automated one (app/api/webhooks/paymongo/route.ts). Shared by both, so
+ * `transactionId` is whichever reference the farmer can match against their
+ * own record of paying: the GCash/bank reference number they typed in for
+ * manual, or PayMongo's own payment id for automated.
+ */
+export interface PaymentReceiptContext extends ManualPaymentEmailContext {
+  amountCentavos: number;
+  transactionId: string;
+  /** ISO timestamp of when the payment was confirmed. */
+  paidAt: string;
+}
+
+export function buildManualPaymentApprovedEmail(ctx: PaymentReceiptContext): BuiltEmail {
   const plan = PLANS[ctx.plan];
   const price = `${formatPlanPrice(plan, ctx.billingPeriod)} / ${periodNoun(ctx.billingPeriod)}`;
+  const amountPaid = formatCurrency(ctx.amountCentavos / 100);
   const bodyLines = [
     `Your manual payment has been verified and your account is now on the ${plan.name} plan (${price}).`,
+    `Amount paid: ${amountPaid}`,
+    `Reference no.: ${ctx.transactionId}`,
+    `Date paid: ${formatDate(ctx.paidAt)}`,
     `Thanks for your patience while we confirmed the transfer.`,
   ];
 
@@ -207,7 +225,9 @@ export function buildManualPaymentApprovedEmail(ctx: ManualPaymentEmailContext):
       title: "Payment details",
       rows: [
         { icon: "box", label: "Plan", value: plan.name },
-        { icon: "card", label: "Amount", value: price },
+        { icon: "card", label: "Amount paid", value: amountPaid },
+        { icon: "receipt", label: "Reference no.", value: ctx.transactionId },
+        { icon: "calendar", label: "Date paid", value: formatDate(ctx.paidAt) },
         { icon: "check-circle", label: "Status", value: "Active" },
       ],
     },

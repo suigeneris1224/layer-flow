@@ -45,17 +45,38 @@ const TO_LABEL: Record<"self" | "owner" | "unknown", string> = {
 export default async function AdminEmailLogsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; eventsPage?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, eventsPage: eventsPageParam } = await searchParams;
   const [sentRows, events] = await Promise.all([getEmailLog(), getRecentEmailEvents()]);
   const { items: pageRows, page, totalPages, totalItems } = paginate(
     sentRows,
     Number(pageParam) || 1,
     ADMIN_PAGE_SIZE
   );
-  const pageHref = (targetPage: number): Route =>
-    (targetPage > 1 ? `/admin/email-logs?page=${targetPage}` : "/admin/email-logs") as Route;
+  const {
+    items: pageEvents,
+    page: eventsPage,
+    totalPages: eventsTotalPages,
+    totalItems: eventsTotalItems,
+  } = paginate(events, Number(eventsPageParam) || 1, ADMIN_PAGE_SIZE);
+
+  // Two independent paginated tables on one page -- each href preserves the
+  // other table's current page instead of resetting it.
+  const pageHref = (targetPage: number): Route => {
+    const params = new URLSearchParams();
+    if (targetPage > 1) params.set("page", String(targetPage));
+    if (eventsPage > 1) params.set("eventsPage", String(eventsPage));
+    const query = params.toString();
+    return (query ? `/admin/email-logs?${query}` : "/admin/email-logs") as Route;
+  };
+  const eventsPageHref = (targetPage: number): Route => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set("page", String(page));
+    if (targetPage > 1) params.set("eventsPage", String(targetPage));
+    const query = params.toString();
+    return (query ? `/admin/email-logs?${query}` : "/admin/email-logs") as Route;
+  };
 
   return (
     <PageShell>
@@ -64,7 +85,7 @@ export default async function AdminEmailLogsPage({
         description="What LayerFlow sent, and what Brevo reports actually happened to it."
       />
 
-      <Panel title="Delivery events" bodyClassName="p-0">
+      <Panel title={`Delivery events (last ${eventsTotalItems})`} bodyClassName="p-0">
         {events.length === 0 ? (
           <div className="p-4">
             <StatusNote tone="info">
@@ -74,29 +95,39 @@ export default async function AdminEmailLogsPage({
             </StatusNote>
           </div>
         ) : (
-          <div className="scroll-x-flush">
-            <table className="w-full min-w-[36rem] border-collapse text-sm">
-              <caption className="sr-only">Brevo delivery events, newest first</caption>
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th scope="col" className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide">Recipient</th>
-                  <th scope="col" className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide">Template</th>
-                  <th scope="col" className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide">Status</th>
-                  <th scope="col" className="p-3 text-right text-[11px] font-semibold uppercase tracking-wide">When</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id} className="border-b border-border last:border-0">
-                    <td className="p-3 text-left">{event.recipient}</td>
-                    <td className="p-3 text-left text-muted-foreground">{event.tag ?? "—"}</td>
-                    <td className="p-3 text-left"><EventStatusPill event={event.event} /></td>
-                    <td className="p-3 text-right tabular">{formatDate(event.occurredAt)}</td>
+          <>
+            <div className="scroll-x-flush">
+              <table className="w-full min-w-[36rem] border-collapse text-sm">
+                <caption className="sr-only">Brevo delivery events, newest first</caption>
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th scope="col" className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide">Recipient</th>
+                    <th scope="col" className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide">Template</th>
+                    <th scope="col" className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide">Status</th>
+                    <th scope="col" className="p-3 text-right text-[11px] font-semibold uppercase tracking-wide">When</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pageEvents.map((event) => (
+                    <tr key={event.id} className="border-b border-border last:border-0">
+                      <td className="p-3 text-left">{event.recipient}</td>
+                      <td className="p-3 text-left text-muted-foreground">{event.tag ?? "—"}</td>
+                      <td className="p-3 text-left"><EventStatusPill event={event.event} /></td>
+                      <td className="p-3 text-right tabular">{formatDate(event.occurredAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <AdminPagination
+              page={eventsPage}
+              totalPages={eventsTotalPages}
+              totalItems={eventsTotalItems}
+              itemLabel="event"
+              hrefForPage={eventsPageHref}
+            />
+          </>
         )}
       </Panel>
 

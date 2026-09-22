@@ -78,13 +78,47 @@ export function TeamManager({
     });
   }
 
+  /**
+   * Fallback for when the Clipboard API is unavailable or rejects --
+   * `navigator.clipboard` doesn't exist at all in a non-secure context and in
+   * several in-app browsers (Messenger/Facebook/Instagram), and the
+   * auto-copy-on-create call above runs after an `await` inside
+   * `startTransition`, outside the original click's synchronous call stack,
+   * which some browsers (Safari included) refuse to treat as a user gesture
+   * and reject outright. `document.execCommand("copy")` via a temporary,
+   * off-screen textarea is the standard cross-browser fallback for both.
+   */
+  function legacyCopy(url: string): boolean {
+    const textarea = document.createElement("textarea");
+    textarea.value = url;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    document.body.removeChild(textarea);
+    return ok;
+  }
+
   async function copy(url: string) {
     try {
+      if (!navigator.clipboard) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(url);
       setCopied(url);
       window.setTimeout(() => setCopied(null), 2000);
     } catch {
-      // Clipboard is blocked in some in-app browsers; the link is on screen.
+      if (legacyCopy(url)) {
+        setCopied(url);
+        window.setTimeout(() => setCopied(null), 2000);
+        return;
+      }
+      // Every copy path failed; the link is still on screen to select by hand.
       setFormError("Couldn't copy automatically — select the link and copy it.");
     }
   }

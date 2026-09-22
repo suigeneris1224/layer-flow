@@ -32,9 +32,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminSubscriptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; period?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; period?: string; deletionPage?: string }>;
 }) {
-  const { q = "", page: pageParam, period = "all" } = await searchParams;
+  const { q = "", page: pageParam, period = "all", deletionPage: deletionPageParam } =
+    await searchParams;
   const [rows, pendingManualPayments, pendingDeletionRequests, deletionHistory] =
     await Promise.all([
       getAllSubscriptions(),
@@ -65,6 +66,24 @@ export default async function AdminSubscriptionsPage({
     if (q.trim()) params.set("q", q.trim());
     if (period !== "all") params.set("period", period);
     if (targetPage > 1) params.set("page", String(targetPage));
+    if (deletionPageParam) params.set("deletionPage", deletionPageParam);
+    const query = params.toString();
+    return (query ? `/admin/subscriptions?${query}` : "/admin/subscriptions") as Route;
+  };
+
+  const {
+    items: deletionHistoryPageRows,
+    page: deletionHistoryPage,
+    totalPages: deletionHistoryTotalPages,
+    totalItems: deletionHistoryTotalItems,
+  } = paginate(deletionHistory, Number(deletionPageParam) || 1, ADMIN_PAGE_SIZE);
+
+  const deletionPageHref = (targetPage: number): Route => {
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    if (period !== "all") params.set("period", period);
+    if (pageParam) params.set("page", pageParam);
+    if (targetPage > 1) params.set("deletionPage", String(targetPage));
     const query = params.toString();
     return (query ? `/admin/subscriptions?${query}` : "/admin/subscriptions") as Route;
   };
@@ -78,7 +97,13 @@ export default async function AdminSubscriptionsPage({
 
       <ManualPaymentsPanel payments={pendingManualPayments} />
       <AccountDeletionPanel requests={pendingDeletionRequests} />
-      <AccountDeletionHistoryPanel requests={deletionHistory} />
+      <AccountDeletionHistoryPanel
+        requests={deletionHistoryPageRows}
+        page={deletionHistoryPage}
+        totalPages={deletionHistoryTotalPages}
+        totalItems={deletionHistoryTotalItems}
+        hrefForPage={deletionPageHref}
+      />
 
       {rows.length === 0 ? (
         <EmptyState icon={Building2} title="No accounts yet" message="Nothing to monitor yet." />

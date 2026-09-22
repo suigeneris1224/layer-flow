@@ -18,6 +18,24 @@ export async function GET(request: NextRequest) {
       : "/dashboard";
 
   if (!code) {
+    // GoTrue redirects here with no `code` in two very different cases: a
+    // genuinely malformed/truncated link, or a verification failure on its
+    // own end (expired token, already-used token, or -- very commonly on
+    // Gmail's Android app specifically -- a link-safety prescan "clicking"
+    // the one-time confirmation link before the human taps it, burning its
+    // single use). Those failures carry `error`/`error_code`/
+    // `error_description` instead of `code`; without checking for them, both
+    // cases produced the same misleading "link was incomplete" message, when
+    // the accurate "expired or already used" one already exists one branch
+    // below for exactly this.
+    const authError = searchParams.get("error") ?? searchParams.get("error_code");
+    if (authError) {
+      logger.warn("auth confirmation link rejected by Supabase", {
+        error: authError,
+        description: searchParams.get("error_description"),
+      });
+      return NextResponse.redirect(`${origin}/login?error=invalid_link`);
+    }
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 

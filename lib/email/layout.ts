@@ -271,7 +271,7 @@ function supportBlock(): string {
         <tr>
           <td align="center" style="padding:20px 0 0;font-size:13px;line-height:1.6;color:${EMAIL_COLORS.muted};text-align:center;">
             Need a hand? Reach out any time at
-            <a href="mailto:hello@layerflow.local" style="color:${EMAIL_COLORS.medium};font-weight:600;text-decoration:none;">hello@layerflow.local</a>
+            <a href="mailto:support@layerflow.ph" style="color:${EMAIL_COLORS.medium};font-weight:600;text-decoration:none;">support@layerflow.ph</a>
             or visit the <a href="${publicEnv.appUrl}/support" style="color:${EMAIL_COLORS.medium};font-weight:600;text-decoration:none;">Help Center</a>.
           </td>
         </tr>

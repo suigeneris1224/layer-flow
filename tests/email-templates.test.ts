@@ -9,6 +9,7 @@ import {
   type SubscriptionEmailContext,
 } from "@/lib/email/templates";
 import { PLANS, formatPlanPrice } from "@/lib/subscriptions/plans";
+import { formatCurrency } from "@/lib/format";
 
 function ctx(overrides: Partial<SubscriptionEmailContext> = {}): SubscriptionEmailContext {
   return {
@@ -100,10 +101,26 @@ describe("annual billing period", () => {
 });
 
 describe("buildManualPaymentApprovedEmail", () => {
+  const receiptCtx = {
+    plan: "PRO" as const,
+    billingPeriod: "MONTHLY" as const,
+    amountCentavos: 89_900,
+    transactionId: "REF123456",
+    paidAt: "2026-09-15T00:00:00.000Z",
+  };
+
   it("mentions the plan and price", () => {
-    const email = buildManualPaymentApprovedEmail({ plan: "PRO", billingPeriod: "MONTHLY" });
+    const email = buildManualPaymentApprovedEmail(receiptCtx);
     expect(email.subject).toContain("Pro");
     expect(email.text).toContain(formatPlanPrice(PLANS.PRO, "MONTHLY"));
+  });
+
+  it("includes the transaction reference, amount paid, and date paid", () => {
+    const email = buildManualPaymentApprovedEmail(receiptCtx);
+    expect(email.text).toContain("REF123456");
+    expect(email.text).toContain(formatCurrency(899));
+    expect(email.html).toContain("REF123456");
+    expect(email.html).toContain(formatCurrency(899));
   });
 });
 

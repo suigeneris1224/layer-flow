@@ -34,7 +34,7 @@ export function FarmStep() {
             name="name"
             required
             autoFocus
-            placeholder="San Remigio Egg Farm"
+            placeholder="e.g. Cebu City Egg Farm"
             aria-invalid={Boolean(fieldErrors?.name)}
           />
         </Field>
@@ -45,7 +45,12 @@ export function FarmStep() {
           hint="Optional."
           error={fieldErrors?.barangay}
         >
-          <Input id="barangay" name="barangay" aria-invalid={Boolean(fieldErrors?.barangay)} />
+          <Input
+            id="barangay"
+            name="barangay"
+            placeholder="e.g. Poblacion"
+            aria-invalid={Boolean(fieldErrors?.barangay)}
+          />
         </Field>
 
         <Field
@@ -57,7 +62,7 @@ export function FarmStep() {
             id="municipality"
             name="municipality"
             required
-            placeholder="San Remigio"
+            placeholder="e.g. City or Municipality"
             aria-invalid={Boolean(fieldErrors?.municipality)}
           />
         </Field>
@@ -67,7 +72,7 @@ export function FarmStep() {
             id="province"
             name="province"
             required
-            placeholder="Cebu"
+            placeholder="e.g. Province"
             aria-invalid={Boolean(fieldErrors?.province)}
           />
         </Field>

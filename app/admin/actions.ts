@@ -1,9 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { BETA_SETTINGS_TAG } from "@/lib/subscriptions/beta";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { BILLING_PERIOD_DAYS } from "@/lib/subscriptions/plans";
 import {
@@ -132,6 +134,7 @@ export async function setBetaModeAction(enabled: boolean): Promise<ActionResult>
       admin
     );
 
+    revalidateTag(BETA_SETTINGS_TAG);
     revalidatePath("/admin/beta-settings");
     revalidatePath("/admin", "layout");
 
@@ -171,6 +174,7 @@ export async function setBetaMaxTestersAction(input: unknown): Promise<ActionRes
       admin
     );
 
+    revalidateTag(BETA_SETTINGS_TAG);
     revalidatePath("/admin/beta-settings");
     revalidatePath("/admin", "layout");
 
@@ -220,6 +224,7 @@ export async function addBetaTesterAction(input: unknown): Promise<ActionResult>
       admin
     );
 
+    revalidateTag(BETA_SETTINGS_TAG);
     revalidatePath("/admin/beta-settings");
     revalidatePath("/admin", "layout");
 
@@ -558,6 +563,7 @@ export async function removeBetaTesterAction(email: string): Promise<ActionResul
       admin
     );
 
+    revalidateTag(BETA_SETTINGS_TAG);
     revalidatePath("/admin/beta-settings");
     revalidatePath("/admin", "layout");
 
@@ -627,6 +633,10 @@ export async function adminApproveAccountDeletionAction(requestId: string): Prom
       if (farmDeleteError) {
         return describeDatabaseError(farmDeleteError, "adminApproveAccountDeletionAction");
       }
+      // Previously missing: nothing busted the deleted farm's cached
+      // reports/analytics entries. Low-stakes once the farm is gone (nobody
+      // can query it again), but cheap to close since we're already here.
+      revalidateTag(farmDataTag(farm.id));
     }
 
     await removeStorageFolder(admin, "avatars", ownerId);

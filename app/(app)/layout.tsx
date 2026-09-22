@@ -2,7 +2,7 @@ import { getUserFarms, requireFarmContext, requireUser } from "@/lib/auth/sessio
 import { canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
 import { isPlatformAdmin } from "@/lib/auth/admin";
 import { canAccess } from "@/lib/subscriptions/entitlements";
-import { getDashboardData } from "@/lib/data/dashboard";
+import { syncFarmAlerts } from "@/lib/data/dashboard";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getProfile } from "@/lib/data/profile";
 import { greetingFor } from "@/lib/domain/presentation";
@@ -25,8 +25,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // Reconciles today's alerts into notifications before the badge/panel below
   // read them, so this navigation shows the sync it just performed rather than
-  // the previous one.
-  await getDashboardData(context);
+  // the previous one. Not the full getDashboardData -- this runs on every
+  // navigation, and the dashboard-only "recent activity" query and shape it
+  // used to pull in were never used here. See lib/data/dashboard.ts.
+  await syncFarmAlerts(context);
   const [notifications, unreadCount, profile, farms] = await Promise.all([
     getNotifications(context),
     getUnreadNotificationCount(context),

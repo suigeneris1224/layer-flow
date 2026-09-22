@@ -1,7 +1,9 @@
 import "server-only";
 
 import { cache } from "react";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import type { FarmContext } from "@/lib/auth/session";
 import { canAccess } from "@/lib/subscriptions/entitlements";
 import { getFlocks } from "@/lib/data/flocks";
@@ -78,7 +80,7 @@ function sum<T>(rows: readonly T[], pick: (row: T) => number): number {
 }
 
 async function fetchPeriod(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
   farmId: string,
   from: string,
   to: string,
@@ -120,27 +122,58 @@ async function fetchPeriod(
   };
 }
 
+/**
+ * Cross-request cached per farm (see lib/data/cache-tags.ts's farmDataTag doc
+ * comment) -- `unstable_cache()` itself is cheap to call every request; the
+ * actual cache is keyed by the resolved key/tags below, not by which call
+ * created this wrapper, so a fresh factory call per farmId is the documented
+ * way to get a per-farm dynamic tag.
+ */
+function getReportsDataCached(farmId: string) {
+  return unstable_cache(
+    async (context: FarmContext, range: ResolvedRange): Promise<ReportsData> => {
+      const supabase = createSupabaseAdminClient();
+      const rangeDays = daysBetween(range.from, range.to);
+      const previousEnd = shiftDate(range.from, -1);
+      const previousStart = shiftDate(previousEnd, -(rangeDays - 1));
+      const yearAgo = sameRangeLastYear(range.from, range.to);
+
+      const entitlement = { plan: context.plan, status: context.subscriptionStatus };
+      const hasSales = canAccess(entitlement, "egg_sales");
+      const hasAdvanced = canAccess(entitlement, "advanced_reports");
+
+      const [current, previous, lastYearPeriod, flocks, expenseByCategory] = await Promise.all([
+        fetchPeriod(supabase, farmId, range.from, range.to, hasSales),
+        fetchPeriod(supabase, farmId, previousStart, previousEnd, hasSales),
+        fetchPeriod(supabase, farmId, yearAgo.from, yearAgo.to, hasSales),
+        hasAdvanced ? getFlocks(farmId, supabase) : Promise.resolve([]),
+        hasAdvanced ? getExpensesByCategory(context, range, supabase) : Promise.resolve(null),
+      ]);
+
+      return buildReportsData(range, current, previous, lastYearPeriod, hasAdvanced, flocks, expenseByCategory);
+    },
+    ["reports-data", farmId],
+    { tags: [farmDataTag(farmId)] }
+  );
+}
+
 export const getReportsData = cache(async function getReportsData(
   context: FarmContext,
   range: ResolvedRange
 ): Promise<ReportsData> {
-  const supabase = await createSupabaseServerClient();
-  const rangeDays = daysBetween(range.from, range.to);
-  const previousEnd = shiftDate(range.from, -1);
-  const previousStart = shiftDate(previousEnd, -(rangeDays - 1));
+  return getReportsDataCached(context.farmId)(context, range);
+});
+
+function buildReportsData(
+  range: ResolvedRange,
+  current: Awaited<ReturnType<typeof fetchPeriod>>,
+  previous: Awaited<ReturnType<typeof fetchPeriod>>,
+  lastYearPeriod: Awaited<ReturnType<typeof fetchPeriod>>,
+  hasAdvanced: boolean,
+  flocks: Awaited<ReturnType<typeof getFlocks>>,
+  expenseByCategory: CategoryBreakdownRow[] | null
+): ReportsData {
   const yearAgo = sameRangeLastYear(range.from, range.to);
-
-  const entitlement = { plan: context.plan, status: context.subscriptionStatus };
-  const hasSales = canAccess(entitlement, "egg_sales");
-  const hasAdvanced = canAccess(entitlement, "advanced_reports");
-
-  const [current, previous, lastYearPeriod, flocks, expenseByCategory] = await Promise.all([
-    fetchPeriod(supabase, context.farmId, range.from, range.to, hasSales),
-    fetchPeriod(supabase, context.farmId, previousStart, previousEnd, hasSales),
-    fetchPeriod(supabase, context.farmId, yearAgo.from, yearAgo.to, hasSales),
-    hasAdvanced ? getFlocks(context.farmId) : Promise.resolve([]),
-    hasAdvanced ? getExpensesByCategory(context, range) : Promise.resolve(null),
-  ]);
 
   const revenue = roundMoney(sum(current.sales, (row) => Number(row.total_amount)));
   const feedCost = sum(current.feed, (row) => Number(row.total_cost));
@@ -194,7 +227,7 @@ export const getReportsData = cache(async function getReportsData(
       : null,
     expenseByCategory,
   };
-});
+}
 
 function buildDailySeries(
   sales: readonly SaleRow[],

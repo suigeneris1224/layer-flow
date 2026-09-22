@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { FarmContext } from "@/lib/auth/session";
 import type { CurrentPrice } from "@/lib/domain/pricing";
@@ -55,8 +56,12 @@ function toCurrentPrice(row: PriceRow): CurrentPrice {
  *
  * A row applies when the date sits inside its range; `effective_to` is
  * inclusive and null means open-ended, matching the exclusion constraint.
+ *
+ * Memoised per request with React `cache()`: the dashboard's advanced-alerts
+ * pricing check and a direct visit to /prices can both call this in the same
+ * request, and without the memo the second call would repeat both queries.
  */
-export async function getCurrentPrices(
+export const getCurrentPrices = cache(async function getCurrentPrices(
   farmId: string,
   onDate: string
 ): Promise<PricedSize[]> {
@@ -94,7 +99,7 @@ export async function getCurrentPrices(
     sortOrder: size.sort_order,
     currentPrice: bySize.get(size.id) ?? null,
   }));
-}
+});
 
 /**
  * The price row a change would affect: the latest open-ended one.

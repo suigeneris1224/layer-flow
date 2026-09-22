@@ -47,6 +47,7 @@ export function InventoryPanel({
   hasNegative,
   ungradedEggs,
   lowStockTrays,
+  isEmpty,
   className,
 }: {
   lines: InventoryLine[];
@@ -55,6 +56,7 @@ export function InventoryPanel({
   hasNegative: boolean;
   ungradedEggs: number;
   lowStockTrays: number;
+  isEmpty: boolean;
   className?: string;
 }) {
   const largest = Math.max(...lines.map((line) => Math.max(0, line.eggsAvailable)), 1);
@@ -72,7 +74,7 @@ export function InventoryPanel({
         </Link>
       }
     >
-      {lines.length === 0 || totalEggs === 0 ? (
+      {isEmpty ? (
         <EmptyState
           icon={Boxes}
           title="No eggs in stock yet"

@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageCustomers, canManageSales } from "@/lib/auth/permissions";
 import { assertCanAccess, assertCanCreate } from "@/lib/subscriptions/entitlements";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import { getSale, getStockForWarning } from "@/lib/data/sales";
 import { getCustomerCount } from "@/lib/data/customers";
 import {
@@ -132,6 +133,7 @@ export async function recordSaleAction(
     revalidatePath("/sales");
     revalidatePath("/inventory");
     revalidatePath("/dashboard");
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true, data: { saleId, warnings } };
   } catch (error) {
@@ -188,6 +190,7 @@ export async function recordSalePaymentAction(
 
     revalidatePath("/sales");
     revalidatePath("/dashboard");
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true, data: { id: saleId } };
   } catch (error) {

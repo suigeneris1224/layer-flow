@@ -54,7 +54,7 @@ export default async function InventoryPage() {
         </StatusNote>
       )}
 
-      {summary.lines.length === 0 ? (
+      {summary.isEmpty ? (
         <EmptyState
           icon={Boxes}
           title="Nothing in stock yet"

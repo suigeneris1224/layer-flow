@@ -276,21 +276,38 @@ export function vaccinationAlert(
 /**
  * Low egg inventory, Pro only.
  *
- * `bad` when the shed has nothing left to sell at all; `warn` at or below the
- * threshold otherwise. Only fires below/at the line, never on a healthy stock.
+ * `bad` ("empty") is reserved for when the shed truly has nothing -- no sold
+ * trays and nothing waiting to be sorted either. When trays are at/below the
+ * threshold but there are ungraded eggs sitting uncounted, that is not
+ * "empty" -- the farmer has stock, it just hasn't been sorted by size yet --
+ * so this downgrades to `warn` and says so instead of overstating the
+ * problem. Only fires when trays are below/at the line, never on a healthy
+ * stock; ungraded eggs alone never trigger it.
  */
 export function lowInventoryAlert(
   totalTrays: number,
+  ungradedEggs: number,
   threshold: number = THRESHOLDS.lowInventoryTrays
 ): Alert | null {
   if (totalTrays > threshold) return null;
 
+  const hasUnsorted = ungradedEggs > 0;
+
+  if (totalTrays <= 0) {
+    return {
+      level: hasUnsorted ? "warn" : "bad",
+      message: hasUnsorted
+        ? `No sorted eggs left, but ${ungradedEggs} egg${ungradedEggs === 1 ? "" : "s"} waiting to be sorted.`
+        : "Egg inventory is empty.",
+      type: "low_inventory",
+    };
+  }
+
   return {
-    level: totalTrays <= 0 ? "bad" : "warn",
-    message:
-      totalTrays <= 0
-        ? "Egg inventory is empty."
-        : `Only ${totalTrays} tray${totalTrays === 1 ? "" : "s"} left in stock.`,
+    level: "warn",
+    message: hasUnsorted
+      ? `Only ${totalTrays} tray${totalTrays === 1 ? "" : "s"} left in stock, plus ${ungradedEggs} egg${ungradedEggs === 1 ? "" : "s"} not sorted yet.`
+      : `Only ${totalTrays} tray${totalTrays === 1 ? "" : "s"} left in stock.`,
     type: "low_inventory",
   };
 }

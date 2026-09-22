@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getBetaState } from "@/lib/subscriptions/beta";
 import { AUDIT_ACTIONS } from "@/lib/data/audit";
 import { logger } from "@/lib/observability/logger";
 import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
@@ -174,55 +175,27 @@ export interface BetaSettings {
   testers: BetaTesterRow[];
 }
 
-const DEFAULT_MAX_TESTERS = 5;
-
-/** The beta-testing toggle, cap and tester list, for app/admin/beta-settings/. */
+/**
+ * The beta-testing toggle, cap and tester list, for app/admin/beta-settings/.
+ *
+ * Sourced from lib/subscriptions/beta.ts's cross-request cache rather than a
+ * direct query -- that cache is busted by the same actions that write these
+ * tables (app/admin/actions.ts's four beta-mutation actions), so this page
+ * never sees a stale value.
+ */
 export async function getBetaSettings(): Promise<BetaSettings> {
-  const admin = createSupabaseAdminClient();
-
-  const [settingsResult, testersResult] = await Promise.all([
-    admin.from("beta_settings").select("enabled, max_testers").eq("id", true).maybeSingle(),
-    admin.from("beta_testers").select("email, added_at").order("added_at", { ascending: true }),
-  ]);
-
-  if (settingsResult.error) {
-    logger.error("beta settings lookup failed", { reason: settingsResult.error.message });
-  }
-  if (testersResult.error) {
-    logger.error("beta testers lookup failed", { reason: testersResult.error.message });
-  }
-
-  return {
-    enabled: settingsResult.data?.enabled ?? false,
-    maxTesters: settingsResult.data?.max_testers ?? DEFAULT_MAX_TESTERS,
-    testers: (testersResult.data ?? []).map((row) => ({
-      email: row.email,
-      addedAt: row.added_at,
-    })),
-  };
+  return getBetaState();
 }
 
 /**
  * The lightweight version of getBetaSettings(), for the shared admin layout's
- * top-bar badge -- every admin page pays for this on every load, so it skips
- * the full tester list and just counts rows.
+ * top-bar badge -- every admin page reads this on every load, so it going
+ * through the same cache (rather than its own uncached query, as before)
+ * turns that into a cache hit after the first admin page view.
  */
 export async function getBetaStatusSummary(): Promise<{ enabled: boolean; testerCount: number }> {
-  const admin = createSupabaseAdminClient();
-
-  const [settingsResult, countResult] = await Promise.all([
-    admin.from("beta_settings").select("enabled").eq("id", true).maybeSingle(),
-    admin.from("beta_testers").select("email", { count: "exact", head: true }),
-  ]);
-
-  if (settingsResult.error) {
-    logger.error("beta status summary lookup failed", { reason: settingsResult.error.message });
-  }
-
-  return {
-    enabled: settingsResult.data?.enabled ?? false,
-    testerCount: countResult.count ?? 0,
-  };
+  const state = await getBetaState();
+  return { enabled: state.enabled, testerCount: state.testers.length };
 }
 
 export interface SupportMessageRow {

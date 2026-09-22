@@ -182,6 +182,7 @@ export default async function DashboardPage({
           hasNegative={data.inventory.hasNegative}
           ungradedEggs={data.inventory.ungradedEggs}
           lowStockTrays={data.inventory.lowStockTrays}
+          isEmpty={data.inventory.isEmpty}
           className="lg:col-span-6 xl:col-span-4"
         />
 

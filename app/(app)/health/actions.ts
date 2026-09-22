@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import {
   canRecordFeed,
   canRecordMortality,
@@ -290,6 +291,7 @@ export async function recordFeedUsageAction(
     });
 
     revalidateHealth(parsed.data.flockId);
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true, data: { id: data.id } };
   } catch (error) {
@@ -356,6 +358,7 @@ export async function updateFeedUsageAction(
     });
 
     revalidateHealth(parsed.data.flockId);
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true, data: { id: recordId } };
   } catch (error) {
@@ -396,6 +399,7 @@ export async function deleteFeedUsageAction(recordId: string): Promise<ActionRes
     });
 
     revalidateHealth(data.flock_id);
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true };
   } catch (error) {

@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageExpenses } from "@/lib/auth/permissions";
 import { assertCanAccess } from "@/lib/subscriptions/entitlements";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { getFlock } from "@/lib/data/flocks";
 import { createExpenseSchema, toFieldErrors } from "@/lib/validation/schemas";
@@ -73,6 +74,7 @@ export async function recordExpenseAction(
 
     revalidatePath("/expenses");
     revalidatePath("/dashboard");
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true, data: { id: data.id } };
   } catch (error) {

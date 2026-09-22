@@ -294,20 +294,38 @@ describe("parameterized thresholds", () => {
 
 describe("lowInventoryAlert", () => {
   it("stays quiet on healthy stock", () => {
-    expect(lowInventoryAlert(20)).toBeNull();
+    expect(lowInventoryAlert(20, 0)).toBeNull();
   });
 
   it("warns at or below the threshold", () => {
-    expect(lowInventoryAlert(THRESHOLDS.lowInventoryTrays)?.level).toBe("warn");
+    expect(lowInventoryAlert(THRESHOLDS.lowInventoryTrays, 0)?.level).toBe("warn");
   });
 
-  it("escalates when the shed is empty", () => {
-    expect(lowInventoryAlert(0)?.level).toBe("bad");
+  it("escalates when the shed is genuinely empty", () => {
+    expect(lowInventoryAlert(0, 0)?.level).toBe("bad");
+    expect(lowInventoryAlert(0, 0)?.message).toBe("Egg inventory is empty.");
   });
 
   it("respects a custom threshold", () => {
-    expect(lowInventoryAlert(10)).toBeNull();
-    expect(lowInventoryAlert(10, 15)?.level).toBe("warn");
+    expect(lowInventoryAlert(10, 0)).toBeNull();
+    expect(lowInventoryAlert(10, 0, 15)?.level).toBe("warn");
+  });
+
+  it("does not claim 'empty' when ungraded eggs are waiting to be sorted", () => {
+    const alert = lowInventoryAlert(0, 50);
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("waiting to be sorted");
+    expect(alert?.message).not.toContain("empty");
+  });
+
+  it("mentions unsorted eggs alongside a low but nonzero tray count", () => {
+    const alert = lowInventoryAlert(3, 50, 5);
+    expect(alert?.message).toContain("3 trays");
+    expect(alert?.message).toContain("not sorted yet");
+  });
+
+  it("never fires on ungraded eggs alone when trays are healthy", () => {
+    expect(lowInventoryAlert(20, 50)).toBeNull();
   });
 });
 

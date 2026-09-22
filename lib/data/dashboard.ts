@@ -114,6 +114,8 @@ export interface DashboardData {
     ungradedEggs: number;
     /** The farm's own low-inventory alert threshold (trays), for coloring each line. */
     lowStockTrays: number;
+    /** True when there are no sizes at all -- see lib/domain/inventory.ts's InventorySummary. */
+    isEmpty: boolean;
   };
   /** Period-over-period change for the KPI row. Null when there is no basis. */
   deltas: {
@@ -163,20 +165,30 @@ function oneOf<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/** Everything DashboardData has except `activity` -- see getFarmOperatingData's doc comment. */
+export type FarmOperatingData = Omit<DashboardData, "activity">;
+
 /**
- * Everything the dashboard renders, in one pass.
+ * Everything the dashboard renders, minus the "recent activity" feed, in one
+ * pass -- plus the notifications sync (a write) that keeps the topbar's alert
+ * badge current.
  *
  * All queries fire together rather than in sequence. On a rural mobile
  * connection six serial round trips is the difference between a dashboard
  * that feels instant and one that feels broken.
  *
- * Memoised per request with React `cache`: the top bar's alert badge and the
- * dashboard page both need this data, and without the memo a single render of
- * /dashboard would run every query twice.
+ * Split out from `getDashboardData` (which adds the `audit_logs` "recent
+ * activity" query on top of this) because `app/(app)/layout.tsx` runs on
+ * *every* authenticated navigation purely to keep the notification badge in
+ * sync -- it was pulling in the full dashboard aggregation, activity feed
+ * included, for a query it never used. Memoised per request with React
+ * `cache`: the layout's alert sync, the topbar badge reads, and the
+ * dashboard page itself all need this data, and without the memo a single
+ * render of /dashboard would run every query twice.
  */
-export const getDashboardData = cache(async function getDashboardData(
+export const getFarmOperatingData = cache(async function getFarmOperatingData(
   context: FarmContext
-): Promise<DashboardData> {
+): Promise<FarmOperatingData> {
   const supabase = await createSupabaseServerClient();
   const today = farmToday(context.timezone);
   const yesterday = shiftDate(today, -1);
@@ -209,7 +221,6 @@ export const getDashboardData = cache(async function getDashboardData(
     flocks,
     grading,
     sizeProduction,
-    activity,
     latestVaccinationByFlock,
     thresholdOverrides,
     prices,
@@ -273,12 +284,6 @@ export const getDashboardData = cache(async function getDashboardData(
       .eq("daily_production.farm_id", context.farmId)
       .gte("daily_production.production_date", windowStart)
       .lte("daily_production.production_date", today),
-    supabase
-      .from("audit_logs")
-      .select("id, action, metadata, created_at")
-      .eq("farm_id", context.farmId)
-      .order("created_at", { ascending: false })
-      .limit(RECENT_ACTIVITY_LIMIT),
     getLatestVaccinationByFlock(context.farmId),
     hasAdvancedAlerts ? getAlertThresholdOverrides(context.farmId) : Promise.resolve(null),
     hasAdvancedAlerts ? getCurrentPrices(context.farmId, today) : Promise.resolve([]),
@@ -286,7 +291,7 @@ export const getDashboardData = cache(async function getDashboardData(
   ]);
 
   logFailures({
-    production, feed, inventory, sales, expenses, flocks, grading, sizeProduction, activity,
+    production, feed, inventory, sales, expenses, flocks, grading, sizeProduction,
   });
 
   const productionRows = production.data ?? [];
@@ -373,6 +378,7 @@ export const getDashboardData = cache(async function getDashboardData(
         flockRows,
         latestVaccinationByFlock,
         totalTrays: inventorySummary.totalTrays,
+        ungradedEggs: inventorySummary.ungradedEggs,
         thresholds,
         hasAdvancedAlerts,
       })
@@ -432,10 +438,48 @@ export const getDashboardData = cache(async function getDashboardData(
     },
     flocks: buildFlockSummaries(flockRows, todayProduction),
     flockStatus: flockStatusLine(deathsThisWeek, hensOnFarm),
-    activity: buildActivity(activity.data ?? []),
     alerts,
   };
 });
+
+/**
+ * Full dashboard data, `getFarmOperatingData` plus the "recent activity" feed
+ * -- only `/dashboard` itself needs this; everywhere else should call
+ * `getFarmOperatingData` or `syncFarmAlerts` directly instead of paying for a
+ * query neither uses.
+ */
+export const getDashboardData = cache(async function getDashboardData(
+  context: FarmContext
+): Promise<DashboardData> {
+  const supabase = await createSupabaseServerClient();
+
+  const [operating, activity] = await Promise.all([
+    getFarmOperatingData(context),
+    supabase
+      .from("audit_logs")
+      .select("id, action, metadata, created_at")
+      .eq("farm_id", context.farmId)
+      .order("created_at", { ascending: false })
+      .limit(RECENT_ACTIVITY_LIMIT),
+  ]);
+
+  if (activity.error) {
+    logger.error("dashboard query failed", { label: "activity", reason: activity.error.message });
+  }
+
+  return { ...operating, activity: buildActivity(activity.data ?? []) };
+});
+
+/**
+ * What `app/(app)/layout.tsx` actually needs on every navigation: run the
+ * same alert computation and notification sync `getDashboardData` does,
+ * without also fetching (and discarding) the recent-activity feed or the
+ * rest of the page-only shape. Shares `getFarmOperatingData`'s per-request
+ * memo, so visiting /dashboard itself still only pays for this once.
+ */
+export async function syncFarmAlerts(context: FarmContext): Promise<void> {
+  await getFarmOperatingData(context);
+}
 
 function logFailures(results: Record<string, { error?: { message: string } | null }>) {
   for (const [label, result] of Object.entries(results)) {
@@ -470,6 +514,7 @@ function buildInventory(
     looseEggs: summary.looseEggs,
     hasNegative: summary.hasNegative,
     ungradedEggs: Math.max(0, ungradedEggs),
+    isEmpty: summary.isEmpty,
   };
 }
 
@@ -573,6 +618,7 @@ interface BuildAlertsInput {
   flockRows: readonly FlockJoin[];
   latestVaccinationByFlock: ReadonlyMap<string, string>;
   totalTrays: number;
+  ungradedEggs: number;
   thresholds: ResolvedThresholds;
   hasAdvancedAlerts: boolean;
 }
@@ -592,6 +638,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     flockRows,
     latestVaccinationByFlock,
     totalTrays,
+    ungradedEggs,
     thresholds,
     hasAdvancedAlerts,
   } = input;
@@ -679,7 +726,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     );
 
     // Low inventory: a single farm-wide figure, no narrowing needed.
-    alerts.push(lowInventoryAlert(totalTrays, thresholds.lowInventoryTrays));
+    alerts.push(lowInventoryAlert(totalTrays, ungradedEggs, thresholds.lowInventoryTrays));
 
     // Underperforming flock: pick the single lowest laying rate this week.
     const weekProduction = productionRows.filter((row) => row.production_date >= weekStart);

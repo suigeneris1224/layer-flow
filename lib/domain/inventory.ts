@@ -38,6 +38,12 @@ export interface InventorySummary {
   totalTrays: number;
   looseEggs: number;
   hasNegative: boolean;
+  /**
+   * True when there are no sizes at all. NOT `totalEggs === 0` -- two sizes
+   * can net to zero (one negative offsetting another positive) while still
+   * having rows the farmer needs to see to fix the problem.
+   */
+  isEmpty: boolean;
 }
 
 /**
@@ -68,6 +74,7 @@ export function summariseInventory(rows: readonly InventoryRow[]): InventorySumm
     totalTrays: lines.reduce((total, line) => total + line.trays, 0),
     looseEggs: lines.reduce((total, line) => total + line.looseEggs, 0),
     hasNegative: lines.some((line) => line.eggsAvailable < 0),
+    isEmpty: lines.length === 0,
   };
 }
 

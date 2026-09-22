@@ -1,6 +1,9 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import { operatingCostsFromExpenses, operatingProfit, roundMoney } from "@/lib/domain/calculations";
 import { logger } from "@/lib/observability/logger";
 import type { ResolvedRange } from "@/lib/domain/reports";
@@ -9,11 +12,17 @@ import type { ResolvedRange } from "@/lib/domain/reports";
  * Revenue/cost/profit compared across every farm a Pro user belongs to.
  *
  * Three grouped `.in("farm_id", farmIds)` queries rather than one round trip
- * per farm, mirroring `getFarmCardsForUser` (lib/data/farms.ts). RLS
- * (`app.is_farm_member(farm_id)`) already scopes every row to farms the
- * caller belongs to, so this is safe as long as `farms` itself came from the
- * caller's own `getUserFarms()` rather than client input -- callers must not
- * pass arbitrary farm ids through from a query string.
+ * per farm, mirroring `getFarmCardsForUser` (lib/data/farms.ts).
+ *
+ * Cross-request cached (see lib/data/cache-tags.ts), tagged with every farm's
+ * `farmDataTag` so a write to any one member farm busts the shared entry.
+ * Reads through the service-role client for the same reason as
+ * lib/data/reports.ts -- `unstable_cache` can't depend on request cookies --
+ * so the `.in("farm_id", farmIds)` filter below is doing the tenant-isolation
+ * work RLS (`app.is_farm_member(farm_id)`) did before. Safe only as long as
+ * `farms` itself came from the caller's own `getUserFarms()` rather than
+ * client input -- callers must not pass arbitrary farm ids through from a
+ * query string.
  */
 
 export interface CrossFarmRow {
@@ -34,7 +43,18 @@ type SaleRow = { farm_id: string; total_amount: number };
 type ExpenseRow = { farm_id: string; amount: number; category: string };
 type FeedRow = { farm_id: string; total_cost: number };
 
-export async function getCrossFarmReportsData(
+function getCrossFarmReportsDataCached(farmIds: readonly string[]) {
+  return unstable_cache(
+    async (
+      farms: readonly { farmId: string; farmName: string }[],
+      range: ResolvedRange
+    ): Promise<CrossFarmReportsData> => fetchCrossFarmReportsData(farms, range),
+    ["cross-farm-reports-data", ...farmIds],
+    { tags: farmIds.map(farmDataTag) }
+  );
+}
+
+export const getCrossFarmReportsData = cache(async function getCrossFarmReportsData(
   farms: readonly { farmId: string; farmName: string }[],
   range: ResolvedRange
 ): Promise<CrossFarmReportsData> {
@@ -42,7 +62,17 @@ export async function getCrossFarmReportsData(
     return { range, rows: [], totals: { revenue: 0, cost: 0, profit: 0 } };
   }
 
-  const supabase = await createSupabaseServerClient();
+  // Sorted so the same set of farms always resolves to the same cache key
+  // regardless of the order getUserFarms() happened to return them in.
+  const farmIds = farms.map((farm) => farm.farmId).sort();
+  return getCrossFarmReportsDataCached(farmIds)(farms, range);
+});
+
+async function fetchCrossFarmReportsData(
+  farms: readonly { farmId: string; farmName: string }[],
+  range: ResolvedRange
+): Promise<CrossFarmReportsData> {
+  const supabase = createSupabaseAdminClient();
   const farmIds = farms.map((farm) => farm.farmId);
 
   const [sales, expenses, feed] = await Promise.all([

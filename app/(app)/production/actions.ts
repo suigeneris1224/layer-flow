@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFarmContext, requireUser } from "@/lib/auth/session";
 import { canRecordProduction } from "@/lib/auth/permissions";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
+import { farmDataTag } from "@/lib/data/cache-tags";
 import { productionExists } from "@/lib/data/production";
 import type { ProductionConflict } from "@/lib/offline/db";
 import { dailyProductionSchema, toFieldErrors } from "@/lib/validation/schemas";
@@ -247,6 +248,7 @@ export async function recordProductionAction(
     revalidatePath("/production");
     revalidatePath(`/production/${productionId}`);
     revalidatePath(`/flocks/${values.flockId}`);
+    revalidateTag(farmDataTag(context.farmId));
 
     return { ok: true, data: { productionId } };
   } catch (error) {

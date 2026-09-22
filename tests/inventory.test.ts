@@ -160,6 +160,25 @@ describe("summariseInventory — negative stock is surfaced, not hidden", () => 
   });
 });
 
+describe("summariseInventory — isEmpty", () => {
+  it("is empty only when there are no sizes at all", () => {
+    expect(summariseInventory([]).isEmpty).toBe(true);
+  });
+
+  it("is not empty when a size exists with a zero balance", () => {
+    expect(summariseInventory([row("Large", 0)]).isEmpty).toBe(false);
+  });
+
+  it("is not empty when sizes net to zero across a negative offset", () => {
+    // The exact case the dashboard panel and /inventory page must agree on:
+    // totalEggs is 0, but there are real rows a farmer needs to see and fix.
+    const summary = summariseInventory([row("Small", 20), row("Large", -20)]);
+    expect(summary.totalEggs).toBe(0);
+    expect(summary.hasNegative).toBe(true);
+    expect(summary.isEmpty).toBe(false);
+  });
+});
+
 describe("summariseInventory — ordering and passthrough", () => {
   it("orders lines by the farm's configured sort order", () => {
     const summary = summariseInventory([

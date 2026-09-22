@@ -1,9 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { farmDataTag } from "@/lib/data/cache-tags";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { FarmContext } from "@/lib/auth/session";
 import { canAccess } from "@/lib/subscriptions/entitlements";
 import { getFlocks } from "@/lib/data/flocks";
@@ -108,139 +106,124 @@ function sum<T>(rows: readonly T[], pick: (row: T) => number): number {
   return rows.reduce((total, row) => total + (Number(pick(row)) || 0), 0);
 }
 
-/**
- * Cross-request cached per farm -- see lib/data/reports.ts's
- * getReportsDataCached for why this is a factory (dynamic per-farm tag) and
- * lib/data/cache-tags.ts for the tag/invalidation contract.
- */
-function getAnalyticsDataCached(farmId: string) {
-  return unstable_cache(
-    async (context: FarmContext, range: ResolvedRange): Promise<AnalyticsData> => {
-      const supabase = createSupabaseAdminClient();
-      const today = farmToday(context.timezone);
-
-      const entitlement = { plan: context.plan, status: context.subscriptionStatus };
-      const hasFlockComparison = canAccess(entitlement, "flock_comparison");
-      const hasSizeAnalytics = canAccess(entitlement, "egg_size_analytics");
-
-      const comparison = comparisonWindow(range);
-      // Widened to also cover the laying rate chart's comparison period -- always
-      // <= range.from, so this one query covers both without a second round trip.
-      const productionQueryFrom = comparison.shift(range.from);
-
-      const [production, feed, sizes, flocks, sales, expenses] = await Promise.all([
-        supabase
-          .from("daily_production")
-          .select("production_date, hens_present, eggs_collected, mortality, flock_id")
-          .eq("farm_id", farmId)
-          .gte("production_date", productionQueryFrom)
-          .lte("production_date", range.to),
-        // flock_id/total_cost are only needed for flock comparison's cost-per-egg
-        // and feed-conversion columns, but this is the same table/date range the
-        // farm-wide feed total already needs -- one query either way.
-        supabase
-          .from("feed_usage")
-          .select("quantity_kg, total_cost, flock_id")
-          .eq("farm_id", farmId)
-          .gte("usage_date", range.from)
-          .lte("usage_date", range.to),
-        hasSizeAnalytics
-          ? supabase
-              .from("daily_egg_size_production")
-              .select(
-                "quantity, egg_sizes!inner(name, sort_order), daily_production!inner(farm_id, production_date)"
-              )
-              .eq("daily_production.farm_id", farmId)
-              .gte("daily_production.production_date", range.from)
-              .lte("daily_production.production_date", range.to)
-          : Promise.resolve({ data: [], error: null }),
-        hasFlockComparison ? getFlocks(farmId, supabase) : Promise.resolve([]),
-        // Cost-per-egg needs revenue/cost attribution (attributeFlockProfitability),
-        // which needs sales and expenses -- /analytics never queried these before
-        // since that was /reports' job. Gated the same as the rest of this section.
-        hasFlockComparison
-          ? supabase
-              .from("egg_sales")
-              .select("total_amount, flock_id")
-              .eq("farm_id", farmId)
-              .gte("sale_date", range.from)
-              .lte("sale_date", range.to)
-          : Promise.resolve({ data: [] as SaleRow[], error: null }),
-        hasFlockComparison
-          ? supabase
-              .from("expenses")
-              .select("amount, category, flock_id")
-              .eq("farm_id", farmId)
-              .gte("expense_date", range.from)
-              .lte("expense_date", range.to)
-          : Promise.resolve({ data: [] as ExpenseRow[], error: null }),
-      ]);
-
-      if (production.error) {
-        logger.error("analytics production lookup failed", { reason: production.error.message });
-      }
-      if (feed.error) {
-        logger.error("analytics feed lookup failed", { reason: feed.error.message });
-      }
-      if (sizes.error) {
-        logger.error("analytics size lookup failed", { reason: sizes.error.message });
-      }
-      if (sales.error) logger.error("analytics sales lookup failed", { reason: sales.error.message });
-      if (expenses.error) {
-        logger.error("analytics expenses lookup failed", { reason: expenses.error.message });
-      }
-
-      const productionRows = production.data ?? [];
-      // The query above was widened to also pull in the comparison period's rows
-      // (see productionQueryFrom) -- everything except the laying rate chart
-      // itself must stay scoped to the range actually being reported on.
-      const currentRangeRows = productionRows.filter((row) => row.production_date >= range.from);
-      const feedRows = (feed.data ?? []) as FeedRow[];
-
-      const totalEggs = sum(currentRangeRows, (row) => row.eggs_collected);
-      const totalMortality = sum(currentRangeRows, (row) => row.mortality);
-      const totalHensDays = sum(currentRangeRows, (row) => row.hens_present);
-      const totalFeedKg = sum(feedRows, (row) => Number(row.quantity_kg));
-
-      const layingRateSeries = buildLayingRateSeries(productionRows, range, comparison);
-      const sizeRows = sizes.data ?? [];
-
-      return {
-        range,
-        totals: {
-          totalEggs,
-          totalMortality,
-          avgLayingRate: layingRate(totalEggs, totalHensDays),
-          avgFeedPerHen: feedPerHen(totalFeedKg, totalHensDays),
-        },
-        charts: {
-          layingRate: layingRateSeries,
-          layingRateComparisonLabel: comparison.label,
-          sizes: hasSizeAnalytics ? buildSizeSlices(sizeRows) : null,
-          sizeTrend: hasSizeAnalytics ? buildSizeTrend(sizeRows, range) : null,
-        },
-        flockComparison: hasFlockComparison
-          ? buildFlockComparison(
-              flocks,
-              currentRangeRows,
-              feedRows,
-              (sales.data ?? []) as SaleRow[],
-              (expenses.data ?? []) as ExpenseRow[],
-              today
-            )
-          : null,
-      };
-    },
-    ["analytics-data", farmId],
-    { tags: [farmDataTag(farmId)] }
-  );
-}
-
 export const getAnalyticsData = cache(async function getAnalyticsData(
   context: FarmContext,
   range: ResolvedRange
 ): Promise<AnalyticsData> {
-  return getAnalyticsDataCached(context.farmId)(context, range);
+  const supabase = await createSupabaseServerClient();
+  const today = farmToday(context.timezone);
+
+  const entitlement = { plan: context.plan, status: context.subscriptionStatus };
+  const hasFlockComparison = canAccess(entitlement, "flock_comparison");
+  const hasSizeAnalytics = canAccess(entitlement, "egg_size_analytics");
+
+  const comparison = comparisonWindow(range);
+  // Widened to also cover the laying rate chart's comparison period -- always
+  // <= range.from, so this one query covers both without a second round trip.
+  const productionQueryFrom = comparison.shift(range.from);
+
+  const [production, feed, sizes, flocks, sales, expenses] = await Promise.all([
+    supabase
+      .from("daily_production")
+      .select("production_date, hens_present, eggs_collected, mortality, flock_id")
+      .eq("farm_id", context.farmId)
+      .gte("production_date", productionQueryFrom)
+      .lte("production_date", range.to),
+    // flock_id/total_cost are only needed for flock comparison's cost-per-egg
+    // and feed-conversion columns, but this is the same table/date range the
+    // farm-wide feed total already needs -- one query either way.
+    supabase
+      .from("feed_usage")
+      .select("quantity_kg, total_cost, flock_id")
+      .eq("farm_id", context.farmId)
+      .gte("usage_date", range.from)
+      .lte("usage_date", range.to),
+    hasSizeAnalytics
+      ? supabase
+          .from("daily_egg_size_production")
+          .select(
+            "quantity, egg_sizes!inner(name, sort_order), daily_production!inner(farm_id, production_date)"
+          )
+          .eq("daily_production.farm_id", context.farmId)
+          .gte("daily_production.production_date", range.from)
+          .lte("daily_production.production_date", range.to)
+      : Promise.resolve({ data: [], error: null }),
+    hasFlockComparison ? getFlocks(context.farmId) : Promise.resolve([]),
+    // Cost-per-egg needs revenue/cost attribution (attributeFlockProfitability),
+    // which needs sales and expenses -- /analytics never queried these before
+    // since that was /reports' job. Gated the same as the rest of this section.
+    hasFlockComparison
+      ? supabase
+          .from("egg_sales")
+          .select("total_amount, flock_id")
+          .eq("farm_id", context.farmId)
+          .gte("sale_date", range.from)
+          .lte("sale_date", range.to)
+      : Promise.resolve({ data: [] as SaleRow[], error: null }),
+    hasFlockComparison
+      ? supabase
+          .from("expenses")
+          .select("amount, category, flock_id")
+          .eq("farm_id", context.farmId)
+          .gte("expense_date", range.from)
+          .lte("expense_date", range.to)
+      : Promise.resolve({ data: [] as ExpenseRow[], error: null }),
+  ]);
+
+  if (production.error) {
+    logger.error("analytics production lookup failed", { reason: production.error.message });
+  }
+  if (feed.error) {
+    logger.error("analytics feed lookup failed", { reason: feed.error.message });
+  }
+  if (sizes.error) {
+    logger.error("analytics size lookup failed", { reason: sizes.error.message });
+  }
+  if (sales.error) logger.error("analytics sales lookup failed", { reason: sales.error.message });
+  if (expenses.error) {
+    logger.error("analytics expenses lookup failed", { reason: expenses.error.message });
+  }
+
+  const productionRows = production.data ?? [];
+  // The query above was widened to also pull in the comparison period's rows
+  // (see productionQueryFrom) -- everything except the laying rate chart
+  // itself must stay scoped to the range actually being reported on.
+  const currentRangeRows = productionRows.filter((row) => row.production_date >= range.from);
+  const feedRows = (feed.data ?? []) as FeedRow[];
+
+  const totalEggs = sum(currentRangeRows, (row) => row.eggs_collected);
+  const totalMortality = sum(currentRangeRows, (row) => row.mortality);
+  const totalHensDays = sum(currentRangeRows, (row) => row.hens_present);
+  const totalFeedKg = sum(feedRows, (row) => Number(row.quantity_kg));
+
+  const layingRateSeries = buildLayingRateSeries(productionRows, range, comparison);
+  const sizeRows = sizes.data ?? [];
+
+  return {
+    range,
+    totals: {
+      totalEggs,
+      totalMortality,
+      avgLayingRate: layingRate(totalEggs, totalHensDays),
+      avgFeedPerHen: feedPerHen(totalFeedKg, totalHensDays),
+    },
+    charts: {
+      layingRate: layingRateSeries,
+      layingRateComparisonLabel: comparison.label,
+      sizes: hasSizeAnalytics ? buildSizeSlices(sizeRows) : null,
+      sizeTrend: hasSizeAnalytics ? buildSizeTrend(sizeRows, range) : null,
+    },
+    flockComparison: hasFlockComparison
+      ? buildFlockComparison(
+          flocks,
+          currentRangeRows,
+          feedRows,
+          (sales.data ?? []) as SaleRow[],
+          (expenses.data ?? []) as ExpenseRow[],
+          today
+        )
+      : null,
+  };
 });
 
 export function buildLayingRateSeries(

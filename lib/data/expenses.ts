@@ -1,8 +1,7 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Database, ExpenseCategory } from "@/lib/types/database";
+import type { ExpenseCategory } from "@/lib/types/database";
 import { getFlocks, type FlockEntry } from "@/lib/data/flocks";
 import { EXPENSE_CATEGORY_LABELS } from "@/lib/domain/expenses";
 import { roundMoney } from "@/lib/domain/calculations";
@@ -150,19 +149,12 @@ export interface CategoryBreakdownRow {
   percentage: number;
 }
 
-/**
- * Spend grouped by the fixed expense_category enum, over a date range.
- *
- * Optional `client` (mirrors lib/data/flocks.ts's getFlocks) so the
- * cross-request-cached reports reader can pass the service-role client
- * instead of the cookie-bound one. Every other caller keeps the default.
- */
+/** Spend grouped by the fixed expense_category enum, over a date range. */
 export async function getExpensesByCategory(
   context: FarmContext,
-  range: ResolvedRange,
-  client?: SupabaseClient<Database>
+  range: ResolvedRange
 ): Promise<CategoryBreakdownRow[]> {
-  const supabase = client ?? (await createSupabaseServerClient());
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("expenses")

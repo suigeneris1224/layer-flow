@@ -1,8 +1,7 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Database, FlockStatus } from "@/lib/types/database";
+import type { FlockStatus } from "@/lib/types/database";
 import { roundMoney } from "@/lib/domain/calculations";
 import { logger } from "@/lib/observability/logger";
 
@@ -69,17 +68,8 @@ function toEntry(row: FlockJoinRow): FlockEntry {
   };
 }
 
-/**
- * Optional `client` (mirrors lib/data/farms.ts's getFarmNamesForOwner) so the
- * cross-request-cached reports/analytics readers can pass the service-role
- * client instead of the cookie-bound one -- unstable_cache can't depend on
- * request cookies. Every other caller keeps the default.
- */
-export async function getFlocks(
-  farmId: string,
-  client?: SupabaseClient<Database>
-): Promise<FlockEntry[]> {
-  const supabase = client ?? (await createSupabaseServerClient());
+export async function getFlocks(farmId: string): Promise<FlockEntry[]> {
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("flocks")

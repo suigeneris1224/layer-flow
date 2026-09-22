@@ -78,7 +78,7 @@ export function AccountDeletionPanel({
         <ul className="flex flex-col divide-y divide-border">
           {requests.map((request) => (
             <li key={request.id} className="flex flex-col gap-3 py-3 first:pt-0">
-              <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{request.email}</p>
                   <p className="text-xs text-muted-foreground">
@@ -103,11 +103,12 @@ export function AccountDeletionPanel({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 gap-2">
+                <div className="flex gap-2 sm:shrink-0">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="flex-1 sm:flex-none"
                     loading={pending && actingId === request.id}
                     disabled={pending}
                     onClick={() => onReject(request)}
@@ -119,6 +120,7 @@ export function AccountDeletionPanel({
                     type="button"
                     variant="destructive"
                     size="sm"
+                    className="flex-1 sm:flex-none"
                     loading={pending && actingId === request.id}
                     disabled={pending}
                     onClick={() => onApprove(request)}

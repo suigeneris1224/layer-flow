@@ -1,9 +1,11 @@
 # Security
 
 > **Status: verified.** The model below has been executed against PostgreSQL and exercised by
-> `npm run test:rls` — 39 assertions covering cross-farm reads and writes, role boundaries, the
-> append-only audit trail, and the `record_daily_production` RPC. RLS is confirmed enabled on all
-> 19 tables with 42 policies. Re-run that suite after any schema change.
+> `npm run test:rls` — `tests/rls/isolation.test.ts` now covers ~75 assertions across cross-farm
+> reads and writes, role boundaries, the append-only audit trail, and the `record_daily_production`
+> RPC. RLS is confirmed enabled on 16 tables with 80 policies (as of the current 35 migrations).
+> Re-run that suite after any schema change, and re-check these counts — they drift as the schema
+> grows.
 
 ## Tenant isolation
 
@@ -149,6 +151,9 @@ eval, so it's dropped there.
 - [x] ~~Run the migrations.~~ Done — all seven apply cleanly.
 - [x] ~~RLS isolation tests.~~ Done — `tests/rls/isolation.test.ts`, 39 passing.
 - [x] ~~A Content-Security-Policy header.~~ Done — see "Transport and headers" above.
-- [ ] **Rate limiting** on auth endpoints and server actions.
+- [x] ~~Rate limiting~~ on auth endpoints and server actions. Done — `lib/domain/rate-limit.ts` /
+      `lib/data/rate-limit.ts`, backed by `rate_limit_hits` (migration `20250101003000_rate_limit.sql`,
+      pruned daily by the existing cron). Fails open on a lookup error, by design — an outage in
+      this table must never lock a farmer out of their own account.
 - [ ] **Nonce-based CSP**, to drop `'unsafe-inline'` from `script-src`/`style-src`.
 - [ ] Verify email confirmation is enabled before any real farm signs up.

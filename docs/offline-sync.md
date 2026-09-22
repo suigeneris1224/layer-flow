@@ -1,12 +1,19 @@
 # Offline support
 
-> **Status: designed, not built.**
+> **Status: built.**
 >
-> There is **no service worker and no sync queue in this repository yet.** The app is installable
-> as a PWA (manifest, icons, standalone display) but it does **not** work offline today. Do not
-> tell a farmer it does.
+> The IndexedDB queue, sync engine, conflict detection, and app-shell service worker described
+> below are all implemented — `lib/offline/`, `public/sw.js`, `components/offline/`, and the
+> supporting migrations (`20250101001400_offline_idempotency.sql`,
+> `20250101001700_production_conflict_detection.sql`). Covered by
+> `tests/offline-queue.test.ts` and `tests/offline-sync.test.ts`.
 >
-> This document is the design to build against, plus the groundwork already in place.
+> What's **not** built: the Background Sync API path (see "Sync triggers" below) — sync currently
+> relies on the `online` event, tab focus, and manual retry, which the design below always treated
+> as sufficient on their own, with Background Sync as an optional bonus.
+>
+> This document is still the design it was built against. Treat divergences from real-device
+> testing (see "Testing it honestly") as open items, not as reasons to doubt what's listed above.
 
 ## Why it matters
 

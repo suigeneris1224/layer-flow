@@ -136,6 +136,14 @@ or the "Trigger Cron" button on the Worker's dashboard page once deployed.
 > the generated signing secret into `PAYMONGO_WEBHOOK_SECRET`. Until this is set up, a farmer can pay but their plan
 > never updates — the Manual QR tab has no such dependency, which is why it stays available as a
 > fallback.
+>
+> **Before switching `PAYMONGO_SECRET_KEY` to a live (`sk_live_...`) key**, update
+> `verifyWebhookSignature` in `lib/subscriptions/paymongo.ts` — it currently reads the **test-mode**
+> signature field (`te`) off PayMongo's `paymongo-signature` header. A live key's webhooks carry the
+> signature under `li` instead; until that one line is swapped, `verifyWebhookSignature` fails
+> closed on every real payment and PayMongo activations silently stop working (the Manual QR tab
+> still works, so this fails quietly rather than loudly). The code has a comment flagging this —
+> this checklist item exists so it isn't the deploy day that finds out.
 
 ## 6. Domain and HTTPS
 

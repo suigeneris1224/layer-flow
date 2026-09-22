@@ -3,7 +3,14 @@
 PostgreSQL on Supabase. Migrations in `supabase/migrations/` are the **single source of truth** —
 never create a table through Studio. Studio is for inspection and administration.
 
-> **Status: verified.** All twelve migrations apply cleanly to PostgreSQL 15 and the seed loads.
+> **Status: verified, but this doc covers only the original slice.** All 35 migrations apply
+> cleanly to PostgreSQL 15 and the seed loads. The table below documents the first twelve
+> (`core.sql` through `flock_ops.sql`) in detail. The 23 since then — team management, notifications,
+> offline-write idempotency and conflict detection, subscription emails, beta testing, manual and
+> PayMongo payments, rate limiting, account deletion, and more — apply and are exercised by the test
+> suite, but aren't individually described here yet. Read them directly in `supabase/migrations/`
+> for now; the design decisions below (grants trap, price versioning, mortality ledger, RESTRICT
+> chains) still hold for everything built on top of this core.
 
 ## Migrations
 

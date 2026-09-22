@@ -12,20 +12,21 @@ house are the defaults, not an afterthought.
 
 ## Current status
 
-A **completed and verified first vertical slice**, not a finished product.
+Past the first vertical slice — a working product with billing, offline recording, team
+management, and an admin back office on top of the original farm-tracking core.
 
 | Check | Status |
 |---|---|
 | `npm run typecheck` | ✅ passes |
 | `npm run lint` | ✅ passes |
-| `npm test` | ✅ 163 unit tests |
-| `npm run test:rls` | ✅ 47 isolation tests **against a real database** |
-| `npm run build` | ✅ compiles, 11 routes |
+| `npm test` | ✅ 484 unit tests across 35 files |
+| `npm run test:rls` | ✅ ~75 isolation assertions **against a real database** |
+| `npm run build` | ✅ compiles, 50+ routes |
 
-Verified end to end against local Supabase: all seven migrations apply cleanly, the seed loads,
-RLS is enabled on all 19 tables with 42 policies, tenant isolation holds, and the app renders and
-writes real data — sign in, view the dashboard, record a production day, watch inventory and
-profit update.
+Verified end to end against local Supabase: all 35 migrations apply cleanly, the seed loads, RLS
+is enabled on 16 tables with 80 policies, tenant isolation holds, and the app renders and writes
+real data — sign in, view the dashboard, record a production day, watch inventory and profit
+update.
 
 ### What is built
 
@@ -72,19 +73,28 @@ the invitee opens the link and signs in. Pending invitations count against the p
 **Settings** (at `/settings`): name, phone and avatar for the signed-in user, with links out to
 farm settings and plans.
 
+**Billing**: two live paths on `/checkout` — Manual QR/bank transfer (always on, admin-approved by
+hand) and automated PayMongo checkout (`BILLING_PROVIDER=paymongo`, activates the plan the moment
+`app/api/webhooks/paymongo/route.ts` confirms payment — currently wired to PayMongo's test-mode
+keys, since the business account isn't yet approved for live use). See
+[docs/billing.md](docs/billing.md).
+
+**Offline recording**: an IndexedDB queue, sync engine, conflict detection, and app-shell service
+worker are all built (`lib/offline/`, `public/sw.js`) — see [docs/offline-sync.md](docs/offline-sync.md).
+The one piece not built is the Background Sync API path; sync relies on the `online` event, tab
+focus, and manual retry instead.
+
+**Alerts**: both the Starter tier (`alerts`) and the Pro tier (`advanced_alerts`, configurable
+thresholds plus four extra rules) are implemented and gated — `lib/domain/alerts.ts`,
+`lib/data/alert-thresholds.ts`, `/settings/alerts`.
+
 ### What is not built yet
 
-**Real billing** — `BILLING_PROVIDER=mock`. Plan changes go through the dev-only plan switcher on
-`/farms`. No checkout, no webhook handler. See [docs/billing.md](docs/billing.md).
+Nothing sizable remains unbuilt from the original feature list. Real gaps: a nonce-based CSP (still
+`'unsafe-inline'` — see [docs/security.md](docs/security.md)), resized PWA icons, and the
+Background Sync path noted above.
 
-**Offline sync** — deliberately no service worker and no sync queue yet. See
-[docs/offline-sync.md](docs/offline-sync.md).
-
-**Advanced alerts** — declared in `lib/subscriptions/plans.ts` as a Pro feature with no
-implementing code behind it yet. (Flock comparison and advanced reports were also listed here
-and are in fact built and gated, at `lib/data/analytics.ts` and `lib/data/reports.ts`.)
-
-Every route in the sidebar now points at a real page; nothing is shown as "Soon".
+Every route in the sidebar points at a real page; nothing is shown as "Soon".
 
 ---
 
@@ -232,7 +242,7 @@ Full model in [docs/security.md](docs/security.md).
 - [security.md](docs/security.md) — RLS, roles, authorization, threat notes
 - [deployment.md](docs/deployment.md) — Vercel + Supabase, backups, rollback
 - [billing.md](docs/billing.md) — plans, entitlements, provider abstraction
-- [offline-sync.md](docs/offline-sync.md) — the offline design, and why it is not built yet
+- [offline-sync.md](docs/offline-sync.md) — the offline design, and how it's actually implemented
 
 ---
 

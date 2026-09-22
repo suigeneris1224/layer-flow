@@ -9,6 +9,63 @@ import type { FarmRole, SubscriptionPlan, SubscriptionStatus } from "@/lib/types
 
 export const ACTIVE_FARM_COOKIE = "lf_active_farm";
 
+/**
+ * Sticky "I was mid-invite" marker, set by signUpAction/signInAction
+ * (app/auth/actions.ts) whenever the submitted `next` points at an invite,
+ * and checked by requireFarmContext below before it would otherwise send a
+ * farm-less user to onboarding.
+ *
+ * Exists because `next` alone (a query param threaded through Supabase's
+ * confirmation email) does not survive every real path a farmer takes: a
+ * confirmation link that fails (expired, already used, or burned by an email
+ * client's link-safety prescan before the human clicks) drops back to a bare
+ * `/login` with no `next`, and closing the tab and returning later loses it
+ * entirely. Without this cookie, an invited worker/manager who hits either
+ * case ends up walking through onboarding and creating their own new farm
+ * instead of joining the one they were invited to.
+ *
+ * maxAge is one day past farm_invitations' own 7-day expiry, so the cookie
+ * naturally stops mattering at roughly the same time the invite itself would.
+ */
+export const PENDING_INVITE_COOKIE = "lf_pending_invite";
+const PENDING_INVITE_MAX_AGE = 60 * 60 * 24 * 8;
+
+/** Matches the 64 lowercase-hex-char tokens inviteMemberAction (app/(app)/settings/team/actions.ts) generates -- two UUIDs concatenated with the dashes stripped. */
+const INVITE_TOKEN_PATTERN = /^[0-9a-f]{64}$/i;
+
+/** Pulls a farm_invitations token out of a path like "/invite/<token>", or null if it isn't one. */
+export function inviteTokenFromPath(path: string): string | null {
+  const match = /^\/invite\/([^/?#]+)$/.exec(path);
+  if (!match) return null;
+  return INVITE_TOKEN_PATTERN.test(match[1]) ? match[1] : null;
+}
+
+/** Reads PENDING_INVITE_COOKIE and returns the `/invite/<token>` path to send a farm-less user to, or null. */
+export async function pendingInviteRedirectTarget(): Promise<`/invite/${string}` | null> {
+  const token = (await cookies()).get(PENDING_INVITE_COOKIE)?.value;
+  return token && INVITE_TOKEN_PATTERN.test(token) ? `/invite/${token}` : null;
+}
+
+/** Stash `next` as the pending invite if it points at one -- call from a Server Action, not a Server Component. */
+export async function rememberPendingInviteIfAny(next: string): Promise<void> {
+  const token = inviteTokenFromPath(next);
+  if (!token) return;
+
+  const cookieStore = await cookies();
+  cookieStore.set(PENDING_INVITE_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: PENDING_INVITE_MAX_AGE,
+  });
+}
+
+/** Clears the pending-invite marker once it's been acted on (accepted, or deliberately skipped). */
+export async function clearPendingInvite(): Promise<void> {
+  (await cookies()).delete(PENDING_INVITE_COOKIE);
+}
+
 export interface SessionUser {
   id: string;
   email: string;
@@ -138,11 +195,18 @@ export const getFarmContext = cache(async (): Promise<FarmContext | null> => {
 });
 
 /**
- * Farm context or bust. Sends users with no farm yet into onboarding.
+ * Farm context or bust. Sends users with no farm yet into onboarding --
+ * unless they're mid-invite (see PENDING_INVITE_COOKIE above), in which case
+ * they're sent back to accept it instead of walking into onboarding and
+ * creating a farm of their own.
  */
 export async function requireFarmContext(): Promise<FarmContext> {
   await requireUser();
   const context = await getFarmContext();
-  if (!context) redirect("/onboarding");
+  if (!context) {
+    const pendingInvite = await pendingInviteRedirectTarget();
+    if (pendingInvite) redirect(pendingInvite);
+    redirect("/onboarding");
+  }
   return context;
 }

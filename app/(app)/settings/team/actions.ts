@@ -4,7 +4,12 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ACTIVE_FARM_COOKIE, getFarmContext, requireUser } from "@/lib/auth/session";
+import {
+  ACTIVE_FARM_COOKIE,
+  clearPendingInvite,
+  getFarmContext,
+  requireUser,
+} from "@/lib/auth/session";
 import { canManageUsers } from "@/lib/auth/permissions";
 import { assertCanAccess, assertCanCreate } from "@/lib/subscriptions/entitlements";
 import { getMemberCount, getPendingInvitationCount } from "@/lib/data/team";
@@ -280,6 +285,8 @@ export async function acceptInvitationAction(
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
     });
+    // Resolved -- nothing left for PENDING_INVITE_COOKIE to point back to.
+    await clearPendingInvite();
 
     revalidatePath("/", "layout");
 

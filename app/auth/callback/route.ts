@@ -17,6 +17,14 @@ export async function GET(request: NextRequest) {
       ? requestedNext
       : "/dashboard";
 
+  // Carried into every /login?error=... redirect below so a failed
+  // confirmation doesn't lose track of where the user was actually headed
+  // (e.g. back to accept a pending invite) -- signInAction/signUpAction
+  // (app/auth/actions.ts) both read this same `next` off the login form.
+  // rememberPendingInviteIfAny (lib/auth/session.ts) is the more durable
+  // fallback for when even this gets lost (tab closed, link never revisited).
+  const nextParam = `&next=${encodeURIComponent(next)}`;
+
   if (!code) {
     // GoTrue redirects here with no `code` in two very different cases: a
     // genuinely malformed/truncated link, or a verification failure on its
@@ -34,9 +42,9 @@ export async function GET(request: NextRequest) {
         error: authError,
         description: searchParams.get("error_description"),
       });
-      return NextResponse.redirect(`${origin}/login?error=invalid_link`);
+      return NextResponse.redirect(`${origin}/login?error=invalid_link${nextParam}`);
     }
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${origin}/login?error=missing_code${nextParam}`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     logger.warn("auth code exchange failed", { reason: error.message });
-    return NextResponse.redirect(`${origin}/login?error=invalid_link`);
+    return NextResponse.redirect(`${origin}/login?error=invalid_link${nextParam}`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

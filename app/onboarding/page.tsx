@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser, pendingInviteRedirectTarget } from "@/lib/auth/session";
 import { getOnboardingState } from "@/lib/data/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_PRICES } from "@/lib/domain/default-prices";
@@ -17,11 +17,28 @@ export const metadata: Metadata = { title: "Set up your farm" };
 
 const STEP_INDEX = { farm: 1, house: 2, flock: 3, pricing: 4, done: 4 } as const;
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ skipInvite?: string }>;
+}) {
   const user = await requireUser();
   const state = await getOnboardingState(user.id);
 
   if (state.step === "done") redirect("/dashboard");
+
+  // Defense in depth: requireFarmContext() (lib/auth/session.ts) is what
+  // normally intercepts a mid-invite, farm-less user before they ever reach
+  // here, but this page has its own entry point too. Only applies to a user
+  // with no farm at all yet (step "farm") -- someone further along already
+  // has one, so a stale invite cookie must not interrupt their own setup.
+  // `?skipInvite=1` is the deliberate way out from the invite page's "this
+  // invitation isn't valid" state, so it always wins over the cookie.
+  const { skipInvite } = await searchParams;
+  if (state.step === "farm" && skipInvite !== "1") {
+    const pendingInvite = await pendingInviteRedirectTarget();
+    if (pendingInvite) redirect(pendingInvite);
+  }
 
   const supabase = await createSupabaseServerClient();
 

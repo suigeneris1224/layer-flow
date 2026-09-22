@@ -48,7 +48,7 @@ export function FarmStep() {
           <Input
             id="barangay"
             name="barangay"
-            placeholder="e.g. Poblacion"
+            placeholder="e.g. Your Barangay"
             aria-invalid={Boolean(fieldErrors?.barangay)}
           />
         </Field>
@@ -62,7 +62,7 @@ export function FarmStep() {
             id="municipality"
             name="municipality"
             required
-            placeholder="e.g. City or Municipality"
+            placeholder="e.g. Your City / Municipality"
             aria-invalid={Boolean(fieldErrors?.municipality)}
           />
         </Field>
@@ -72,7 +72,7 @@ export function FarmStep() {
             id="province"
             name="province"
             required
-            placeholder="e.g. Province"
+            placeholder="e.g. Your Province"
             aria-invalid={Boolean(fieldErrors?.province)}
           />
         </Field>

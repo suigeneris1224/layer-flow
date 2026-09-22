@@ -51,14 +51,29 @@ export default async function InvitePage({
   if (lookup.status === "invalid") {
     return (
       <Panel title="Invitation">
-        {/*
-          One message for missing, expired and already-used alike. Telling them
-          apart would turn this page into a way to test whether a token is live.
-        */}
-        <StatusNote tone="warn" title="This invitation isn't valid">
-          It may have expired or already been used. Ask the farm owner to send you a
-          new link.
-        </StatusNote>
+        <div className="flex flex-col gap-4">
+          {/*
+            One message for missing, expired and already-used alike. Telling them
+            apart would turn this page into a way to test whether a token is live.
+          */}
+          <StatusNote tone="warn" title="This invitation isn't valid">
+            It may have expired or already been used. Ask the farm owner to send you a
+            new link.
+          </StatusNote>
+          {/*
+            A farm-less signed-in user would otherwise land right back here on
+            every page load (see lib/auth/session.ts's PENDING_INVITE_COOKIE) --
+            this is the deliberate way out, not a dead end.
+          */}
+          {user && (
+            <Link
+              href={"/onboarding?skipInvite=1" as Route}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Set up your own farm instead
+            </Link>
+          )}
+        </div>
       </Panel>
     );
   }

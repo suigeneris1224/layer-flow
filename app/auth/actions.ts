@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient, REMEMBER_ME_COOKIE } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { rememberPendingInviteIfAny } from "@/lib/auth/session";
 import { isBetaModeEnabled, isListedBetaTester } from "@/lib/subscriptions/beta";
 import { publicEnv } from "@/lib/config/env";
 import { securePasswordField } from "@/lib/validation/schemas";
@@ -97,6 +98,11 @@ export async function signUpAction(
   const destination = next ? safeRedirect(next) : "/onboarding";
   let hasSession = false;
 
+  // Durable fallback for when `destination` itself doesn't survive the trip
+  // through Supabase's confirmation email (see PENDING_INVITE_COOKIE's doc
+  // comment) -- a no-op unless `next` actually points at an invite.
+  await rememberPendingInviteIfAny(destination);
+
   try {
     // Closed beta: while free-tier infra can't absorb open growth, only the
     // handful of listed testers may register. No session exists yet, so RLS
@@ -165,6 +171,10 @@ export async function signInAction(
 
   const next = String(formData.get("next") ?? "/dashboard");
   const rememberMe = formData.get("rememberMe") === "on";
+
+  // Same durable fallback as signUpAction -- covers "I already have one" on
+  // the invite page, and a plain sign-in that still carries `next`.
+  await rememberPendingInviteIfAny(next);
 
   try {
     const supabase = await createSupabaseServerClient({ persistSession: rememberMe });

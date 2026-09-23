@@ -200,6 +200,36 @@
   }
 }
 
+/* The topbar greeting's wave, gated to once per sign-in by
+   components/layout/greeting-wave.tsx -- not scoped to mobile, unlike
+   page-enter above, since the greeting shows at every breakpoint. */
+@keyframes greeting-wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10%,
+  30% {
+    transform: rotate(14deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+.greeting-wave {
+  display: inline-block;
+  transform-origin: 70% 70%;
+  animation: greeting-wave 700ms ease-in-out 1;
+}
+
 @layer base {
   /*
    * iOS date inputs, straightened out.

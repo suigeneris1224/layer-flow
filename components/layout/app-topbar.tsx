@@ -2,6 +2,7 @@ import { MobileDrawer } from "@/components/nav/mobile-drawer";
 import { NotificationMenu } from "@/components/layout/notification-menu";
 import { PendingCountBadge } from "@/components/offline/pending-count-badge";
 import { UserMenu } from "@/components/layout/user-menu";
+import { GreetingWave } from "@/components/layout/greeting-wave";
 import type { Notification } from "@/lib/data/notifications";
 import type { SubscriptionPlan } from "@/lib/types/database";
 
@@ -47,7 +48,7 @@ export function AppTopbar({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold sm:text-base">
-          {greeting}, {firstName}! <span aria-hidden>👋</span>
+          {greeting}, {firstName}! <GreetingWave />
         </p>
         <p className="hidden truncate text-xs text-muted-foreground sm:block">
           Here is what is happening at {farmName} today.

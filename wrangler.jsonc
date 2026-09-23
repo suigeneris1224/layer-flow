@@ -15,9 +15,9 @@
     "binding": "ASSETS",
     "directory": ".open-next/assets"
   },
-  // Same schedule vercel.json used: daily at 01:00 UTC.
+  // Same schedule vercel.json used: daily at 10:00 PM UTC.
   "triggers": {
-    "crons": ["0 1 * * *"]
+    "crons": ["0 22 * * *"]
   },
   // Non-secret runtime vars only -- this file is committed to git. Actual
   // credentials (SUPABASE_SERVICE_ROLE_KEY, BREVO_API_KEY, CRON_SECRET,

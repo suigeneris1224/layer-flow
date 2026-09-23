@@ -15,7 +15,7 @@ export default function TermsPage() {
 
       <main id="main" className="flex-1">
         <PageShell width="reading" className="py-10 lg:py-14">
-          <PageHeader title="Terms & Conditions" description="Last Updated: September 7, 2026" />
+          <PageHeader title="Terms & Conditions" description="Last Updated: September 23, 2026" />
 
           <div className="mt-4 flex flex-col gap-6 text-sm leading-relaxed text-muted-foreground">
             <p>
@@ -64,14 +64,43 @@ export default function TermsPage() {
                 </li>
                 <li>
                   <span className="font-medium text-foreground">
-                    User-Initiated Transactions via PayMongo:
+                    Current Payment Method — Manual Transfer:
                   </span>{" "}
-                  All regular subscription payments are completely user-initiated. Unless you
-                  explicitly authorize a separate, specialized enterprise recurring billing
-                  contract through a verified business payment channel, we do not execute
-                  automated monthly credit card or e-wallet deductions. All digital transactions
-                  are pushed manually by you via our integrated PayMongo checkout portal using
-                  supported payment methods (GCash, Maya, QR Ph, or local credit cards).
+                  At this time, all subscription payments are made via manual bank or e-wallet
+                  transfer to LayerFlow&apos;s officially designated receiving account, as
+                  displayed within the app&apos;s checkout screen at the time of payment. You must
+                  submit your payment reference number and a legible proof of payment
+                  (receipt/screenshot) for review.{" "}
+                  <span className="font-medium text-foreground">
+                    Your plan is not activated automatically
+                  </span>{" "}
+                  — a LayerFlow administrator manually verifies each submission before your
+                  subscription is updated. Review is typically completed within one (1) business
+                  day, though this is an estimate, not a guaranteed turnaround, and may take
+                  longer during periods of high volume, holidays, or when a submission requires
+                  further verification.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">Pay Online (Coming Soon):</span>{" "}
+                  An automated online checkout via our payment processor PayMongo (supporting
+                  credit/debit cards, GCash, Maya, and QR Ph) is planned for a future release and
+                  is not currently available. When enabled, this section will be updated per
+                  Section 5 (Amendments), and PayMongo&apos;s own terms of service will
+                  additionally govern transactions made through that channel.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">
+                    Manual Payment Verification and Account Accuracy:
+                  </span>{" "}
+                  You are solely responsible for sending payment to the exact account name and
+                  number displayed in the app at the time of your transaction. LayerFlow is not
+                  responsible for, and will not credit, funds sent to any other account, including
+                  a previously displayed account that has since changed. Submitting a payment
+                  reference number or proof of payment that is falsified, edited, reused from a
+                  prior transaction, or does not belong to you is a material breach of these Terms
+                  and will be treated with the same severity as the time-tampering violations
+                  described in Section 4 — immediate termination, forfeiture of any pending
+                  balance, and no eligibility for a refund.
                 </li>
               </ul>
             </section>
@@ -217,6 +246,14 @@ export default function TermsPage() {
                   utilize the data export or report features to generate fraudulent financial
                   records or misleading compliance data.
                 </li>
+                <li>
+                  <span className="font-medium text-foreground">Payment Proof Integrity:</span>{" "}
+                  You agree not to submit any falsified, altered, duplicated, or misattributed
+                  proof of payment or reference number. Submissions are cross-checked against
+                  prior records, and any detected irregularity will result in rejection of the
+                  payment and, for repeated or deliberate attempts, permanent account termination
+                  without refund.
+                </li>
               </ul>
             </section>
 
@@ -264,7 +301,11 @@ export default function TermsPage() {
                       If PayMongo triggers a technical duplicate charge for a single subscription
                       renewal, we will reverse the duplicate transaction. The refund timeline
                       depends entirely on PayMongo&apos;s settlement infrastructure and your
-                      e-wallet (GCash/Maya) or bank&apos;s clearing duration.
+                      e-wallet (GCash/Maya) or bank&apos;s clearing duration. For an approved
+                      manual payment later found to be erroneous or duplicated, LayerFlow will
+                      reverse it via the same manual channel (bank/e-wallet transfer back to you);
+                      this may take longer than a payment-processor-based reversal since no
+                      automated gateway is involved.
                     </li>
                     <li className="list-disc">
                       <span className="font-medium text-foreground">Extended server downtime:</span>{" "}
@@ -272,6 +313,18 @@ export default function TermsPage() {
                       total outage preventing data synchronization or platform access for more
                       than seven (7) consecutive business days, affected active accounts may
                       request a pro-rated extension of their service period.
+                    </li>
+                    <li className="list-disc">
+                      <span className="font-medium text-foreground">
+                        Rejected manual payments:
+                      </span>{" "}
+                      If your manually submitted payment is rejected, no subscription access was
+                      ever granted, so there is no platform fee to refund. If you believe your
+                      payment was incorrectly rejected, you may request a re-review within seven
+                      (7) days of the rejection notice by providing supporting evidence (e.g.,
+                      your own transaction history from your bank or e-wallet provider). LayerFlow
+                      does not refund or credit funds sent to an incorrect or unofficial receiving
+                      account, as such funds are never received by LayerFlow.
                     </li>
                   </ul>
                 </li>

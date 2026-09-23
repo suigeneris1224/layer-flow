@@ -294,38 +294,62 @@ describe("parameterized thresholds", () => {
 
 describe("lowInventoryAlert", () => {
   it("stays quiet on healthy stock", () => {
-    expect(lowInventoryAlert(20, 0)).toBeNull();
+    expect(lowInventoryAlert(20, 0, 0)).toBeNull();
   });
 
   it("warns at or below the threshold", () => {
-    expect(lowInventoryAlert(THRESHOLDS.lowInventoryTrays, 0)?.level).toBe("warn");
+    expect(lowInventoryAlert(THRESHOLDS.lowInventoryTrays, 0, 0)?.level).toBe("warn");
   });
 
   it("escalates when the shed is genuinely empty", () => {
-    expect(lowInventoryAlert(0, 0)?.level).toBe("bad");
-    expect(lowInventoryAlert(0, 0)?.message).toBe("Egg inventory is empty.");
+    expect(lowInventoryAlert(0, 0, 0)?.level).toBe("bad");
+    expect(lowInventoryAlert(0, 0, 0)?.message).toBe("Egg inventory is empty.");
   });
 
   it("respects a custom threshold", () => {
-    expect(lowInventoryAlert(10, 0)).toBeNull();
-    expect(lowInventoryAlert(10, 0, 15)?.level).toBe("warn");
+    expect(lowInventoryAlert(10, 0, 0)).toBeNull();
+    expect(lowInventoryAlert(10, 0, 0, 15)?.level).toBe("warn");
   });
 
   it("does not claim 'empty' when ungraded eggs are waiting to be sorted", () => {
-    const alert = lowInventoryAlert(0, 50);
+    const alert = lowInventoryAlert(0, 50, 0);
     expect(alert?.level).toBe("warn");
     expect(alert?.message).toContain("waiting to be sorted");
     expect(alert?.message).not.toContain("empty");
   });
 
   it("mentions unsorted eggs alongside a low but nonzero tray count", () => {
-    const alert = lowInventoryAlert(3, 50, 5);
+    const alert = lowInventoryAlert(3, 50, 0, 5);
     expect(alert?.message).toContain("3 trays");
-    expect(alert?.message).toContain("not sorted yet");
+    expect(alert?.message).toContain("waiting to be sorted");
   });
 
   it("never fires on ungraded eggs alone when trays are healthy", () => {
-    expect(lowInventoryAlert(20, 50)).toBeNull();
+    expect(lowInventoryAlert(20, 50, 0)).toBeNull();
+  });
+
+  it("does not claim 'empty' when eggs are sitting loose across sizes", () => {
+    const alert = lowInventoryAlert(0, 0, 87);
+    expect(alert?.level).toBe("warn");
+    expect(alert?.message).toContain("loose eggs across sizes");
+    expect(alert?.message).not.toContain("empty");
+  });
+
+  it("mentions loose eggs alongside a low but nonzero tray count", () => {
+    const alert = lowInventoryAlert(2, 0, 87);
+    expect(alert?.message).toContain("2 trays");
+    expect(alert?.message).toContain("loose eggs across sizes");
+  });
+
+  it("mentions both ungraded and loose eggs together", () => {
+    const alert = lowInventoryAlert(0, 50, 87);
+    expect(alert?.message).toContain("waiting to be sorted");
+    expect(alert?.message).toContain("loose eggs across sizes");
+    expect(alert?.message).toContain(" and ");
+  });
+
+  it("never fires on loose eggs alone when trays are healthy", () => {
+    expect(lowInventoryAlert(20, 0, 87)).toBeNull();
   });
 });
 

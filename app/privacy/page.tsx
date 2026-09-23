@@ -17,7 +17,7 @@ export default function PrivacyPage() {
 
       <main id="main" className="flex-1">
         <PageShell width="reading" className="py-10 lg:py-14">
-          <PageHeader title="Privacy Policy" description="Last Updated: September 7, 2026" />
+          <PageHeader title="Privacy Policy" description="Last Updated: September 23, 2026" />
 
           <div className="mt-4 flex flex-col gap-6 text-sm leading-relaxed text-muted-foreground">
             <p>
@@ -99,13 +99,27 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <span className="font-medium text-foreground">
-                    Third-Party Payment Processing Data:
+                    Payment Verification Data (Current — Manual Transfer):
                   </span>{" "}
-                  Financial transactions and subscription billing operations are handled
-                  exclusively by our designated third-party payment aggregator, PayMongo. We do
-                  not store, process, or transmit your credit card numbers, banking credentials,
-                  or e-wallet (GCash, Maya) PINs on our servers. All transaction details are
-                  governed by PayMongo&apos;s separate privacy policy and PCI-DSS compliant
+                  While our automated online checkout is not yet available, subscription payments
+                  are made via manual bank/e-wallet transfer. To verify these payments, we collect
+                  the payer name you provide, your payment reference number, and the
+                  proof-of-payment file (receipt or screenshot) you upload. This file is stored in
+                  our access-controlled cloud storage and is only viewable by authorized LayerFlow
+                  staff reviewing your payment, via a temporary, expiring link — never a public
+                  URL. We do not ask for, and you should never send us, your e-wallet PIN, mobile
+                  banking password, or full card number; only the transaction receipt itself is
+                  needed.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">
+                    Third-Party Payment Processing Data (Once Pay Online Is Enabled):
+                  </span>{" "}
+                  When our automated online checkout via PayMongo becomes available, transactions
+                  made through that channel will be handled exclusively by PayMongo. We will not
+                  store, process, or transmit your credit card numbers, banking credentials, or
+                  e-wallet PINs on our servers for that flow, and those transactions will be
+                  governed by PayMongo&apos;s own privacy policy and PCI-DSS compliant
                   infrastructure.
                 </li>
               </ul>
@@ -188,6 +202,15 @@ export default function PrivacyPage() {
                   We retain your operational data on our active servers for as long as your
                   subscription account remains active.
                 </li>
+                <li>
+                  <span className="font-medium text-foreground">
+                    Payment Verification Document Security:
+                  </span>{" "}
+                  Proof-of-payment files you submit are stored in access-controlled cloud storage,
+                  separate from public assets, and are only ever accessible through short-lived,
+                  expiring links generated for an authorized reviewer — never a permanent or
+                  public URL.
+                </li>
               </ul>
             </section>
 
@@ -197,26 +220,35 @@ export default function PrivacyPage() {
               </h2>
               <ul className="mt-2 flex flex-col gap-3">
                 <li>
-                  <span className="font-medium text-foreground">Grace Period Storage:</span> If
-                  your prepaid subscription expires, your cloud data will enter a read-only state
-                  for a 3-day grace period.
-                </li>
-                <li>
-                  <span className="font-medium text-foreground">Archival State:</span> Following
-                  the grace period, if the subscription remains unpaid, your cloud-synchronized
-                  data will be archived into an inactive state.
+                  <span className="font-medium text-foreground">Billing Grace Period:</span> If
+                  your prepaid subscription expires, your account enters a 3-day grace period
+                  during which local logging may continue but cloud sync and multi-user access are
+                  restricted, consistent with our Terms &amp; Conditions. Your data is not deleted
+                  during this period or at any point afterward due to non-payment alone — an
+                  unpaid or inactive account&apos;s data remains stored, with cloud access
+                  restricted, until you either resume your subscription or request account
+                  deletion as described below.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">
-                    Permanent Erasure Protocol:
+                    Account Deletion (User-Requested, Admin-Reviewed):
                   </span>{" "}
-                  We reserve the right to permanently delete all cloud-hosted historical logs,
-                  flock data, and farm records from our Supabase databases after 90 consecutive
-                  days of non-payment or account inactivity. Prior to executing permanent cloud
-                  erasure, we will make reasonable efforts to transmit a final notification via
-                  your registered email or phone number. Local data stored on your device will
-                  remain intact until the app is uninstalled or local application data is manually
-                  cleared by the user.
+                  We do not automatically delete accounts or data based on inactivity or
+                  non-payment. To permanently delete your account and all associated farm data,
+                  you must submit a deletion request from Settings. An administrator reviews each
+                  request, typically within a few days, before it is carried out. Your account and
+                  data remain fully intact and usable while a request is pending. Once approved,
+                  deletion is immediate and permanent, and cannot be undone. Payment verification
+                  records are retained per the schedule below, independent of this process.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">
+                    Payment Verification Records:
+                  </span>{" "}
+                  We retain submitted payment reference numbers and proof-of-payment files for
+                  the lifetime of your account plus three (3) years thereafter, to support
+                  accounting, fraud prevention, and dispute resolution, after which they are
+                  permanently deleted in accordance with our standard data retention schedule.
                 </li>
               </ul>
             </section>
@@ -267,7 +299,12 @@ export default function PrivacyPage() {
                   </span>{" "}
                   The right to suspend, withdraw, or order the removal of your personal
                   information from our active databases upon termination of our business
-                  relationship.
+                  relationship. Erasure is carried out via a request you submit through your
+                  account settings, reviewed by an administrator (typically within a few days)
+                  before deletion is performed — see Section 5 for the full process. This right
+                  does not extend to payment reference numbers and proof-of-payment records, which
+                  we retain for the period described in Section 5 to meet accounting and legal
+                  recordkeeping obligations, even after an erasure request or account deletion.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">Right to File a Complaint:</span>{" "}
@@ -312,9 +349,12 @@ export default function PrivacyPage() {
                   <span className="font-medium text-foreground">
                     Payment Processing Metadata:
                   </span>{" "}
-                  When you access our billing or checkout interface, our payment gateway partner
-                  (PayMongo) sets operational cookies to handle secure tokenization, fraud
-                  mitigation, and user verification. We do not control these third-party cookies.
+                  Our current manual payment process does not use third-party payment cookies.
+                  Once our automated online checkout via PayMongo is enabled, that payment gateway
+                  will set its own operational cookies on the billing/checkout interface for
+                  secure tokenization and fraud mitigation on transactions made through it; we do
+                  not control those third-party cookies. Blocking cookies does not affect your
+                  ability to submit a manual payment for review today.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">
@@ -330,9 +370,8 @@ export default function PrivacyPage() {
                   Clearing your application data or cache via your device&apos;s operating system
                   settings will completely erase un-synchronized farm records — do not clear
                   application data while offline, as un-synced entries cannot be recovered. You
-                  can also configure your browser to block cookies; however, doing so will prevent
-                  you from logging into your billing dashboard or processing subscription renewals
-                  via PayMongo.
+                  can also configure your browser to block cookies; however, doing so may affect
+                  automated checkout once that feature is enabled.
                 </li>
               </ul>
             </section>

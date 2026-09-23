@@ -276,37 +276,44 @@ export function vaccinationAlert(
 /**
  * Low egg inventory, Pro only.
  *
- * `bad` ("empty") is reserved for when the shed truly has nothing -- no sold
- * trays and nothing waiting to be sorted either. When trays are at/below the
- * threshold but there are ungraded eggs sitting uncounted, that is not
- * "empty" -- the farmer has stock, it just hasn't been sorted by size yet --
- * so this downgrades to `warn` and says so instead of overstating the
- * problem. Only fires when trays are below/at the line, never on a healthy
- * stock; ungraded eggs alone never trigger it.
+ * `bad` ("empty") is reserved for when the shed truly has nothing -- no
+ * sellable trays, no ungraded eggs, and no loose leftovers in any size.
+ * Whenever trays are at/below the threshold but there's real stock sitting
+ * uncounted -- ungraded eggs, or graded eggs that just haven't reached a
+ * full tray in their own size -- this downgrades to `warn` and names what's
+ * there, instead of overstating the problem. Only fires when trays are
+ * below/at the line, never on a healthy stock; loose/ungraded eggs alone
+ * never trigger it.
  */
 export function lowInventoryAlert(
   totalTrays: number,
   ungradedEggs: number,
+  looseEggs: number,
   threshold: number = THRESHOLDS.lowInventoryTrays
 ): Alert | null {
   if (totalTrays > threshold) return null;
 
-  const hasUnsorted = ungradedEggs > 0;
+  const extras: string[] = [];
+  if (ungradedEggs > 0) {
+    extras.push(`${ungradedEggs} egg${ungradedEggs === 1 ? "" : "s"} waiting to be sorted`);
+  }
+  if (looseEggs > 0) {
+    extras.push(`${looseEggs} loose egg${looseEggs === 1 ? "" : "s"} across sizes`);
+  }
+  const extrasText = extras.length > 0 ? extras.join(" and ") : null;
 
   if (totalTrays <= 0) {
     return {
-      level: hasUnsorted ? "warn" : "bad",
-      message: hasUnsorted
-        ? `No sorted eggs left, but ${ungradedEggs} egg${ungradedEggs === 1 ? "" : "s"} waiting to be sorted.`
-        : "Egg inventory is empty.",
+      level: extrasText ? "warn" : "bad",
+      message: extrasText ? `No sorted eggs left, but ${extrasText}.` : "Egg inventory is empty.",
       type: "low_inventory",
     };
   }
 
   return {
     level: "warn",
-    message: hasUnsorted
-      ? `Only ${totalTrays} tray${totalTrays === 1 ? "" : "s"} left in stock, plus ${ungradedEggs} egg${ungradedEggs === 1 ? "" : "s"} not sorted yet.`
+    message: extrasText
+      ? `Only ${totalTrays} tray${totalTrays === 1 ? "" : "s"} left in stock, plus ${extrasText}.`
       : `Only ${totalTrays} tray${totalTrays === 1 ? "" : "s"} left in stock.`,
     type: "low_inventory",
   };

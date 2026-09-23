@@ -379,6 +379,7 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
         latestVaccinationByFlock,
         totalTrays: inventorySummary.totalTrays,
         ungradedEggs: inventorySummary.ungradedEggs,
+        looseEggs: inventorySummary.looseEggs,
         thresholds,
         hasAdvancedAlerts,
       })
@@ -619,6 +620,7 @@ interface BuildAlertsInput {
   latestVaccinationByFlock: ReadonlyMap<string, string>;
   totalTrays: number;
   ungradedEggs: number;
+  looseEggs: number;
   thresholds: ResolvedThresholds;
   hasAdvancedAlerts: boolean;
 }
@@ -639,6 +641,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     latestVaccinationByFlock,
     totalTrays,
     ungradedEggs,
+    looseEggs,
     thresholds,
     hasAdvancedAlerts,
   } = input;
@@ -726,7 +729,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     );
 
     // Low inventory: a single farm-wide figure, no narrowing needed.
-    alerts.push(lowInventoryAlert(totalTrays, ungradedEggs, thresholds.lowInventoryTrays));
+    alerts.push(lowInventoryAlert(totalTrays, ungradedEggs, looseEggs, thresholds.lowInventoryTrays));
 
     // Underperforming flock: pick the single lowest laying rate this week.
     const weekProduction = productionRows.filter((row) => row.production_date >= weekStart);

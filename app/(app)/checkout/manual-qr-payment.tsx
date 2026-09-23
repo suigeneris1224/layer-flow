@@ -304,6 +304,17 @@ export function ManualQrPayment({
           <Button type="submit" loading={pending} className="w-fit">
             Submit payment for review
           </Button>
+
+          <p className="text-xs text-muted-foreground">
+            By submitting, you confirm this payment was sent to the exact account shown above.
+            Your plan won&apos;t be activated until an admin reviews and approves it — usually
+            within one business day, but not guaranteed. Submitting false or altered proof of
+            payment may result in account termination. See our{" "}
+            <a href="/terms" className="text-primary hover:underline">
+              Terms
+            </a>{" "}
+            for details.
+          </p>
         </form>
       </div>
     </Panel>

@@ -182,6 +182,17 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+
+  /* PublicFooter's dark green band rescopes --foreground/--muted-foreground/
+     --border to its own fixed values (see the --footer-* tokens above) so
+     every descendant's existing text-foreground/text-muted-foreground/border
+     classes resolve correctly there -- a CSS class instead of an inline
+     `style` prop so it doesn't need `style-src 'unsafe-inline'` in the CSP. */
+  .footer-scope {
+    --foreground: var(--footer-foreground);
+    --muted-foreground: var(--footer-muted-foreground);
+    --border: var(--footer-border);
+  }
 }
 
 /* Mobile-only route-change feel (below `lg`, the same cutoff MobileTabBar

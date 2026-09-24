@@ -157,12 +157,12 @@ export function ImageCropModal({
           // layout settles (see react-easy-crop#267) -- a plain CSS height
           // is available synchronously, so this always has a real size.
           <div
-            className={cn("relative h-72 w-full overflow-hidden rounded-md bg-muted")}
-            // Without this, a touch-drag meant to reposition the crop can
-            // instead be interpreted as a page pan/scroll on mobile --
-            // react-easy-crop handles the gesture itself, so the browser
-            // should never treat it as native panning/zooming.
-            style={{ touchAction: "none" }}
+            // touch-none (touch-action: none): without it, a touch-drag meant
+            // to reposition the crop can instead be interpreted as a page
+            // pan/scroll on mobile -- react-easy-crop handles the gesture
+            // itself, so the browser should never treat it as native
+            // panning/zooming.
+            className={cn("relative h-72 w-full touch-none overflow-hidden rounded-md bg-muted")}
           >
             <Cropper
               image={imageSrc}

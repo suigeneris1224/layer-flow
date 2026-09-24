@@ -1,52 +1,5 @@
 import type { NextConfig } from "next";
 
-/*
- * Built from NEXT_PUBLIC_SUPABASE_URL directly (not lib/config/env.ts's
- * zod-validated publicEnv) so this file has no import-time dependency on
- * other env vars next.config.ts itself doesn't need. Every REST/Auth/Storage
- * call and every farm/avatar/cover photo the app renders comes from this one
- * origin, so it is the only third party this CSP has to allow.
- */
-const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
-  : "";
-const supabaseWsOrigin = supabaseOrigin.replace(/^http/, "ws");
-
-// 'unsafe-inline' on script-src/style-src is a known, deliberate gap: Next's
-// App Router injects its own inline hydration script, and at least one
-// component (public-footer.tsx) sets CSS custom properties via a style
-// attribute. Removing it needs a per-request nonce threaded through
-// middleware into every layout -- real plumbing that wants a browser to
-// verify hydration doesn't break, not a one-line follow-up. See
-// docs/security.md.
-//
-// 'unsafe-eval' is dev-only: `next dev`'s Fast Refresh compiles chunks with
-// eval()-based source maps, so any client component (the dashboard's charts
-// are the obvious one) throws a CSP violation and fails to run without it.
-// Production builds don't eval, so it's dropped there.
-const scriptSrc = process.env.NODE_ENV === "production"
-  ? "script-src 'self' 'unsafe-inline'"
-  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
-
-// `blob:` on img-src is for the client-only photo crop/resize pipeline
-// (lib/client/resize-image.ts, components/ui/image-crop-modal.tsx) -- it
-// previews a picked file via `URL.createObjectURL(file)` before anything is
-// ever uploaded, and without `blob:` here the browser silently refuses to
-// load it: the <img>'s onerror fires exactly like a real decode failure, and
-// there's no network request for either end's logs to ever show.
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  scriptSrc,
-  "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${supabaseOrigin}`,
-  "font-src 'self' data:",
-  `connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin}`,
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join("; ");
-
 const nextConfig: NextConfig = {
   /*
    * `next build` and `next dev` share `.next` by default, so building while a
@@ -61,13 +14,21 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Content-Security-Policy is set in middleware.ts instead -- it
+        // needs a fresh nonce per request, which a static header list here
+        // can never provide. Setting it here too would add a second CSP
+        // header that browsers combine restrictively, re-enforcing the old
+        // static policy on top of the nonce'd one.
         source: "/(.*)",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY }
+          // 2 years, scoped to subdomains of this exact host only -- not
+          // `preload` yet, since submitting to the browser preload list is
+          // effectively permanent and deserves its own explicit decision.
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }
         ]
       },
       {

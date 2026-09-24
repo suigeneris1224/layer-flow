@@ -8,22 +8,14 @@ import { Brand } from "@/components/nav/brand";
  * in app/globals.css), not the site's usual light/dark surface -- so rather
  * than re-color every link and the reused <Brand /> one by one, the three
  * tokens they lean on (--foreground, --muted-foreground, --border) are
- * rescoped to the footer's own values via inline custom properties. Every
- * descendant's existing text-foreground/text-muted-foreground/border classes
- * then resolve correctly here with no changes to those shared components.
+ * rescoped to the footer's own values via the `.footer-scope` utility class
+ * (app/globals.css). Every descendant's existing text-foreground/
+ * text-muted-foreground/border classes then resolve correctly here with no
+ * changes to those shared components.
  */
 export function PublicFooter() {
   return (
-    <footer
-      className="border-t border-footer-border bg-footer-bg text-footer-foreground"
-      style={
-        {
-          "--foreground": "var(--footer-foreground)",
-          "--muted-foreground": "var(--footer-muted-foreground)",
-          "--border": "var(--footer-border)",
-        } as React.CSSProperties
-      }
-    >
+    <footer className="footer-scope border-t border-footer-border bg-footer-bg text-footer-foreground">
       <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-4">
         <div className="[&>div]:items-start">
           <Brand />

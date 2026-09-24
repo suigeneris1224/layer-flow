@@ -45,15 +45,42 @@ function isPublicPath(pathname: string): boolean {
 }
 
 /**
- * Callers that authenticate with a shared secret inside the route handler and
- * never carry a Supabase session. Building a client and calling getUser() for
- * them is pure CPU cost on every cron tick and webhook delivery, which matters
- * on Workers where CPU time per request is capped.
+ * Paths where calling getUser() buys nothing, so building a Supabase client
+ * and making the auth check is pure CPU cost -- on Workers, where CPU time
+ * per request is capped, that matters.
+ *
+ * Two different reasons land a path here:
+ *   - /api/cron, /api/webhooks: authenticate with a shared secret inside the
+ *     route handler and never carry a Supabase session at all.
+ *   - the 9 static marketing/content pages (also app/sitemap.ts's entries):
+ *     prerendered, take no `dynamic` export, and never read session state --
+ *     the only reason updateSession() needs a user's session on a *public*
+ *     path is to redirect an already-logged-in visitor away from /login or
+ *     /signup specifically, which none of these are. A crawler
+ *     working through the sitemap would otherwise pay for a Supabase client
+ *     + auth check on every single hit for no behavioral reason.
+ *     /login, /signup, /forgot-password and /reset-password are deliberately
+ *     NOT here: the first two still need the redirect-if-logged-in check,
+ *     and the other two aren't in the sitemap or hit repeatedly by crawlers,
+ *     so they're left alone rather than widening this list further than the
+ *     concern that motivated it.
  */
-const SESSIONLESS_PATHS = ["/api/cron", "/api/webhooks"];
+const NO_SESSION_CHECK_PATHS = [
+  "/",
+  "/api/cron",
+  "/api/webhooks",
+  "/pricing",
+  "/features",
+  "/how-it-works",
+  "/faq",
+  "/about",
+  "/contact",
+  "/privacy",
+  "/terms",
+];
 
-function isSessionlessPath(pathname: string): boolean {
-  return SESSIONLESS_PATHS.some(
+function needsNoSessionCheck(pathname: string): boolean {
+  return NO_SESSION_CHECK_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
 }
@@ -67,7 +94,7 @@ function isSessionlessPath(pathname: string): boolean {
  * data.
  */
 export async function updateSession(request: NextRequest) {
-  if (isSessionlessPath(request.nextUrl.pathname)) {
+  if (needsNoSessionCheck(request.nextUrl.pathname)) {
     return NextResponse.next({ request });
   }
 

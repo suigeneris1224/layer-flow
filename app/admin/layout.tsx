@@ -27,34 +27,45 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border bg-surface px-4 py-3 lg:px-6">
-        <div className="flex items-center gap-2">
-          <Brand compact />
-          <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-            Admin
-          </span>
+      <header className="flex flex-col gap-2 border-b border-border bg-surface px-4 py-3 lg:px-6">
+        {/*
+          Brand/badge and the account actions are the only two things in this
+          row on purpose -- justify-between only behaves predictably with
+          exactly one pair of edges to push apart. AdminStatusBadges used to
+          share this row as a third flex child, and on a narrow phone
+          flex-wrap had no reliable way to keep "Back to app"/"Sign out"
+          pinned to the top-right once it wrapped; it's its own row below
+          instead, free to wrap on its own without ever crowding these.
+        */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Brand compact />
+            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+              Admin
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              <span className="hidden sm:inline">Back to app</span>
+            </Link>
+            <form action={signOutAction}>
+              <Button type="submit" variant="outline" size="sm">
+                <LogOut className="size-4" aria-hidden />
+                <span className="hidden sm:inline">Sign out</span>
+              </Button>
+            </form>
+          </div>
         </div>
 
         <AdminStatusBadges
           betaEnabled={betaStatus.enabled}
           activeBetaUsers={betaStatus.testerCount}
         />
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-            <span className="hidden sm:inline">Back to app</span>
-          </Link>
-          <form action={signOutAction}>
-            <Button type="submit" variant="outline" size="sm">
-              <LogOut className="size-4" aria-hidden />
-              <span className="hidden sm:inline">Sign out</span>
-            </Button>
-          </form>
-        </div>
       </header>
 
       <AdminMobileNav />

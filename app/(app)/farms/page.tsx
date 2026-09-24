@@ -32,6 +32,9 @@ export default async function FarmsPage({
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
   // Any signed-in member of a farm may create a brand new farm they'd own --
   // same as onboarding's createFarmAction, which has no role check either.
+  // Deliberate: creating a farm is an account-level action, not scoped to the
+  // current farm. Resolved confusion about this with clarifying copy in
+  // farm-form.tsx rather than restricting who can do it.
   const canAddFarm = canCreate(entitlement, "farms", farms.length);
   const limitPrompt = !canAddFarm ? limitReachedPrompt(entitlement, "farms", farms.length) : null;
 

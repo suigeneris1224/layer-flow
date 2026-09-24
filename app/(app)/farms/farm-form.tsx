@@ -157,6 +157,13 @@ export function FarmForm({
   return (
     <Panel title={mode === "edit" ? "Edit farm details" : "Add a farm"}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        {mode === "create" && (
+          <p className="text-xs text-muted-foreground">
+            This creates a brand-new farm that you&apos;ll own — separate from any farm
+            you&apos;ve been invited to. Your role there won&apos;t change.
+          </p>
+        )}
+
         {formError && <StatusNote tone="bad">{formError}</StatusNote>}
         {success && <StatusNote tone="good">{success}</StatusNote>}
 

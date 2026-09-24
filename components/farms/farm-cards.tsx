@@ -35,9 +35,12 @@ export interface FarmCardData {
 export function FarmCards({
   farms,
   activeFarmId,
+  canAddFarm,
 }: {
   farms: FarmCardData[];
   activeFarmId: string;
+  /** Role permits creating a new farm -- not plan-limit-aware. See app/(app)/farms/page.tsx. */
+  canAddFarm: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -124,16 +127,18 @@ export function FarmCards({
           );
         })}
 
-        <a
-          href="/farms?addFarm=1#add-farm"
-          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          <Warehouse className="size-6" aria-hidden />
-          <span className="flex items-center gap-1 font-medium">
-            <Plus className="size-4" aria-hidden />
-            Add New Farm
-          </span>
-        </a>
+        {canAddFarm && (
+          <a
+            href="/farms?addFarm=1#add-farm"
+            className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+          >
+            <Warehouse className="size-6" aria-hidden />
+            <span className="flex items-center gap-1 font-medium">
+              <Plus className="size-4" aria-hidden />
+              Add New Farm
+            </span>
+          </a>
+        )}
       </div>
     </div>
   );

@@ -182,8 +182,10 @@ export async function getPendingInvitationCount(farmId: string): Promise<number>
 }
 
 export interface InvitationPreview {
-  farmName: string;
-  role: FarmRole;
+  /** One or more farms this invite grants -- more than one when the owner
+   * selected several of their own farms in a single invite (see
+   * accept_farm_invitation, which redeems every row sharing the token). */
+  farms: { farmName: string; role: FarmRole }[];
   expiresAt: string;
 }
 
@@ -219,11 +221,15 @@ export async function getInvitationPreview(token: string): Promise<InvitationLoo
     return { status: "unavailable" };
   }
 
-  const row = (data ?? [])[0];
-  if (!row) return { status: "invalid" };
+  const rows = data ?? [];
+  if (rows.length === 0) return { status: "invalid" };
 
   return {
     status: "ok",
-    preview: { farmName: row.farm_name, role: row.role, expiresAt: row.expires_at },
+    preview: {
+      farms: rows.map((row) => ({ farmName: row.farm_name, role: row.role })),
+      // Every row in one invite batch shares the same expiry.
+      expiresAt: rows[0].expires_at,
+    },
   };
 }

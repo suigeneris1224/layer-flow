@@ -52,6 +52,9 @@ export default async function DashboardPage({
     showRenewalBanner ? getSubscriptionPeriod(context.ownerId) : Promise.resolve(null),
   ]);
   const cardsByFarm = await getFarmCardsForUser(farms.map((farm) => farm.farmId));
+  // See app/(app)/farms/page.tsx -- team members (any role but OWNER, on any
+  // farm) cannot create an independent farm.
+  const hasTeamRole = farms.some((farm) => farm.role !== "OWNER");
 
   const salesOverview = data.money.isComplete
     ? await getSalesOverview(context.farmId, salesRange, data.date)
@@ -256,6 +259,7 @@ export default async function DashboardPage({
             houseCount: cardsByFarm[farm.farmId]?.houseCount ?? 0,
           }))}
           activeFarmId={context.farmId}
+          canAddFarm={!hasTeamRole}
         />
       </Panel>
 

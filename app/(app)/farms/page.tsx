@@ -30,13 +30,14 @@ export default async function FarmsPage({
 
   const canEdit = canManageFarmSettings(context);
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
-  // Any signed-in member of a farm may create a brand new farm they'd own --
-  // same as onboarding's createFarmAction, which has no role check either.
-  // Deliberate: creating a farm is an account-level action, not scoped to the
-  // current farm. Resolved confusion about this with clarifying copy in
-  // farm-form.tsx rather than restricting who can do it.
-  const canAddFarm = canCreate(entitlement, "farms", farms.length);
-  const limitPrompt = !canAddFarm ? limitReachedPrompt(entitlement, "farms", farms.length) : null;
+  // Team members (any role but OWNER, on any farm) are scoped to the owner(s)
+  // who invited them and cannot create an independent farm -- see the
+  // team-membership plan. Hidden entirely, not shown as a locked/upgrade
+  // state, since the gate here is role, not plan.
+  const hasTeamRole = farms.some((farm) => farm.role !== "OWNER");
+  const canAddFarm = !hasTeamRole && canCreate(entitlement, "farms", farms.length);
+  const limitPrompt =
+    !hasTeamRole && !canAddFarm ? limitReachedPrompt(entitlement, "farms", farms.length) : null;
 
   return (
     <PageShell>
@@ -54,6 +55,7 @@ export default async function FarmsPage({
             houseCount: cardsByFarm[farm.farmId]?.houseCount ?? 0,
           }))}
           activeFarmId={context.farmId}
+          canAddFarm={!hasTeamRole}
         />
       </Panel>
 
@@ -83,13 +85,15 @@ export default async function FarmsPage({
         </Panel>
       )}
 
-      <div id="add-farm">
-        {canAddFarm ? (
-          <FarmForm mode="create" forceOpen={addFarm === "1"} />
-        ) : (
-          limitPrompt && <UpgradePanel prompt={limitPrompt} />
-        )}
-      </div>
+      {!hasTeamRole && (
+        <div id="add-farm">
+          {canAddFarm ? (
+            <FarmForm mode="create" forceOpen={addFarm === "1"} />
+          ) : (
+            limitPrompt && <UpgradePanel prompt={limitPrompt} />
+          )}
+        </div>
+      )}
 
     </PageShell>
   );

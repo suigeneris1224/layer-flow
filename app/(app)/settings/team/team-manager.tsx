@@ -7,6 +7,7 @@ import { Check, Copy, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusNote } from "@/components/ui/states";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/auth/permissions";
 import { invitableRoles } from "@/lib/validation/schemas";
@@ -36,6 +37,8 @@ export function TeamManager({
   canInvite,
   appUrl,
   timezone,
+  ownedFarms,
+  activeFarmId,
 }: {
   members: TeamMember[];
   invitations: PendingInvitation[];
@@ -44,6 +47,10 @@ export function TeamManager({
   canInvite: boolean;
   appUrl: string;
   timezone: string;
+  /** Every farm the signed-in owner owns -- the multi-farm invite picker.
+   * A single-owned-farm owner never sees a picker at all (see below). */
+  ownedFarms: { id: string; name: string }[];
+  activeFarmId: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -53,6 +60,13 @@ export function TeamManager({
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<(typeof invitableRoles)[number]>("WORKER");
+  const [farmIds, setFarmIds] = useState<string[]>([activeFarmId]);
+
+  function toggleFarm(farmId: string) {
+    setFarmIds((prev) =>
+      prev.includes(farmId) ? prev.filter((id) => id !== farmId) : [...prev, farmId]
+    );
+  }
 
   const inviteUrl = (token: string) => `${appUrl}/invite/${token}`;
 
@@ -62,7 +76,7 @@ export function TeamManager({
     setFieldErrors({});
 
     startTransition(async () => {
-      const result = await safeAction(() => inviteMemberAction({ email, role }));
+      const result = await safeAction(() => inviteMemberAction({ email, role, farmIds }));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -71,6 +85,7 @@ export function TeamManager({
       }
 
       setEmail("");
+      setFarmIds([activeFarmId]);
       // Copy straight away: the link is the whole point of the invitation, and
       // a farmer who has to hunt for it afterwards will send the wrong thing.
       void copy(inviteUrl(result.data.token));
@@ -351,11 +366,31 @@ export function TeamManager({
               </Select>
             </Field>
 
+            {ownedFarms.length > 1 && (
+              <Field
+                label="Farms"
+                htmlFor="invite-farms"
+                hint="Grant access to more than one of your farms with this same link."
+                error={fieldErrors.farmIds}
+              >
+                <div id="invite-farms" className="flex flex-col">
+                  {ownedFarms.map((farm) => (
+                    <Checkbox
+                      key={farm.id}
+                      label={farm.name}
+                      checked={farmIds.includes(farm.id)}
+                      onChange={() => toggleFarm(farm.id)}
+                    />
+                  ))}
+                </div>
+              </Field>
+            )}
+
             <div>
               <Button
                 type="submit"
                 loading={pending}
-                disabled={!email.trim() || !canInvite}
+                disabled={!email.trim() || !canInvite || farmIds.length === 0}
               >
                 <UserPlus className="size-4" aria-hidden />
                 {pending ? "Creating…" : "Create invite link"}

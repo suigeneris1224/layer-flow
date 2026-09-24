@@ -80,20 +80,25 @@ export default async function InvitePage({
 
   const preview = lookup.preview;
   const nextPath = `/invite/${token}`;
+  const farmNames = preview.farms.map((farm) => farm.farmName).join(", ");
 
   return (
     <Panel title="You've been invited">
       <div className="flex flex-col gap-4">
-        <div>
-          <p className="text-lg font-semibold tracking-tight">{preview.farmName}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            as a {ROLE_LABELS[preview.role].toLowerCase()} —{" "}
-            {ROLE_DESCRIPTIONS[preview.role].toLowerCase()}
-          </p>
+        <div className="flex flex-col gap-2">
+          {preview.farms.map((farm) => (
+            <div key={farm.farmName}>
+              <p className="text-lg font-semibold tracking-tight">{farm.farmName}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                as a {ROLE_LABELS[farm.role].toLowerCase()} —{" "}
+                {ROLE_DESCRIPTIONS[farm.role].toLowerCase()}
+              </p>
+            </div>
+          ))}
         </div>
 
         {user ? (
-          <AcceptInvitation token={token} farmName={preview.farmName} />
+          <AcceptInvitation token={token} farmName={farmNames} />
         ) : (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">

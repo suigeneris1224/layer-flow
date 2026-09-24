@@ -9,6 +9,7 @@ import {
   limitReachedPrompt,
 } from "@/lib/subscriptions/entitlements";
 import { getPendingInvitations, getTeamMembers } from "@/lib/data/team";
+import { getFarmsOwnedBy } from "@/lib/data/farms";
 import { publicEnv } from "@/lib/config/env";
 import { PageHeader } from "@/components/layout/page-shell";
 import { StatusNote } from "@/components/ui/states";
@@ -38,12 +39,16 @@ export default async function TeamPage() {
     );
   }
 
-  const [members, invitations] = await Promise.all([
+  const canManage = canManageUsers(context);
+
+  const [members, invitations, ownedFarms] = await Promise.all([
     getTeamMembers(context.farmId),
     getPendingInvitations(context.farmId),
+    // Only the owner ever sees/uses the multi-farm picker; skip the query
+    // otherwise (a Worker/Manager viewing this page read-only doesn't own
+    // anything to pick from).
+    canManage ? getFarmsOwnedBy(context.ownerId) : Promise.resolve([]),
   ]);
-
-  const canManage = canManageUsers(context);
 
   // Pending invitations occupy a seat: each one becomes a member the moment it
   // is opened, and nothing re-checks the plan at that point.
@@ -73,6 +78,8 @@ export default async function TeamPage() {
         canInvite={canInvite}
         appUrl={publicEnv.appUrl}
         timezone={context.timezone}
+        ownedFarms={ownedFarms}
+        activeFarmId={context.farmId}
       />
 
       {canManage && !canInvite && (

@@ -1274,12 +1274,15 @@ suite("RLS tenant isolation", () => {
 
       const first = await bob.client.rpc("accept_farm_invitation", { p_token: token });
       expect(first.error).toBeNull();
-      expect(first.data).toBe(farmA.farmId);
+      // Returns every farm_id granted -- an array, since one token can now
+      // span several farms (see 20250101003400_multi_farm_invitations.sql).
+      // A single-farm invite is just a batch of one.
+      expect(first.data).toEqual([farmA.farmId]);
 
       // Idempotent: a double tap or a retry must not raise.
       const second = await bob.client.rpc("accept_farm_invitation", { p_token: token });
       expect(second.error).toBeNull();
-      expect(second.data).toBe(farmA.farmId);
+      expect(second.data).toEqual([farmA.farmId]);
 
       const admin = adminClient();
       const { data: rows } = await admin

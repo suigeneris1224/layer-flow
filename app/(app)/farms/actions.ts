@@ -197,6 +197,17 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
     return failure("Please check the form below.", toFieldErrors(parsed.error));
   }
 
+  // Team members (any role but OWNER, on any farm) are scoped to the owner(s)
+  // who invited them and cannot spin up an independent farm -- see the
+  // team-membership plan. Checked before the plan-limit lookup below since
+  // it's a role gate, not a plan one.
+  const memberships = await getUserFarms();
+  if (memberships.some((farm) => farm.role !== "OWNER")) {
+    return failure(
+      "You're already part of a team on another farm. Ask its owner to give you access to more farms instead of creating your own."
+    );
+  }
+
   try {
     const context = await getFarmContext();
     const existingFarms = await getFarmCountForUser(user.id);

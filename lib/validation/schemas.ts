@@ -566,6 +566,9 @@ export const inviteMemberSchema = z.object({
   role: z.enum(invitableRoles, {
     errorMap: () => ({ message: "Choose manager or worker" }),
   }),
+  // Every id here must belong to a farm the inviting owner owns -- checked
+  // server-side in inviteMemberAction, never trusted from this shape alone.
+  farmIds: z.array(uuid).min(1, "Select at least one farm"),
 });
 
 export const updateMemberRoleSchema = z.object({

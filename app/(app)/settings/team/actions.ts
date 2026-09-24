@@ -69,34 +69,55 @@ export async function inviteMemberAction(
     const entitlement = { plan: context.plan, status: context.subscriptionStatus };
     assertCanAccess(entitlement, "team_management");
 
-    /*
-     * Pending invitations count against the cap alongside existing members.
-     * Nothing re-checks the plan when somebody accepts -- by then the token is
-     * the authority -- so a farm could otherwise send ten invites on a two-user
-     * plan and quietly end up with ten members.
-     */
-    const [members, pending] = await Promise.all([
-      getMemberCount(context.farmId),
-      getPendingInvitationCount(context.farmId),
-    ]);
-    assertCanCreate(entitlement, "users", members + pending);
-
     const supabase = await createSupabaseServerClient();
+
+    // Every selected farm must actually belong to this owner. RLS would also
+    // reject a foreign farm id at insert time (farm_invitations_insert_owner),
+    // but this gives a clean error instead of a raw policy failure.
+    const { data: ownedFarms, error: ownedError } = await supabase
+      .from("farms")
+      .select("id, name")
+      .eq("owner_id", user.id)
+      .in("id", parsed.data.farmIds);
+
+    if (ownedError) return describeDatabaseError(ownedError, "inviteMemberAction");
+    if ((ownedFarms?.length ?? 0) !== parsed.data.farmIds.length) {
+      return failure("One of the selected farms isn't yours.");
+    }
+
+    /*
+     * Pending invitations count against each selected farm's own cap
+     * alongside its existing members. Nothing re-checks the plan when
+     * somebody accepts -- by then the token is the authority -- so a farm
+     * could otherwise end up with more members than its plan allows.
+     * Checked per farm, same as the single-farm case always was.
+     */
+    for (const farm of ownedFarms ?? []) {
+      const [members, pending] = await Promise.all([
+        getMemberCount(farm.id),
+        getPendingInvitationCount(farm.id),
+      ]);
+      assertCanCreate(entitlement, "users", members + pending);
+    }
+
     const token = `${randomUUID()}${randomUUID()}`.replace(/-/g, "");
     const expiresAt = new Date(Date.now() + INVITE_DAYS * 86_400_000).toISOString();
 
-    const { data, error } = await supabase
-      .from("farm_invitations")
-      .insert({
-        farm_id: context.farmId,
+    // One row per selected farm, all sharing the token -- see
+    // supabase/migrations/20250101003400_multi_farm_invitations.sql. A single
+    // insert call: a dedup violation on any one farm aborts the whole batch,
+    // so no partial invite is ever created. The token is already known, so
+    // there's nothing to select back.
+    const { error } = await supabase.from("farm_invitations").insert(
+      parsed.data.farmIds.map((farmId) => ({
+        farm_id: farmId,
         email: parsed.data.email,
         role: parsed.data.role,
         token,
         invited_by: user.id,
         expires_at: expiresAt,
-      })
-      .select("token")
-      .single();
+      }))
+    );
 
     if (error) return describeDatabaseError(error, "inviteMemberAction");
 
@@ -105,12 +126,12 @@ export async function inviteMemberAction(
       userId: user.id,
       action: AUDIT_ACTIONS.MEMBER_ADDED,
       entityType: "farm_invitation",
-      metadata: { email: parsed.data.email, role: parsed.data.role },
+      metadata: { email: parsed.data.email, role: parsed.data.role, farmIds: parsed.data.farmIds },
     });
 
     revalidatePath("/settings/team");
 
-    return { ok: true, data: { token: data.token } };
+    return { ok: true, data: { token } };
   } catch (error) {
     return describeUnknownError(error, "inviteMemberAction");
   }
@@ -268,15 +289,17 @@ export async function acceptInvitationAction(
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: farmId, error } = await supabase.rpc("accept_farm_invitation", {
+    const { data: farmIds, error } = await supabase.rpc("accept_farm_invitation", {
       p_token: token,
     });
 
     if (error) return describeDatabaseError(error, "acceptInvitationAction");
-    if (!farmId) return failure("That invitation is no longer valid.");
+    if (!farmIds || farmIds.length === 0) return failure("That invitation is no longer valid.");
 
-    // Land them on the farm they just joined rather than whichever farm the
-    // cookie happened to hold.
+    // Land them on the first farm they just joined rather than whichever farm
+    // the cookie happened to hold. The farm switcher already shows every farm
+    // granted by this invite.
+    const farmId = farmIds[0];
     const cookieStore = await cookies();
     cookieStore.set(ACTIVE_FARM_COOKIE, farmId, {
       httpOnly: true,

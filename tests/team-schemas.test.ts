@@ -12,12 +12,15 @@ import { inviteMemberSchema, updateMemberRoleSchema } from "@/lib/validation/sch
  */
 
 const MEMBER = "6c2f4a5e-0f7a-4a1c-9a4a-0f8b7f3d1e22";
+const FARM_A = "6c2f4a5e-0f7a-4a1c-9a4a-0f8b7f3d1e01";
+const FARM_B = "6c2f4a5e-0f7a-4a1c-9a4a-0f8b7f3d1e02";
 
 describe("inviteMemberSchema", () => {
   it("accepts a manager invite", () => {
     const result = inviteMemberSchema.safeParse({
       email: "ana@example.com",
       role: "MANAGER",
+      farmIds: [FARM_A],
     });
     expect(result.success).toBe(true);
   });
@@ -26,6 +29,7 @@ describe("inviteMemberSchema", () => {
     const result = inviteMemberSchema.safeParse({
       email: "ana@example.com",
       role: "OWNER",
+      farmIds: [FARM_A],
     });
     expect(result.success).toBe(false);
   });
@@ -34,6 +38,7 @@ describe("inviteMemberSchema", () => {
     const result = inviteMemberSchema.safeParse({
       email: "ana@example.com",
       role: "ADMIN",
+      farmIds: [FARM_A],
     });
     expect(result.success).toBe(false);
   });
@@ -44,18 +49,55 @@ describe("inviteMemberSchema", () => {
     const result = inviteMemberSchema.safeParse({
       email: "  Ana@Example.COM  ",
       role: "WORKER",
+      farmIds: [FARM_A],
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.email).toBe("ana@example.com");
   });
 
   it("rejects something that is not an email", () => {
-    const result = inviteMemberSchema.safeParse({ email: "ana", role: "WORKER" });
+    const result = inviteMemberSchema.safeParse({
+      email: "ana",
+      role: "WORKER",
+      farmIds: [FARM_A],
+    });
     expect(result.success).toBe(false);
   });
 
   it("rejects a blank email", () => {
-    const result = inviteMemberSchema.safeParse({ email: "   ", role: "WORKER" });
+    const result = inviteMemberSchema.safeParse({
+      email: "   ",
+      role: "WORKER",
+      farmIds: [FARM_A],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts more than one farm -- the multi-farm invite case", () => {
+    const result = inviteMemberSchema.safeParse({
+      email: "ana@example.com",
+      role: "WORKER",
+      farmIds: [FARM_A, FARM_B],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.farmIds).toEqual([FARM_A, FARM_B]);
+  });
+
+  it("rejects an empty farm selection", () => {
+    const result = inviteMemberSchema.safeParse({
+      email: "ana@example.com",
+      role: "WORKER",
+      farmIds: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a non-uuid farm id", () => {
+    const result = inviteMemberSchema.safeParse({
+      email: "ana@example.com",
+      role: "WORKER",
+      farmIds: ["not-a-uuid"],
+    });
     expect(result.success).toBe(false);
   });
 });

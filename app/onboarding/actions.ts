@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ACTIVE_FARM_COOKIE, getFarmContext, requireUser } from "@/lib/auth/session";
+import { ACTIVE_FARM_COOKIE, getFarmContext, getUserFarms, requireUser } from "@/lib/auth/session";
 import { canManageFlock } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
@@ -56,6 +56,17 @@ export async function createFarmAction(
 
     const existingFarms = count ?? 0;
     if (existingFarms > 0) {
+      // Team members (any role but OWNER, on any farm) are scoped to the
+      // owner(s) who invited them and cannot spin up an independent farm --
+      // see the team-membership plan. A brand-new user with zero farms has
+      // nothing to check here.
+      const memberships = await getUserFarms();
+      if (memberships.some((farm) => farm.role !== "OWNER")) {
+        return failure(
+          "You're already part of a team on another farm. Ask its owner to give you access to more farms instead of creating your own."
+        );
+      }
+
       const context = await getFarmContext();
       assertCanCreate(
         { plan: context?.plan ?? "FREE", status: context?.subscriptionStatus ?? "ACTIVE" },

@@ -42,6 +42,31 @@ export async function getFarmNamesForOwner(
   return (data ?? []).map((row) => row.name);
 }
 
+/**
+ * Every farm this account owns -- id and name -- for the multi-farm invite
+ * picker on /settings/team. Mirrors getFarmNamesForOwner's client-construction
+ * pattern, but returns full rows since the picker needs an id to submit.
+ */
+export async function getFarmsOwnedBy(
+  ownerId: string,
+  client?: SupabaseClient<Database>
+): Promise<{ id: string; name: string }[]> {
+  const supabase = client ?? (await createSupabaseServerClient());
+
+  const { data, error } = await supabase
+    .from("farms")
+    .select("id, name")
+    .eq("owner_id", ownerId)
+    .order("name");
+
+  if (error) {
+    logger.error("farms owned by lookup failed", { reason: error.message });
+    return [];
+  }
+
+  return data ?? [];
+}
+
 export interface FarmDetail {
   id: string;
   name: string;

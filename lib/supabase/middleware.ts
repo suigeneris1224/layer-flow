@@ -19,6 +19,11 @@ const PUBLIC_PATHS = [
   "/contact",
   "/privacy",
   "/terms",
+  // Crawler-facing metadata routes (app/robots.ts, app/sitemap.ts) -- an
+  // anonymous request to either was being redirected to /login before this,
+  // which meant no crawler could ever actually read either file.
+  "/robots.txt",
+  "/sitemap.xml",
   "/auth/callback",
   "/auth/confirm",
   // An invitee may have no account yet, so the landing page has to be
@@ -50,8 +55,10 @@ function isPublicPath(pathname: string): boolean {
  * per request is capped, that matters.
  *
  * Two different reasons land a path here:
- *   - /api/cron, /api/webhooks: authenticate with a shared secret inside the
- *     route handler and never carry a Supabase session at all.
+ *   - /api/cron, /api/webhooks, /robots.txt, /sitemap.xml: authenticate with
+ *     a shared secret (the first two) or need no auth concept at all (the
+ *     last two -- crawler-facing metadata routes) and never carry a Supabase
+ *     session.
  *   - the 9 static marketing/content pages (also app/sitemap.ts's entries):
  *     prerendered, take no `dynamic` export, and never read session state --
  *     the only reason updateSession() needs a user's session on a *public*
@@ -69,6 +76,8 @@ const NO_SESSION_CHECK_PATHS = [
   "/",
   "/api/cron",
   "/api/webhooks",
+  "/robots.txt",
+  "/sitemap.xml",
   "/pricing",
   "/features",
   "/how-it-works",

@@ -30,10 +30,9 @@ export default async function FarmsPage({
 
   const canEdit = canManageFarmSettings(context);
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
-  // Team members (any role but OWNER, on any farm) are scoped to the owner(s)
-  // who invited them and cannot create an independent farm -- see the
-  // team-membership plan. Hidden entirely, not shown as a locked/upgrade
-  // state, since the gate here is role, not plan.
+  // Team members can't create a farm -- see createFarmAction in ./actions.ts.
+  // Hidden entirely rather than shown as a locked/upgrade state, since the
+  // gate here is role, not plan.
   const hasTeamRole = farms.some((farm) => farm.role !== "OWNER");
   const canAddFarm = !hasTeamRole && canCreate(entitlement, "farms", farms.length);
   const limitPrompt =

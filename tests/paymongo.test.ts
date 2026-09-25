@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseWebhookEvent, verifyWebhookSignature } from "@/lib/subscriptions/paymongo";
 
 const SECRET = "whsec_test_secret";
@@ -9,8 +9,17 @@ function signaturesFor(rawBody: string, timestamp = "1700000000"): string {
   return `t=${timestamp},te=${hmac},li=unused`;
 }
 
+/** Same shape, but signed under the live-mode field instead. */
+function liveSignatureFor(rawBody: string, timestamp = "1700000000"): string {
+  const hmac = createHmac("sha256", SECRET).update(`${timestamp}.${rawBody}`).digest("hex");
+  return `t=${timestamp},te=unused,li=${hmac}`;
+}
+
 beforeAll(() => {
   process.env.PAYMONGO_WEBHOOK_SECRET = SECRET;
+  // verifyWebhookSignature picks te/li based on this key's prefix -- test
+  // mode by default, flipped to a live key inside the tests that need it.
+  process.env.PAYMONGO_SECRET_KEY = "sk_test_dummy";
 });
 
 describe("verifyWebhookSignature", () => {
@@ -39,6 +48,28 @@ describe("verifyWebhookSignature", () => {
 
   it("rejects a malformed signature header missing required parts", () => {
     expect(verifyWebhookSignature(rawBody, "t=1700000000")).toBe(false);
+  });
+
+  describe("with a live secret key configured", () => {
+    const originalKey = process.env.PAYMONGO_SECRET_KEY;
+
+    beforeAll(() => {
+      process.env.PAYMONGO_SECRET_KEY = "sk_live_dummy";
+    });
+
+    afterAll(() => {
+      process.env.PAYMONGO_SECRET_KEY = originalKey;
+    });
+
+    it("accepts a correctly signed live-mode payload", () => {
+      expect(verifyWebhookSignature(rawBody, liveSignatureFor(rawBody))).toBe(true);
+    });
+
+    it("rejects a test-mode-only signature -- the live field is what's checked now", () => {
+      // signaturesFor signs `te` correctly but leaves `li=unused`, so under a
+      // live key this must fail even though the payload is genuinely signed.
+      expect(verifyWebhookSignature(rawBody, signaturesFor(rawBody))).toBe(false);
+    });
   });
 });
 

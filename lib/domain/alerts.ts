@@ -276,14 +276,10 @@ export function vaccinationAlert(
 /**
  * Low egg inventory, Pro only.
  *
- * `bad` ("empty") is reserved for when the shed truly has nothing -- no
- * sellable trays, no ungraded eggs, and no loose leftovers in any size.
- * Whenever trays are at/below the threshold but there's real stock sitting
- * uncounted -- ungraded eggs, or graded eggs that just haven't reached a
- * full tray in their own size -- this downgrades to `warn` and names what's
- * there, instead of overstating the problem. Only fires when trays are
- * below/at the line, never on a healthy stock; loose/ungraded eggs alone
- * never trigger it.
+ * `bad` ("empty") only fires when trays, ungraded eggs, and loose leftovers
+ * are all zero. If any of those has real stock, this downgrades to `warn`
+ * and names what's there instead of overstating the problem. Only fires at
+ * or below the tray threshold; loose/ungraded eggs alone never trigger it.
  */
 export function lowInventoryAlert(
   totalTrays: number,

@@ -135,11 +135,11 @@ export interface PaymongoWebhookEvent {
  *
  * PayMongo signs each delivery with a `Paymongo-Signature` header shaped
  * `t=<timestamp>,te=<test-mode-hmac>,li=<live-mode-hmac>` -- the HMAC-SHA256
- * of `<timestamp>.<rawBody>` keyed by the webhook secret, using the `te` part
- * while running in test mode. **Confirm this exact header/HMAC-input format
- * against PayMongo's current webhook documentation before relying on it in
- * production** -- it guards a real unauthenticated endpoint and must not be
- * shipped from memory alone.
+ * of `<timestamp>.<rawBody>` keyed by the webhook secret. Which field applies
+ * follows the same test/live key rule as the rest of this file (see above).
+ * **Confirm this exact header/HMAC-input format against PayMongo's current
+ * webhook documentation before relying on it in production** -- it guards a
+ * real unauthenticated endpoint and must not be shipped from memory alone.
  *
  * Returns null on a missing/invalid signature; the caller answers 401.
  */
@@ -157,7 +157,8 @@ export function verifyWebhookSignature(
   );
 
   const timestamp = parts.t;
-  const providedHmac = parts.te; // test-mode signature; swap to `li` once PAYMONGO_SECRET_KEY is a live key.
+  const isLiveKey = serverEnv.paymongoSecretKey.startsWith("sk_live_");
+  const providedHmac = isLiveKey ? parts.li : parts.te;
   if (!timestamp || !providedHmac) return false;
 
   const expectedHmac = createHmac("sha256", serverEnv.paymongoWebhookSecret)

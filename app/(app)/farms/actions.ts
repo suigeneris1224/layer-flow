@@ -7,7 +7,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ACTIVE_FARM_COOKIE, getFarmContext, getUserFarms, requireUser } from "@/lib/auth/session";
 import { canManageFarmSettings } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
-import { getFarmCountForUser } from "@/lib/data/farms";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { resolveUploadType } from "@/lib/upload/file-signature";
 import { createFarmSchema, toFieldErrors, updateFarmSchema } from "@/lib/validation/schemas";
@@ -198,9 +197,7 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
   }
 
   // Team members (any role but OWNER, on any farm) are scoped to the owner(s)
-  // who invited them and cannot spin up an independent farm -- see the
-  // team-membership plan. Checked before the plan-limit lookup below since
-  // it's a role gate, not a plan one.
+  // who invited them and cannot create an independent farm here.
   const memberships = await getUserFarms();
   if (memberships.some((farm) => farm.role !== "OWNER")) {
     return failure(
@@ -210,7 +207,9 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
 
   try {
     const context = await getFarmContext();
-    const existingFarms = await getFarmCountForUser(user.id);
+    // memberships already holds every farm_members row for this user (see
+    // the team check above) -- no need for a second count query.
+    const existingFarms = memberships.length;
 
     assertCanCreate(
       { plan: context?.plan ?? "FREE", status: context?.subscriptionStatus ?? "ACTIVE" },

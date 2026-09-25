@@ -56,9 +56,8 @@ export async function createFarmAction(
 
     const existingFarms = count ?? 0;
     if (existingFarms > 0) {
-      // Team members (any role but OWNER, on any farm) are scoped to the
-      // owner(s) who invited them and cannot spin up an independent farm --
-      // see the team-membership plan. A brand-new user with zero farms has
+      // Team members can't create an independent farm -- see createFarmAction
+      // in app/(app)/farms/actions.ts. A brand-new user with zero farms has
       // nothing to check here.
       const memberships = await getUserFarms();
       if (memberships.some((farm) => farm.role !== "OWNER")) {

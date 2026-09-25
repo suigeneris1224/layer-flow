@@ -85,12 +85,36 @@ export async function inviteMemberAction(
       return failure("One of the selected farms isn't yours.");
     }
 
+    // Checked ahead of the insert so the error can name which farm already
+    // has one open, rather than surfacing farm_invitations_pending_key's
+    // generic message once the batch insert below hits it. The constraint
+    // itself remains the real enforcement -- a race between two concurrent
+    // invites still fails safely with that generic message.
+    const { data: conflicting, error: pendingError } = await supabase
+      .from("farm_invitations")
+      .select("farm_id")
+      .eq("email", parsed.data.email)
+      .is("accepted_at", null)
+      .in("farm_id", parsed.data.farmIds);
+
+    if (pendingError) return describeDatabaseError(pendingError, "inviteMemberAction");
+    if (conflicting && conflicting.length > 0) {
+      const names = (ownedFarms ?? [])
+        .filter((farm) => conflicting.some((row) => row.farm_id === farm.id))
+        .map((farm) => farm.name)
+        .join(", ");
+      return failure(
+        `${names || "One of the selected farms"} already ${
+          conflicting.length === 1 ? "has" : "have"
+        } an open invitation for this email. Cancel it first, or send them the existing link.`
+      );
+    }
+
     /*
      * Pending invitations count against each selected farm's own cap
      * alongside its existing members. Nothing re-checks the plan when
      * somebody accepts -- by then the token is the authority -- so a farm
      * could otherwise end up with more members than its plan allows.
-     * Checked per farm, same as the single-farm case always was.
      */
     for (const farm of ownedFarms ?? []) {
       const [members, pending] = await Promise.all([

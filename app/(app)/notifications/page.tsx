@@ -3,8 +3,8 @@ import { requireFarmContext } from "@/lib/auth/session";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
-import { NotificationRow } from "@/components/notifications/notification-row";
 import { MarkAllReadButton } from "@/components/notifications/mark-all-read-button";
+import { NotificationList } from "./notification-list";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function NotificationsPage() {
   const context = await requireFarmContext();
-  const [notifications, unreadCount] = await Promise.all([
+  const [{ notifications, nextCursor }, unreadCount] = await Promise.all([
     getNotifications(context),
     getUnreadNotificationCount(context),
   ]);
@@ -43,13 +43,11 @@ export default async function NotificationsPage() {
             No alerts. Everything looks normal.
           </p>
         ) : (
-          <ul className="divide-y divide-border">
-            {notifications.map((notification) => (
-              <li key={notification.id}>
-                <NotificationRow notification={notification} timezone={context.timezone} />
-              </li>
-            ))}
-          </ul>
+          <NotificationList
+            initialNotifications={notifications}
+            initialCursor={nextCursor}
+            timezone={context.timezone}
+          />
         )}
       </Panel>
     </PageShell>

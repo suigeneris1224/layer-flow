@@ -52,32 +52,97 @@ function fromRow(row: NotificationRow): Notification {
 }
 
 const HISTORY_DAYS = 30;
+const RESOLVED_PAGE_SIZE = 20;
+
+const NOTIFICATION_COLUMNS = "id, type, level, message, created_at, read_at, resolved_at";
 
 /**
- * Recent notifications for the farm, newest first: open ones plus anything
- * resolved in the last 30 days, so the panel has some history without
- * growing without bound.
+ * Recent notifications for the farm, newest first: every open one plus the
+ * first page of resolved ones (last 30 days). Open notifications are never
+ * paginated -- notifications_open_key caps them at one per alert type per
+ * farm, so there are only ever a handful and they're the ones that need
+ * attention. Resolved history is the genuinely unbounded part (a flapping
+ * alert can accumulate many rows within the 30-day window), so it's the part
+ * that's paginated -- see getMoreResolvedNotifications for further pages.
  */
 export const getNotifications = cache(async function getNotifications(
   context: FarmContext
-): Promise<Notification[]> {
+): Promise<{ notifications: Notification[]; nextCursor: string | null }> {
+  const supabase = await createSupabaseServerClient();
+  const since = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const [openResult, resolvedResult] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select(NOTIFICATION_COLUMNS)
+      .eq("farm_id", context.farmId)
+      .is("resolved_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("notifications")
+      .select(NOTIFICATION_COLUMNS)
+      .eq("farm_id", context.farmId)
+      .not("resolved_at", "is", null)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(RESOLVED_PAGE_SIZE + 1),
+  ]);
+
+  if (openResult.error || resolvedResult.error) {
+    logger.error("notification list failed", {
+      reason: (openResult.error ?? resolvedResult.error)!.message,
+    });
+    return { notifications: [], nextCursor: null };
+  }
+
+  const openRows = (openResult.data ?? []) as NotificationRow[];
+  const resolvedRows = (resolvedResult.data ?? []) as NotificationRow[];
+  const hasMore = resolvedRows.length > RESOLVED_PAGE_SIZE;
+  const resolvedPage = hasMore ? resolvedRows.slice(0, RESOLVED_PAGE_SIZE) : resolvedRows;
+
+  const notifications = [...openRows, ...resolvedPage]
+    .map(fromRow)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  return {
+    notifications,
+    nextCursor: hasMore ? resolvedPage[resolvedPage.length - 1].created_at : null,
+  };
+});
+
+/** Further pages of resolved history -- open notifications are already
+ *  complete from getNotifications, so "load more" never re-fetches them. */
+export async function getMoreResolvedNotifications(
+  context: FarmContext,
+  cursor: string
+): Promise<{ notifications: Notification[]; nextCursor: string | null }> {
   const supabase = await createSupabaseServerClient();
   const since = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, type, level, message, created_at, read_at, resolved_at")
+    .select(NOTIFICATION_COLUMNS)
     .eq("farm_id", context.farmId)
-    .or(`resolved_at.is.null,created_at.gte.${since}`)
-    .order("created_at", { ascending: false });
+    .not("resolved_at", "is", null)
+    .gte("created_at", since)
+    .lt("created_at", cursor)
+    .order("created_at", { ascending: false })
+    .limit(RESOLVED_PAGE_SIZE + 1);
 
   if (error) {
-    logger.error("notification list failed", { reason: error.message });
-    return [];
+    logger.error("more notifications lookup failed", { reason: error.message });
+    return { notifications: [], nextCursor: null };
   }
 
-  return ((data ?? []) as NotificationRow[]).map(fromRow);
-});
+  const rows = (data ?? []) as NotificationRow[];
+  const hasMore = rows.length > RESOLVED_PAGE_SIZE;
+  const page = hasMore ? rows.slice(0, RESOLVED_PAGE_SIZE) : rows;
+
+  return {
+    notifications: page.map(fromRow),
+    nextCursor: hasMore ? page[page.length - 1].created_at : null,
+  };
+}
 
 /** For the topbar badge: firing and not yet acknowledged by anyone on the farm. */
 export const getUnreadNotificationCount = cache(async function getUnreadNotificationCount(

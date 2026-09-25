@@ -29,7 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // navigation, and the dashboard-only "recent activity" query and shape it
   // used to pull in were never used here. See lib/data/dashboard.ts.
   await syncFarmAlerts(context);
-  const [notifications, unreadCount, profile, farms] = await Promise.all([
+  const [{ notifications }, unreadCount, profile, farms] = await Promise.all([
     getNotifications(context),
     getUnreadNotificationCount(context),
     getProfile(user.id),

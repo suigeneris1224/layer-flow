@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireFarmContext } from "@/lib/auth/session";
+import { getMoreResolvedNotifications, type Notification } from "@/lib/data/notifications";
 import { describeDatabaseError, describeUnknownError, type ActionResult } from "@/lib/errors";
 
 /** Read state is farm-wide, not per-teammate -- see lib/data/notifications.ts. */
@@ -24,6 +25,18 @@ export async function markNotificationReadAction(id: string): Promise<ActionResu
     return { ok: true };
   } catch (error) {
     return describeUnknownError(error, "markNotificationReadAction");
+  }
+}
+
+export async function loadMoreNotificationsAction(
+  cursor: string
+): Promise<ActionResult<{ notifications: Notification[]; nextCursor: string | null }>> {
+  try {
+    const context = await requireFarmContext();
+    const data = await getMoreResolvedNotifications(context, cursor);
+    return { ok: true, data };
+  } catch (error) {
+    return describeUnknownError(error, "loadMoreNotificationsAction");
   }
 }
 

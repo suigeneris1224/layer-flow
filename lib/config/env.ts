@@ -67,7 +67,7 @@ export const serverEnv = {
     return process.env.EMAIL_PROVIDER ?? "mock";
   },
   get emailFrom(): string {
-    return process.env.EMAIL_FROM ?? "LayerFlow <support@layerflow.ph>";
+    return process.env.EMAIL_FROM ?? "LayerFlow <support@getlayerflow.com>";
   },
   get brevoApiKey(): string {
     const key = process.env.BREVO_API_KEY;

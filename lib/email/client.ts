@@ -43,7 +43,7 @@ interface FromAddress {
   email: string;
 }
 
-/** `"LayerFlow <support@layerflow.ph>"` -> `{ name: "LayerFlow", email: "support@layerflow.ph" }`. */
+/** `"LayerFlow <support@getlayerflow.com>"` -> `{ name: "LayerFlow", email: "support@getlayerflow.com" }`. */
 function parseFromHeader(value: string): FromAddress {
   const match = value.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
   if (!match) return { email: value.trim() };

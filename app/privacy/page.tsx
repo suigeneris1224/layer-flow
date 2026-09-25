@@ -3,7 +3,7 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { PublicFooter } from "@/components/marketing/public-footer";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 
-const SUPPORT_EMAIL = "support@layerflow.ph";
+const SUPPORT_EMAIL = "support@getlayerflow.com";
 
 export const metadata: Metadata = {
   title: "Privacy",

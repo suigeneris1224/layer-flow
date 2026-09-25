@@ -155,17 +155,17 @@ the way there was when Vercel hosted the app and Cloudflare only handled DNS.
 
 ### Support inbox, for free
 
-A `support@layerflow.ph` inbox costs real money at most registrars; **Cloudflare Email Routing**
+A `support@getlayerflow.com` inbox costs real money at most registrars; **Cloudflare Email Routing**
 forwards it to a personal inbox at no cost and needs no mailbox — same Cloudflare zone the domain
 and the Worker already live in:
 
 1. In Cloudflare → **Email → Email Routing**, verify the domain and add a rule:
-   `support@layerflow.ph` → your personal address.
+   `support@getlayerflow.com` → your personal address.
 2. Confirm the Worker's custom-domain DNS record (from step 6 above) and the Email Routing MX/TXT
    records coexist in the same zone without conflicting — Cloudflare manages both automatically
    once Email Routing is enabled.
 
-This is receive-only: mail sent *to* `support@layerflow.ph` lands in a personal inbox. It has no
+This is receive-only: mail sent *to* `support@getlayerflow.com` lands in a personal inbox. It has no
 effect on `EMAIL_FROM` (Brevo, in the table above) — that is what farmers see in the *From* line
 of receipt/reminder emails, and stays whatever address is verified in Brevo until deliberately
 changed.

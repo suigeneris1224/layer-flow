@@ -16,7 +16,7 @@ import {
 } from "@/lib/errors";
 
 /** Where a new request notifies -- same inbox app/contact/page.tsx points visitors to. */
-const SUPPORT_EMAIL = "support@layerflow.ph";
+const SUPPORT_EMAIL = "support@getlayerflow.com";
 
 /**
  * File a support request.

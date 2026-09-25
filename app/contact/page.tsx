@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Get in touch with the LayerFlow team, including support.",
 };
 
-const SUPPORT_EMAIL = "support@layerflow.ph";
+const SUPPORT_EMAIL = "support@getlayerflow.com";
 
 export default function ContactPage() {
   return (
@@ -51,7 +51,7 @@ export default function ContactPage() {
                 <span>Coming soon</span>
               </div>
               <a
-                href="https://m.me/layerflow.ph"
+                href="https://m.me/getlayerflow"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-start gap-2 text-sm text-muted-foreground hover:text-foreground"

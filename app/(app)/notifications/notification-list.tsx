@@ -47,8 +47,8 @@ export function NotificationList({
         ))}
       </ul>
       {cursor && (
-        <div className="border-t border-border p-3">
-          <Button type="button" variant="outline" loading={pending} onClick={onLoadMore}>
+        <div className="flex justify-center border-t border-border p-3">
+          <Button type="button" variant="ghost" size="sm" loading={pending} onClick={onLoadMore}>
             Load more
           </Button>
         </div>

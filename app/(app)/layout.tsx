@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { getUserFarms, requireFarmContext, requireUser } from "@/lib/auth/session";
 import { canManageSales, ROLE_LABELS } from "@/lib/auth/permissions";
 import { isPlatformAdmin } from "@/lib/auth/admin";
@@ -24,11 +25,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await requireUser();
 
   // Reconciles today's alerts into notifications before the badge/panel below
-  // read them, so this navigation shows the sync it just performed rather than
-  // the previous one. Not the full getDashboardData -- this runs on every
-  // navigation, and the dashboard-only "recent activity" query and shape it
-  // used to pull in were never used here. See lib/data/dashboard.ts.
-  await syncFarmAlerts(context);
+  // read them, so a navigation that actually triggers this shows the sync it
+  // just performed rather than the previous one. Not the full
+  // getDashboardData -- this runs on every navigation, and the dashboard-only
+  // "recent activity" query and shape it used to pull in were never used
+  // here. See lib/data/dashboard.ts.
+  //
+  // Gated by lib/supabase/middleware.ts: the full 9-query sync is genuinely
+  // expensive, and every page except /dashboard only needs it to keep this
+  // badge current, not for anything they render themselves -- middleware
+  // tracks when it last ran for the active farm and only asks for it again
+  // after a short staleness window. The reads right below stay unconditional:
+  // whatever's currently stored is what the badge shows regardless of
+  // whether this navigation happened to also refresh it.
+  if ((await headers()).get("x-lf-sync-alerts")) {
+    await syncFarmAlerts(context);
+  }
   const [{ notifications }, unreadCount, profile, farms] = await Promise.all([
     getNotifications(context),
     getUnreadNotificationCount(context),

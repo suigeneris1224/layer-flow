@@ -2,7 +2,23 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database";
 import { publicEnv } from "@/lib/config/env";
-import { REMEMBER_ME_COOKIE } from "@/lib/supabase/cookies";
+import { ALERT_SYNC_COOKIE, REMEMBER_ME_COOKIE } from "@/lib/supabase/cookies";
+
+/**
+ * Raw cookie name, not imported from lib/auth/session.ts -- that module pulls
+ * in next/headers (cookies()/headers()), which isn't usable in middleware.
+ * Must match ACTIVE_FARM_COOKIE there.
+ */
+const ACTIVE_FARM_COOKIE_NAME = "lf_active_farm";
+
+/**
+ * How long `syncFarmAlerts` (lib/data/dashboard.ts) stays "done" for the
+ * active farm before app/(app)/layout.tsx is told to run it again. Short
+ * enough that a badge update after recording something stays close to
+ * instant; long enough to skip the expensive 9-query alert sync on the
+ * rapid back-to-back navigation this exists to help.
+ */
+const ALERT_SYNC_STALE_MS = 60_000;
 
 /** Routes reachable without a session. Everything else requires login. */
 const PUBLIC_PATHS = [
@@ -163,5 +179,67 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
-  return response;
+  if (!user) return response;
+
+  /*
+   * Forward the already-verified user to the render step, so
+   * lib/auth/session.ts's getSessionUser() doesn't have to call getUser()
+   * a second time -- that's a second JWT-revalidation round trip to Supabase
+   * for a check this one already did. Must use the `request: { headers }`
+   * form (not response.headers.set, which only reaches the browser -- see
+   * middleware.ts's x-nonce comment) so it's actually visible to headers()
+   * in a Server Component. A client can't spoof this: requestHeaders.set()
+   * unconditionally overwrites anything sent under this name before the
+   * render step ever sees it.
+   */
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(
+    "x-lf-user",
+    JSON.stringify({
+      id: user.id,
+      email: user.email ?? "",
+      fullName: (user.user_metadata?.full_name as string | undefined) ?? "",
+    })
+  );
+
+  /*
+   * Tell app/(app)/layout.tsx whether its alert sync is actually due.
+   * ALERT_SYNC_COOKIE is "<farmId>:<epochMs>" of the last time it ran for the
+   * active farm; stale (missing, expired, or a different farm than the one
+   * lf_active_farm now names -- e.g. switchFarmAction just ran) means it's
+   * due again, and this request is the one that both tells the layout to run
+   * it and refreshes the marker for next time.
+   */
+  const activeFarmId = request.cookies.get(ACTIVE_FARM_COOKIE_NAME)?.value ?? "";
+  const [markerFarmId, markerAt] = (request.cookies.get(ALERT_SYNC_COOKIE)?.value ?? "").split(":");
+  const alertSyncDue =
+    markerFarmId !== activeFarmId ||
+    !markerAt ||
+    Date.now() - Number(markerAt) > ALERT_SYNC_STALE_MS;
+
+  if (alertSyncDue) {
+    requestHeaders.set("x-lf-sync-alerts", "1");
+  }
+
+  const finalResponse = NextResponse.next({ request: { headers: requestHeaders } });
+  // Carry over any cookies the Supabase client queued onto `response` above
+  // (its token-refresh path) -- rebuilding the response for the header must
+  // not silently drop a session-cookie refresh.
+  for (const cookie of response.cookies.getAll()) {
+    finalResponse.cookies.set(cookie);
+  }
+
+  if (alertSyncDue && activeFarmId) {
+    finalResponse.cookies.set(ALERT_SYNC_COOKIE, `${activeFarmId}:${Date.now()}`, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      // Cleanup only -- ALERT_SYNC_STALE_MS above is what actually governs
+      // freshness, not this expiry.
+      maxAge: 60 * 10,
+    });
+  }
+
+  return finalResponse;
 }

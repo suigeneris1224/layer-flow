@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -96,8 +96,26 @@ export interface FarmContext {
  * `getUser()` verifies the JWT with Supabase on every call rather than
  * trusting the cookie's claims. Wrapped in React `cache` so a single render
  * pass makes one round trip no matter how many components ask.
+ *
+ * lib/supabase/middleware.ts already did that verification once this request
+ * and forwards the result as the `x-lf-user` header -- reusing it here skips
+ * a second, redundant JWT-revalidation round trip to Supabase on every
+ * authenticated page load. Falls back to the real check below whenever that
+ * header is missing or unparseable (a route middleware didn't run for, or
+ * any other edge case), so this can only ever degrade to today's slower but
+ * correct behavior, never produce a wrong user.
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+  const forwarded = (await headers()).get("x-lf-user");
+  if (forwarded) {
+    try {
+      const parsed = JSON.parse(forwarded) as SessionUser;
+      if (parsed.id && typeof parsed.id === "string") return parsed;
+    } catch {
+      // Fall through to the real check below.
+    }
+  }
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },

@@ -7,3 +7,13 @@
  * `lib/supabase/middleware.ts` (Edge runtime) need this same string.
  */
 export const REMEMBER_ME_COOKIE = "lf_remember_off";
+
+/**
+ * `"<farmId>:<epochMs>"` marker of when `lib/data/dashboard.ts`'s
+ * `syncFarmAlerts` last actually ran for the active farm. Written by
+ * `lib/supabase/middleware.ts` (a Server Component like `app/(app)/layout.tsx`
+ * cannot set cookies mid-render -- see that file's own try/catch around
+ * `cookies().set()`), read by that same middleware on the next request to
+ * decide whether the full alert sync is due again or can be skipped.
+ */
+export const ALERT_SYNC_COOKIE = "lf_alerts_synced_at";

@@ -5,21 +5,14 @@ import { renderEmailHtml } from "@/lib/email/layout";
 import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/types/database";
 
 /**
- * Transactional email copy.
- *
- * Pure functions, no I/O -- see lib/email/client.ts for the thing that
- * actually sends what these build, and lib/email/layout.ts for the shared
- * header/hero/card/CTA/footer system every builder here composes through, so
- * every email in the product reads as the same design.
+ * Transactional email copy. Pure functions, no I/O -- see lib/email/client.ts
+ * for sending and lib/email/layout.ts for the shared visual system every
+ * builder composes through.
  *
  * Kept honest about billing being mock: the receipt never claims to be a tax
- * invoice, and the past-due reminder never claims access is cut off, matching
- * the "two deliberate kindnesses" in lib/subscriptions/entitlements.ts (only
- * CANCELED/EXPIRED lose access).
- *
- * The plain-text alternative (`text`) is the one thing tests pin down
- * (tests/email-templates.test.ts) -- change its wording deliberately, not as
- * a side effect of a visual tweak to `html`.
+ * invoice, the past-due reminder never claims access is cut off. The
+ * plain-text `text` alternative is pinned by tests/email-templates.test.ts --
+ * change it deliberately, not as a side effect of a visual `html` tweak.
  */
 
 /** Days before `current_period_end` the renewal reminder goes out. */

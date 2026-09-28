@@ -5,19 +5,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * The Export control in a page header.
+ * The Export control in a page header. A plain GET form, not a link or
+ * popover: submitting it hits the route handler directly, which answers with
+ * Content-Disposition and downloads with no client JS needed.
  *
- * A plain GET form rather than a link or a popover: submitting it hits the
- * route handler, which answers with Content-Disposition and so downloads
- * without navigating. That means no client JavaScript, no `as Route` cast
- * around a typed route, and no prefetch of a file.
- *
- * A page with no date filter of its own gets its own range picker here,
- * since exporting "what the page shows" would hand somebody ten rows. A page
- * that already has one (Sales History, Expenses) passes `fixedRange`
- * instead: Export then downloads exactly what's on screen, rather than
- * showing a second, differently-worded dropdown that would only ever affect
- * the file and never the list next to it.
+ * A page with no date filter of its own gets its own range picker here; a
+ * page that already has one (Sales History, Expenses) passes `fixedRange`
+ * instead, so Export downloads exactly what's on screen.
  */
 
 const RANGES = [

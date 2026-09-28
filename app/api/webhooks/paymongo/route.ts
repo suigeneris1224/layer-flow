@@ -12,18 +12,11 @@ import type { BillingPeriod, Json, SubscriptionPlan } from "@/lib/types/database
 
 /**
  * PayMongo's payment webhook: no user session, so signature verification is
- * the only gate (see lib/subscriptions/paymongo.ts's verifyWebhookSignature).
- * Set this route's URL in PayMongo Dashboard -> Developers -> Webhooks with
- * only `link.payment.paid` selected -- PayMongo's event picker has no
- * link-scoped failure/expiry event.
- *
- * Reads the raw body as text, not `.json()`, because the signature is an
- * HMAC over the exact bytes PayMongo sent -- parsing first and
- * re-serializing would not reliably reproduce them.
- *
- * Never throws back a failure that would make PayMongo retry indefinitely:
- * an unknown/duplicate link id is logged and still answered 200, same
- * reasoning as app/api/webhooks/brevo/route.ts.
+ * the only gate. Set this route's URL in PayMongo Dashboard with only
+ * `link.payment.paid` selected. Reads the raw body as text, not `.json()`,
+ * since the signature is an HMAC over the exact bytes sent. Never throws
+ * back a failure that would make PayMongo retry indefinitely -- logged and
+ * answered 200 either way.
  */
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();

@@ -13,21 +13,13 @@ import type { BillingPeriod, SubscriptionPlan, SubscriptionStatus } from "@/lib/
 
 /**
  * Daily subscription-email sweep: PAST_DUE reminders and upcoming-renewal
- * reminders, run by Vercel Cron (see vercel.json) with no user session -- the
- * "scheduled/maintenance job" case createSupabaseAdminClient()'s own doc
- * comment names as a legitimate use of the service-role client.
+ * reminders, run by Cloudflare Cron (workers/cron-worker.ts) with no user
+ * session -- the service-role client's "scheduled job" case.
  *
- * Subscriptions are account-wide (one row per `owner_id`, covering every farm
- * that owner has), so this is naturally one email per account, not per farm --
- * an owner with several PAST_DUE farms would have gotten several separate
- * reminders under the old per-farm schema; there is exactly one row to sweep
- * per owner now.
- *
+ * One email per account, not per farm, since subscriptions are account-wide.
  * Idempotent by construction: each query only picks up rows whose dedup
- * column is still null, and app/(app)/billing/actions.ts's
- * devSetSubscriptionAction clears both columns on every plan/status change --
- * an account can be swept twice in the same window without a duplicate email.
- * One account's failure never aborts the batch.
+ * column is still null, cleared on every plan/status change, so a repeat
+ * sweep never double-sends. One account's failure never aborts the batch.
  */
 
 interface SubscriptionRow {

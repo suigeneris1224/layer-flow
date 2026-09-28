@@ -26,19 +26,13 @@ const TONE_TEXT: Record<"good" | "warn" | "bad", string> = {
 };
 
 /**
- * Eggs on hand by size.
+ * Eggs on hand by size. Trays counted per size, not the farm total -- loose
+ * eggs of different sizes aren't a sellable tray together. Negative balances
+ * are shown, never clamped.
  *
- * Trays are counted per size, not by dividing the farm total: farmers grade
- * into same-size trays, so loose eggs of different sizes are not a tray anyone
- * can sell. Negative balances are shown, never clamped -- see
- * lib/domain/inventory.ts.
- *
- * Each line is colored against `lowStockTrays` -- the same threshold the
- * dashboard's own low-inventory alert uses (lib/domain/alerts.ts's
- * `lowInventoryAlert`, customizable on Pro via alert thresholds), so "red
- * here" and "the low-stock alert fired" always agree. A negative balance
- * floors to 0 trays (lib/domain/inventory.ts), which is always at or below
- * the threshold, so it lands in the same red tier without a separate case.
+ * Each line is colored against `lowStockTrays`, the same threshold the
+ * dashboard's low-inventory alert uses, so "red here" always agrees with
+ * "the alert fired."
  */
 export function InventoryPanel({
   lines,

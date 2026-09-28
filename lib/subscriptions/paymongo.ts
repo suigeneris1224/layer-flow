@@ -6,21 +6,16 @@ import { logger } from "@/lib/observability/logger";
 import type { BillingPeriod, SubscriptionPlan } from "@/lib/types/database";
 
 /**
- * PayMongo billing provider -- the `createCheckout()`/`cancelSubscription()`/
- * `getSubscription()`/`handleWebhook()` shape docs/billing.md promises,
- * backed by PayMongo's Links API (https://developers.paymongo.com/reference/
- * the-link-object): one REST call returns a hosted `checkout_url`, so this
- * app never has to build its own GCash/card picker UI.
+ * PayMongo billing provider, matching docs/billing.md's provider shape --
+ * backed by PayMongo's Links API: one REST call returns a hosted
+ * `checkout_url`, no custom GCash/card picker UI needed.
  *
- * PayMongo has no native recurring-subscription object. A Link only ever
- * pays for one billing cycle -- `subscriptions.current_period_end` (set by
- * the webhook handler in app/api/webhooks/paymongo/route.ts) is the sole
- * source of truth for when the next one is due, exactly like the manual
- * GCash-QR flow already works. `cancelSubscription` below is a local status
- * flip for that reason, not a call to PayMongo.
+ * PayMongo has no recurring-subscription object -- a Link pays one cycle,
+ * `subscriptions.current_period_end` is the sole source of truth for renewal,
+ * same as the manual GCash-QR flow. `cancelSubscription` is a local status
+ * flip for that reason, not a PayMongo call.
  *
- * Test vs live is selected entirely by which key is configured
- * (`sk_test_...` vs `sk_live_...`) -- nothing here branches on isProduction.
+ * Test vs live is selected entirely by which key is configured.
  */
 
 const API_BASE = "https://api.paymongo.com/v1";

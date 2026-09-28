@@ -7,23 +7,13 @@ import { cn } from "@/lib/utils";
 import { SETTINGS_CATEGORIES } from "@/lib/domain/settings-categories";
 
 /**
- * The Settings nav for tablet/desktop (app/(app)/settings/layout.tsx): the
- * page's own big title, styled as a "Settings > [current tab]" breadcrumb --
- * "Settings" small and muted, linking back to the hub; the current tab's name
- * takes over as the actual page heading -- over an underline tab row. Mobile
- * never renders this -- it keeps the hub-grid-then-full-page flow at bare
- * /settings, where each tab's own <PageHeader> (shown only below `md`) is the
- * only heading.
+ * The Settings nav for tablet/desktop: the page title styled as a
+ * "Settings > [current tab]" breadcrumb over an underline tab row. Mobile
+ * never renders this -- it keeps the hub-grid-then-full-page flow instead.
  *
- * All 7 tabs genuinely live under /settings/* (Profile/Team/Subscription/
- * Help & Support moved here from their own top-level routes), so every one
- * of them highlights via usePathname() and swaps content in place -- no full
- * navigation for any tab.
- *
- * Imports SETTINGS_CATEGORIES itself rather than receiving it as a prop: its
- * `icon` field is a component function, and a Server Component (the layout)
- * can't pass a function to a Client Component as a prop -- only the
- * serializable list of which keys are visible crosses that boundary.
+ * Imports SETTINGS_CATEGORIES itself rather than receiving it as a prop:
+ * its `icon` field is a component function, which a Server Component parent
+ * can't pass across to a Client Component -- only the visible-keys list can.
  */
 export function SettingsNav({
   visibleKeys,

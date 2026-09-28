@@ -169,22 +169,15 @@ function oneOf<T>(value: T | T[] | null | undefined): T | undefined {
 export type FarmOperatingData = Omit<DashboardData, "activity">;
 
 /**
- * Everything the dashboard renders, minus the "recent activity" feed, in one
- * pass -- plus the notifications sync (a write) that keeps the topbar's alert
- * badge current.
+ * Everything the dashboard renders, minus the "recent activity" feed, plus
+ * the notifications sync that keeps the topbar's alert badge current. All
+ * queries fire together (Promise.all), not in sequence -- matters on a rural
+ * connection.
  *
- * All queries fire together rather than in sequence. On a rural mobile
- * connection six serial round trips is the difference between a dashboard
- * that feels instant and one that feels broken.
- *
- * Split out from `getDashboardData` (which adds the `audit_logs` "recent
- * activity" query on top of this) because `app/(app)/layout.tsx` runs on
- * *every* authenticated navigation purely to keep the notification badge in
- * sync -- it was pulling in the full dashboard aggregation, activity feed
- * included, for a query it never used. Memoised per request with React
- * `cache`: the layout's alert sync, the topbar badge reads, and the
- * dashboard page itself all need this data, and without the memo a single
- * render of /dashboard would run every query twice.
+ * Split out from `getDashboardData` since `app/(app)/layout.tsx` runs this on
+ * every navigation just to keep the badge in sync, and was pulling in the
+ * unused activity-feed query too. Memoised with React `cache` so the layout,
+ * the badge reads, and the dashboard page share one call per request.
  */
 export const getFarmOperatingData = cache(async function getFarmOperatingData(
   context: FarmContext

@@ -17,17 +17,10 @@ const BILLING_PERIODS: BillingPeriod[] = ["MONTHLY", "ANNUAL"];
 
 /**
  * Platform-admin tool: flip the current account's plan/status without real
- * billing. Available in production, not just dev -- name/styling are legacy
- * from when this really was dev-only; the actual gate has always been
- * `isPlatformAdmin` (lib/auth/admin.ts), not the environment.
- *
- * Subscriptions are account-wide, so this affects every farm the signed-in
- * account has, not just the one currently open.
- *
- * The page that renders this already checks `isPlatformAdmin` -- a farm
- * OWNER who isn't a platform admin never sees this -- and
- * devSetSubscriptionAction refuses independently too, since a hidden button
- * is not a security boundary.
+ * billing. Available in production, not just dev -- name/styling are legacy,
+ * the actual gate has always been `isPlatformAdmin`. Affects every farm the
+ * account has, since subscriptions are account-wide. Gated twice: the page
+ * hides this from a non-admin, and the action refuses independently too.
  */
 export function DevPlanSwitcher({
   currentPlan,

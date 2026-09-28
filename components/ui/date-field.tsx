@@ -7,21 +7,14 @@ import { farmToday, formatDate, shiftDate } from "@/lib/format";
 
 /**
  * A date field that is a calendar on a mouse and the OS picker on a phone.
+ * Both render; a `pointer:` media query picks which shows, no hydration
+ * flash, hidden one is `display:none` so it's not a second tab stop. Native
+ * wins one-handed/outdoors/in-gloves (same reasoning as `Select`); a calendar
+ * only wins with a mouse, where the native input is genuinely poor.
  *
- * Both are rendered; a `pointer:` media query decides which one is displayed,
- * so there is no hydration flash and no user-agent sniffing, and the hidden
- * one is `display:none` and therefore not a second tab stop.
- *
- * Why not one custom calendar everywhere: docs/design-system.md keeps `Select`
- * native because the OS picker beats a custom widget one-handed, outdoors, in
- * gloves. That argument is just as true for dates, and a 7x6 grid of small day
- * cells is the worst possible target on a phone. It is only on a pointer
- * device -- where the native date input is genuinely poor -- that a calendar
- * wins.
- *
- * All arithmetic goes through `shiftDate`, which anchors to UTC midnight. A
- * date built from a local-midnight string lands on the previous day for any
- * timezone ahead of UTC, which is every farm we serve.
+ * Arithmetic goes through `shiftDate`, anchored to UTC midnight -- a date
+ * built from a local-midnight string lands a day early for any timezone
+ * ahead of UTC, which is every farm we serve.
  */
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;

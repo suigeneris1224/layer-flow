@@ -34,18 +34,12 @@ export interface RecordedSale {
 }
 
 /**
- * Record one egg sale.
+ * Record one egg sale. Gate order is deliberate: who, which farm, role,
+ * plan, then input -- Egg Sales is a Starter feature.
  *
- * The gate order is deliberate: who are you, which farm, may your role do this,
- * does your plan include it, is the input well-formed -- and only then the
- * write. Egg Sales is a Starter feature, so this is the first place the
- * entitlement layer actually refuses something.
- *
- * The stock check WARNS rather than blocks. Farms sell before recording the
- * morning collection, so a sale that outruns the balance usually means the
- * records are behind, not that the farmer is wrong; refusing it would make the
- * app disagree with reality. Inventory then shows negative in red, which the
- * inventory screen already surfaces.
+ * The stock check WARNS rather than blocks: a sale that outruns the balance
+ * usually means the records are behind, not that the farmer is wrong.
+ * Inventory then shows negative in red instead.
  */
 export async function recordSaleAction(
   input: unknown

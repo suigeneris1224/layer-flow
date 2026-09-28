@@ -18,18 +18,11 @@ export interface FeedCostValue {
 }
 
 /**
- * How feed cost gets typed in: a raw cost-per-kg, or a sack price + size that
- * this computes cost-per-kg from.
- *
- * Presentation only -- the parent form (react-hook-form in production-form,
- * plain state in feed-form) still owns the three underlying values and their
- * validation/derived-total logic, so `feedCost(kg, costPerKg)` keeps working
- * unchanged regardless of which mode was used to arrive at it.
- *
- * Mount with a `key` that changes whenever the record being edited changes
- * (e.g. `${flockId}-${date}`, or the selected record id) -- the initial mode
- * is decided once, from whether sack values are already present, and a prop
- * change alone won't re-derive it.
+ * How feed cost gets typed in: a raw cost-per-kg, or a sack price + size this
+ * computes cost-per-kg from. Presentation only -- the parent form still owns
+ * the three underlying values. Mount with a `key` that changes whenever the
+ * edited record changes -- the initial mode is decided once and won't
+ * re-derive from a prop change alone.
  */
 export function FeedCostInput({
   value,

@@ -4,19 +4,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/observability/logger";
 
 /**
- * Reading flock health: mortality, feed and vaccinations.
+ * Reading flock health: mortality, feed and vaccinations -- share a shape (a
+ * dated row against a flock) and a page, so they share a module.
  *
- * These three share a shape -- a dated row against a flock -- and a page, so
- * they share a module rather than three near-identical ones.
- *
- * The hard rule running through this file: `record_daily_production` owns every
- * row whose `daily_production_id` is set. It deletes and re-inserts them each
- * time a day is saved. So the standalone screens read and write only rows
- * where that column is null, and every query below says so explicitly. Drop
- * the `.is("daily_production_id", null)` filter and /health starts showing
- * rows the farmer cannot safely edit -- and cannot keep.
- *
- * Vaccinations have no such split; nothing else writes them.
+ * The rule running through this file: `record_daily_production` owns every
+ * row whose `daily_production_id` is set, deleting and re-inserting them each
+ * save. Standalone screens read/write only rows where that column is null --
+ * every query below filters on it explicitly. Vaccinations have no such
+ * split; nothing else writes them.
  */
 
 export interface HealthRange {

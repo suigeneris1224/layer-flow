@@ -10,22 +10,13 @@ import type { FarmRole, SubscriptionPlan, SubscriptionStatus } from "@/lib/types
 export const ACTIVE_FARM_COOKIE = "lf_active_farm";
 
 /**
- * Sticky "I was mid-invite" marker, set by signUpAction/signInAction
- * (app/auth/actions.ts) whenever the submitted `next` points at an invite,
- * and checked by requireFarmContext below before it would otherwise send a
- * farm-less user to onboarding.
- *
- * Exists because `next` alone (a query param threaded through Supabase's
- * confirmation email) does not survive every real path a farmer takes: a
- * confirmation link that fails (expired, already used, or burned by an email
- * client's link-safety prescan before the human clicks) drops back to a bare
- * `/login` with no `next`, and closing the tab and returning later loses it
- * entirely. Without this cookie, an invited worker/manager who hits either
- * case ends up walking through onboarding and creating their own new farm
- * instead of joining the one they were invited to.
- *
- * maxAge is one day past farm_invitations' own 7-day expiry, so the cookie
- * naturally stops mattering at roughly the same time the invite itself would.
+ * Sticky "I was mid-invite" marker, set whenever the submitted `next` points
+ * at an invite, checked by requireFarmContext before it would otherwise send
+ * a farm-less user to onboarding. Exists because `next` alone doesn't survive
+ * every path (a failed confirmation link, or closing the tab) -- without it
+ * an invited worker/manager could end up creating their own farm instead of
+ * joining the one they were invited to. maxAge tracks the invite's own 7-day
+ * expiry plus a day.
  */
 export const PENDING_INVITE_COOKIE = "lf_pending_invite";
 const PENDING_INVITE_MAX_AGE = 60 * 60 * 24 * 8;
@@ -91,19 +82,11 @@ export interface FarmContext {
 }
 
 /**
- * The authenticated user, or null.
- *
- * `getUser()` verifies the JWT with Supabase on every call rather than
- * trusting the cookie's claims. Wrapped in React `cache` so a single render
- * pass makes one round trip no matter how many components ask.
- *
- * lib/supabase/middleware.ts already did that verification once this request
- * and forwards the result as the `x-lf-user` header -- reusing it here skips
- * a second, redundant JWT-revalidation round trip to Supabase on every
- * authenticated page load. Falls back to the real check below whenever that
- * header is missing or unparseable (a route middleware didn't run for, or
- * any other edge case), so this can only ever degrade to today's slower but
- * correct behavior, never produce a wrong user.
+ * The authenticated user, or null. Wrapped in React `cache` so one render
+ * pass makes one round trip. Prefers the `x-lf-user` header middleware
+ * already set from its own `getUser()` call this request, falling back to a
+ * fresh `getUser()` if that header is missing or unparseable -- degrades to
+ * slower-but-correct, never a wrong user.
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const forwarded = (await headers()).get("x-lf-user");

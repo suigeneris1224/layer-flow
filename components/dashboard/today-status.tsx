@@ -3,18 +3,11 @@ import type { Alert, AlertLevel } from "@/lib/domain/alerts";
 import { cn } from "@/lib/utils";
 
 /**
- * The status band at the top of the dashboard.
- *
- * This is the first thing a farmer reads in the morning, so it is given real
- * presence rather than the flat inline treatment `StatusNote` uses for notes
- * inside a form. The two are deliberately different: `StatusNote` is a remark
- * beside a field, this is the headline of the day.
- *
- * Everything is token-driven and every tone pairs colour with an icon *and*
- * words, per docs/design-system.md section 4 -- the pulse and the tint are
- * reinforcement, never the signal itself. The pulse only runs for warn and
- * bad: an animation that plays when nothing is wrong is noise, and the
- * global prefers-reduced-motion rule stills it either way.
+ * The status band at the top of the dashboard -- the first thing a farmer
+ * reads in the morning, so it gets real presence, not `StatusNote`'s flat
+ * inline treatment. Every tone pairs colour with an icon and words; the
+ * pulse only runs for warn/bad, since an animation on "nothing's wrong" is
+ * just noise.
  */
 
 const TONE: Record<

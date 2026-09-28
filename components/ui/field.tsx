@@ -100,17 +100,9 @@ export const Select = React.forwardRef<
   React.SelectHTMLAttributes<HTMLSelectElement> & {
     /**
      * Shrink to the width of the chosen option instead of filling the row.
-     *
-     * The chevron is positioned against the wrapper, so a caller that narrowed
-     * only the `<select>` used to leave it stranded at the far right of a
-     * full-width span. Narrowing both together is the supported way to do it.
-     *
-     * Also tightens the horizontal padding and chevron gutter below `sm` --
-     * a fit select is a compact range toggle (report/dashboard/export range
-     * pickers), not a form field, so it can read less bulky on a phone
-     * header. Height (min-h-11) and font size (text-base) are untouched:
-     * those are the touch-target and iOS-zoom-prevention rules from the
-     * comment above CONTROL, and apply everywhere, fit or not.
+     * Also tightens padding/chevron gutter below `sm` -- a compact range
+     * toggle, not a form field. Height and font size stay untouched (the
+     * touch-target/iOS-zoom rules above CONTROL apply everywhere).
      */
     fit?: boolean;
   }

@@ -21,19 +21,11 @@ function secretMatches(provided: string | null, expected: string): boolean {
 
 /**
  * Brevo's transactional delivery webhook: no user session, so the shared
- * secret in the query string is the only gate -- Brevo's webhook UI has no
- * way to set a custom header, unlike the Vercel Cron Bearer token
- * (app/api/cron/subscription-emails/route.ts), so this can't use that
- * pattern. Set the webhook URL in Brevo's dashboard (Transactional →
- * Settings → Webhooks) to this route with `?secret=<BREVO_WEBHOOK_SECRET>`.
- *
- * Brevo can be configured to send either one event per request or a batch
- * array -- accept both rather than assuming.
- *
- * Never throws back a failure that would make Brevo retry indefinitely: an
- * unparseable payload or a partial insert failure is logged and still
- * answered 200, since there is nothing a retry would fix that a human
- * reading the log wouldn't do faster.
+ * secret in the query string is the only gate -- Brevo's webhook UI can't
+ * set a custom header. Set the webhook URL in Brevo's dashboard to this route
+ * with `?secret=<BREVO_WEBHOOK_SECRET>`. Accepts either one event or a batch
+ * array. Never throws back a failure that would make Brevo retry
+ * indefinitely -- logged and answered 200 either way.
  */
 
 interface BrevoEvent {

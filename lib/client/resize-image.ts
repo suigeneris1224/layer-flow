@@ -1,18 +1,10 @@
 "use client";
 
 /**
- * Downscales an image to fit within `maxDimension` on its longest edge and
- * re-encodes it as JPEG, without any crop -- no dialog, no user interaction,
- * nothing rendered to the page. A raw phone photo is routinely 3-8MB at full
- * resolution; this keeps uploads comfortably under each caller's existing
- * server-side byte cap while preserving the original aspect ratio (display
- * still relies on CSS `object-cover` where a fixed frame, like the avatar
- * circle, is needed).
- *
- * Deliberately not `ImageCropModal` (removed) -- that gave users a drag-to-
- * reposition step, but its `<canvas>` source decoding was a recurring source
- * of black-output bugs on mobile. This is the same proven `<img>`-based
- * decode path minus the interactive part.
+ * Downscales an image to fit within `maxDimension` and re-encodes as JPEG,
+ * no crop, no UI -- a raw phone photo is routinely 3-8MB at full resolution,
+ * this keeps uploads under each caller's server-side byte cap while
+ * preserving aspect ratio.
  */
 export async function resizeImage(file: File, maxDimension: number, quality = 0.9): Promise<File> {
   const imageSrc = URL.createObjectURL(file);

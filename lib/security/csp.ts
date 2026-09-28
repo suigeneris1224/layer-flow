@@ -21,33 +21,18 @@ const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseWsOrigin = supabaseOrigin.replace(/^http/, "ws");
 
 /**
- * `script-src` uses a per-request nonce instead of `'unsafe-inline'` --
- * Next.js detects the nonce in this header and applies it automatically to
- * its own inline hydration/RSC bootstrap scripts, and nothing else in this
- * codebase renders a custom inline `<script>` or `dangerouslySetInnerHTML`
- * (verified by grep), so nothing else needs to read or forward the nonce.
- * `'unsafe-eval'` stays dev-only: `next dev`'s Fast Refresh compiles chunks
- * with eval()-based source maps, so any client component (the dashboard's
- * charts are the obvious one) throws a CSP violation and fails to run
- * without it. Production builds don't eval, so it's dropped there.
+ * `script-src` uses a per-request nonce instead of `'unsafe-inline'` -- Next
+ * applies it automatically to its own hydration scripts, and nothing else
+ * here renders inline JS. `'unsafe-eval'` is dev-only: Fast Refresh's source
+ * maps need it, production builds don't.
  *
- * `style-src` still carries `'unsafe-inline'`. Several components set
- * genuinely dynamic inline styles -- chart palette colors cycling a fixed
- * array, a staggered animation delay, a data-driven container height, and
- * an inventory bar's continuous 0-100% width (components/nav/quick-add.tsx,
- * components/charts/expense-category-chart.tsx, egg-size-donut.tsx,
- * egg-size-trend-chart.tsx, components/dashboard/inventory-panel.tsx). A CSS
- * nonce only exempts `<style>` elements, never a bare `style=""` attribute,
- * so removing this needs each call site converted to a bounded set of
- * static classes or a per-element nonce'd `<style>` tag -- real, separate
- * work, deliberately not bundled into this pass.
+ * `style-src` still carries `'unsafe-inline'`: several components set
+ * genuinely dynamic inline styles (chart colors, an animation delay, a
+ * data-driven bar width) that a nonce can't cover -- known gap, not yet
+ * closed, tracked separately.
  *
- * `blob:` on img-src is for the client-only photo crop/resize pipeline
- * (lib/client/resize-image.ts, components/ui/image-crop-modal.tsx) -- it
- * previews a picked file via `URL.createObjectURL(file)` before anything is
- * ever uploaded, and without `blob:` here the browser silently refuses to
- * load it: the <img>'s onerror fires exactly like a real decode failure, and
- * there's no network request for either end's logs to ever show.
+ * `blob:` on img-src is for the client-side photo crop/resize preview
+ * (`URL.createObjectURL`) before anything is uploaded.
  */
 export function buildContentSecurityPolicy(nonce: string): string {
   const scriptSrc =

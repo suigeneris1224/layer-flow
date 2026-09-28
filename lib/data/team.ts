@@ -47,18 +47,11 @@ type ProfileRow = {
 };
 
 /**
- * Everyone with access to the farm.
- *
- * Profiles are fetched separately rather than embedded. `farm_members.user_id`
- * and `profiles.id` both reference `auth.users`, so they are siblings, not
- * parent and child -- PostgREST has no relationship to infer and an embed fails
- * with "Could not find a relationship". The alternative is a second foreign key
- * from farm_members straight to profiles, which would exist purely to satisfy
- * the query planner and would model a diamond that is not real.
- *
- * Two round trips for a list capped at ten people is the cheaper trade. RLS is
- * identical either way: profiles_select_self_or_teammate already lets people
- * who share a farm read each other.
+ * Everyone with access to the farm. Profiles are fetched separately, not
+ * embedded: `farm_members.user_id` and `profiles.id` are siblings (both
+ * reference `auth.users`), not parent/child, so PostgREST has no
+ * relationship to embed. Two round trips for a ten-person list is the
+ * cheaper trade.
  */
 export async function getTeamMembers(farmId: string): Promise<TeamMember[]> {
   const supabase = await createSupabaseServerClient();

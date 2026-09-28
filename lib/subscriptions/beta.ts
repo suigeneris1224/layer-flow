@@ -34,20 +34,14 @@ export interface BetaState {
 }
 
 /**
- * Cross-request cache of the entire beta state: the toggle, the tester cap,
- * and every listed tester's email + added-at. This is small, global data
- * (an admin flips one boolean and manages <=5 emails) that changes only
- * through app/admin/actions.ts's four beta-mutation actions, each of which
- * calls `revalidateTag(BETA_SETTINGS_TAG)` -- so reading it on essentially
- * every request (every farm owner, via getFarmContext) is otherwise pure
- * waste.
+ * Cross-request cache of the beta state: the toggle, tester cap, and tester
+ * list. Small, global data invalidated by `revalidateTag(BETA_SETTINGS_TAG)`
+ * on every beta-mutation action, so reading it on essentially every request
+ * (via getFarmContext) is otherwise pure waste.
  *
- * Reads through the service-role client rather than a caller's session:
- * `unstable_cache` cannot depend on request-scoped cookies (the result is
- * shared across requests/users), and this data has no per-user variation
- * anyway -- beta_settings is readable by any signed-in user under RLS, and
- * beta_testers only exposes email/added_at, nothing sensitive. See
- * lib/supabase/admin.ts's doc comment for this as a listed legitimate use.
+ * Uses the service-role client since `unstable_cache` can't depend on
+ * request-scoped cookies -- safe here since the data has no per-user
+ * variation and nothing sensitive.
  */
 const getBetaState = unstable_cache(
   async (): Promise<BetaState> => {

@@ -122,33 +122,14 @@ export async function sendPastDueReminderAction(): Promise<ActionResult> {
 
 /**
  * Platform-admin shortcut: set the *current* account's plan/status directly,
- * without real billing.
+ * without real billing -- so an admin can change their own test account's
+ * plan from Settings instead of leaving for /admin/subscriptions.
  *
- * Subscriptions are account-wide (keyed by `owner_id`), so this affects every
- * farm the caller owns, not just the one currently open. Same write and same
- * gate as app/admin/actions.ts's adminSetSubscriptionAction (which targets
- * any account from the /admin/subscriptions table) -- this one exists
- * because a platform admin changing their own test account's plan
- * shouldn't have to leave Settings to do it. Available in production, not
- * just dev/staging: it was originally dev-only, but the real security
- * boundary was always isPlatformAdmin below, not the environment, so once
- * that landed there was nothing left for an isProduction gate to add.
- *
- * `subscriptions` has no write policy for `authenticated` -- only a
- * service-role client (billing webhooks, normally) can write it -- so this is
- * the one place in this file that reaches for `createSupabaseAdminClient()`.
- * Gated twice: the UI that calls this never renders for a non-platform-admin,
- * and this refuses independently too, since a hidden button is not a
- * security boundary. Platform-admin only (not just farm OWNER) -- see
- * lib/auth/admin.ts's isPlatformAdmin -- since this bypasses billing
- * entirely and an owner should not be able to grant their own account a paid
- * plan for free.
- *
- * Also simulates a billing period: every change sets current_period_start/end
- * to a fresh 30-day window (real billing has no checkout yet, so there is no
- * other source for these dates) and clears both reminder-dedup columns, since
- * a plan/status change starts a new episode worth re-notifying about if it
- * persists. See lib/email/ and app/api/cron/subscription-emails/route.ts.
+ * Platform-admin only (isPlatformAdmin, not farm OWNER), gated twice (hidden
+ * UI + this check), since it bypasses billing entirely. Uses
+ * createSupabaseAdminClient() because `subscriptions` has no write policy for
+ * `authenticated`. Also simulates a fresh 30-day billing period and clears
+ * the reminder-dedup columns, same as a real billing event would.
  */
 export async function devSetSubscriptionAction(input: unknown): Promise<ActionResult> {
   const user = await requireUser();

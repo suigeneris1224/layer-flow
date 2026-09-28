@@ -7,18 +7,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * Crop-then-upload for avatar/cover/farm photos.
- *
- * Output is always a fixed-size JPEG, regardless of the input's format or
- * dimensions -- one encode path, and a predictable, small file size (a few
- * hundred KB at these dimensions), comfortably under every caller's existing
- * server-side byte cap. The crop step is purely client-side; nothing here
- * touches the upload server actions, which only ever cared that *a* valid
- * image arrives in FormData.
- *
- * `file` is expected to already be HEIC-normalized and pre-shrunk by the
- * caller (see `lib/client/heic.ts` and `lib/client/resize-image.ts`) --
- * this component doesn't do either, on purpose (see the two notes below).
+ * Crop-then-upload for avatar/cover/farm photos. Output is always a
+ * fixed-size JPEG regardless of input format/dimensions -- one encode path,
+ * predictable small file size. Purely client-side; `file` is expected to
+ * already be HEIC-normalized and pre-shrunk by the caller.
  */
 /**
  * Decodes `imageSrc` into a plain `<img>`, the same element type

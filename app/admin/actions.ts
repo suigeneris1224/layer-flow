@@ -33,20 +33,12 @@ import {
 import { logger } from "@/lib/observability/logger";
 
 /**
- * The production-safe equivalent of app/(app)/billing/actions.ts's
- * devSetSubscriptionAction, for an account the caller does NOT belong to.
- *
- * That action is gated `!isProduction` + owner-only, since it exists so a
- * developer can flip their own test account's plan locally. This one is the
- * opposite shape on purpose: it must work in production (that is the entire
- * point -- fixing a real account's stuck subscription), gated by
- * `isPlatformAdmin` instead of farm membership. Deliberately does NOT call
- * `requirePlatformAdmin()` (lib/auth/admin.ts) -- that redirects, which is
- * right for a page and wrong for an action a client component expects a
- * `{ok:false}` result from.
- *
- * Subscriptions are account-wide: this changes every farm the account owns
- * at once, keyed by `owner_id`, not `farm_id`.
+ * The production-safe equivalent of devSetSubscriptionAction, for an account
+ * the caller does NOT belong to -- gated by `isPlatformAdmin` instead of farm
+ * membership. Doesn't call `requirePlatformAdmin()` since that redirects,
+ * wrong for an action a client expects a `{ok:false}` result from.
+ * Subscriptions are account-wide, so this changes every farm the account
+ * owns, keyed by `owner_id`.
  */
 export async function adminSetSubscriptionAction(
   ownerId: string,
@@ -588,16 +580,11 @@ async function removeStorageFolder(
 /**
  * Approve a pending account deletion request: the actual, irreversible work.
  *
- * Order matters. `farms.owner_id` is `on delete restrict`
- * (supabase/migrations/20250101000000_core.sql), so every farm the requester
- * owns must be gone before `auth.admin.deleteUser` can succeed. Deleting a
- * farm row cascades everything farm-scoped in one statement -- houses,
- * flocks, production, sales, expenses, egg sizes/inventory, customers,
- * notifications, alert thresholds, farm members/invitations, support
- * requests, subscriptions -- confirmed safe against the RESTRICT edges inside
- * that subgraph (they're all between two tables that both cascade from the
- * same farm). Storage is untouched by any of this and must be cleared
- * explicitly, both here and for the user's own avatar/cover/receipts.
+ * Order matters: `farms.owner_id` is `on delete restrict`, so every farm the
+ * requester owns must be deleted (cascading everything farm-scoped) before
+ * `auth.admin.deleteUser` can succeed. Storage is untouched by any of that
+ * and must be cleared explicitly, both here and for the user's own
+ * avatar/cover/receipts.
  */
 export async function adminApproveAccountDeletionAction(requestId: string): Promise<ActionResult> {
   const user = await requireUser();

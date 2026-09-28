@@ -5,21 +5,11 @@ import { cn } from "@/lib/utils";
 /**
  * Wordmark plus tagline, used at the top of the sidebar and the drawer.
  *
- * The mark is imported rather than referenced by path so Next knows its
- * intrinsic size at build time (no layout shift while it loads), even though
- * `unoptimized` means it ships as-is rather than resized -- Cloudflare
- * Workers only serves `next/image`'s resized/reformatted output through a
- * paid Images binding this app doesn't have, same as every other `<Image>`
- * here (avatar, cover, farm photo).
- *
- * It sits directly on the surface with no tile behind it: the PNG is genuinely
- * transparent, so on the light theme it reads as part of the sidebar. See the
- * note in docs/design-system.md about how it behaves on the dark theme.
- *
- * Deliberately not `priority`: that injects a `<link rel="preload">` on every
- * page, but this renders in several places that are not on screen at load (the
- * sidebar is `hidden` below `lg`, the footer is below the fold), so browsers
- * warned the preload went unused. It is a 48px mark and never the LCP element.
+ * The mark is imported (not path-referenced) so Next knows its intrinsic
+ * size at build time; `unoptimized` since Workers only resizes `<Image>`
+ * through a paid Images binding this app doesn't have. Not `priority` --
+ * it's often off-screen at load (sidebar hidden below `lg`, footer below the
+ * fold) and never the LCP element, so preloading it just warns unused.
  */
 export function Brand({
   compact = false,

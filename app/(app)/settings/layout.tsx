@@ -6,20 +6,11 @@ import { SettingsNav } from "@/components/nav/settings-nav";
 import { PendingSyncPill } from "@/components/offline/pending-sync-pill";
 
 /**
- * Shell for every /settings/* route: a tab bar on top at tablet/desktop
- * (`md:` and up), content below, so switching tabs doesn't reload the page
- * shell. Below `md`, the tab bar is hidden entirely and mobile falls back to
- * the hub-grid page at bare /settings exactly as before -- tap a card, get a
- * full page.
- *
- * SettingsNav supplies the only heading at this breakpoint -- a "Settings >
- * [tab]" breadcrumb standing in for the page title -- so there is no
- * separate <PageHeader> here; each tab's own <PageHeader> only renders below
- * `md`, where SettingsNav itself is hidden.
- *
- * This is what now does the job app/(app)/settings/page.tsx and its sibling
- * pages used to each do themselves via <PageShell> (max width + padding) --
- * they no longer wrap themselves in it, to avoid doubling it up.
+ * Shell for every /settings/* route: a tab bar at tablet/desktop (`md:` and
+ * up), content below, so switching tabs doesn't reload the shell. Below
+ * `md`, the tab bar is hidden and mobile falls back to the hub-grid page.
+ * SettingsNav supplies the only heading at this breakpoint, and owns the
+ * `<PageShell>` wrapping each tab used to do itself.
  */
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   const context = await requireFarmContext();

@@ -24,18 +24,12 @@ import {
 } from "@/lib/errors";
 
 /**
- * Standalone mortality, feed and vaccination entry.
- *
- * The rule that governs this whole file: `record_daily_production` owns every
- * mortality and feed row whose `daily_production_id` is set, and rewrites them
- * from scratch each time a day is saved. So every write here sets that column
- * to null on insert, and every update and delete carries
- * `.is("daily_production_id", null)` so a farmer can never reach through this
- * screen and edit a row the RPC is about to overwrite anyway.
- *
- * Nothing here touches `flocks.current_hens`. The mortality_recalc_hens trigger
- * derives it from the ledger; writing it by hand would fight the trigger and
- * lose.
+ * Standalone mortality, feed and vaccination entry. `record_daily_production`
+ * owns every row whose `daily_production_id` is set and rewrites them each
+ * save -- every write here sets that column null on insert, and every
+ * update/delete filters on it, so a farmer can't edit a row the RPC is about
+ * to overwrite. Nothing here touches `flocks.current_hens`; the recalc
+ * trigger derives it from the ledger.
  */
 
 function revalidateHealth(flockId: string): void {

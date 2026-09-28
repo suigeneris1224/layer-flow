@@ -66,27 +66,13 @@ function isPublicPath(pathname: string): boolean {
 }
 
 /**
- * Paths where calling getUser() buys nothing, so building a Supabase client
- * and making the auth check is pure CPU cost -- on Workers, where CPU time
- * per request is capped, that matters.
- *
- * Two different reasons land a path here:
- *   - /api/cron, /api/webhooks, /robots.txt, /sitemap.xml: authenticate with
- *     a shared secret (the first two) or need no auth concept at all (the
- *     last two -- crawler-facing metadata routes) and never carry a Supabase
- *     session.
- *   - the 9 static marketing/content pages (also app/sitemap.ts's entries):
- *     prerendered, take no `dynamic` export, and never read session state --
- *     the only reason updateSession() needs a user's session on a *public*
- *     path is to redirect an already-logged-in visitor away from /login or
- *     /signup specifically, which none of these are. A crawler
- *     working through the sitemap would otherwise pay for a Supabase client
- *     + auth check on every single hit for no behavioral reason.
- *     /login, /signup, /forgot-password and /reset-password are deliberately
- *     NOT here: the first two still need the redirect-if-logged-in check,
- *     and the other two aren't in the sitemap or hit repeatedly by crawlers,
- *     so they're left alone rather than widening this list further than the
- *     concern that motivated it.
+ * Paths where calling getUser() buys nothing -- building a Supabase client
+ * for the auth check is pure CPU cost, which matters on Workers' capped
+ * per-request CPU time. Covers routes that authenticate by shared secret or
+ * need no auth at all (/api/cron, /api/webhooks, /robots.txt, /sitemap.xml),
+ * plus static marketing pages that never read session state. /login/
+ * /signup stay excluded since they still need the redirect-if-logged-in
+ * check.
  */
 const NO_SESSION_CHECK_PATHS = [
   "/",

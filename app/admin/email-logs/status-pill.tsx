@@ -30,7 +30,7 @@ const TINT_CLASS: Record<ChipTint, string> = {
 
 const NEUTRAL_CLASS = "bg-muted text-muted-foreground";
 
-export function EventStatusPill({ event }: { event: string }) {
+export function EventStatusPill({ event, count = 1 }: { event: string; count?: number }) {
   const tint = EVENT_TINT[event];
   return (
     <span
@@ -40,6 +40,7 @@ export function EventStatusPill({ event }: { event: string }) {
       )}
     >
       {event.replace(/_/g, " ")}
+      {count > 1 && ` ×${count}`}
     </span>
   );
 }

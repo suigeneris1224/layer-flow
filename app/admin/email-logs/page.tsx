@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Route } from "next";
 import { getEmailLog, type EmailKind, type EmailTrigger } from "@/lib/data/admin";
 import { getRecentEmailEvents } from "@/lib/data/email-events";
+import { groupEmailEvents } from "@/lib/domain/email-events";
 import { paginate, ADMIN_PAGE_SIZE } from "@/lib/domain/admin";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
@@ -49,6 +50,10 @@ export default async function AdminEmailLogsPage({
 }) {
   const { page: pageParam, eventsPage: eventsPageParam } = await searchParams;
   const [sentRows, events] = await Promise.all([getEmailLog(), getRecentEmailEvents()]);
+  // Collapsed before paginating, so a page of "events" is a page of
+  // meaningfully distinct ones -- repeated opens/clicks on one message
+  // shouldn't crowd out other activity or inflate the page count.
+  const groupedEvents = groupEmailEvents(events);
   const { items: pageRows, page, totalPages, totalItems } = paginate(
     sentRows,
     Number(pageParam) || 1,
@@ -59,7 +64,7 @@ export default async function AdminEmailLogsPage({
     page: eventsPage,
     totalPages: eventsTotalPages,
     totalItems: eventsTotalItems,
-  } = paginate(events, Number(eventsPageParam) || 1, ADMIN_PAGE_SIZE);
+  } = paginate(groupedEvents, Number(eventsPageParam) || 1, ADMIN_PAGE_SIZE);
 
   // Two independent paginated tables on one page -- each href preserves the
   // other table's current page instead of resetting it.
@@ -112,7 +117,7 @@ export default async function AdminEmailLogsPage({
                     <tr key={event.id} className="border-b border-border last:border-0">
                       <td className="p-3 text-left">{event.recipient}</td>
                       <td className="p-3 text-left text-muted-foreground">{event.tag ?? "—"}</td>
-                      <td className="p-3 text-left"><EventStatusPill event={event.event} /></td>
+                      <td className="p-3 text-left"><EventStatusPill event={event.event} count={event.count} /></td>
                       <td className="p-3 text-right tabular">{formatDate(event.occurredAt)}</td>
                     </tr>
                   ))}

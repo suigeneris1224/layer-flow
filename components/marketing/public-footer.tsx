@@ -38,7 +38,7 @@ export function PublicFooter() {
         </div>
 
         <div className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-foreground">Company</span>
+          <span className="font-medium text-foreground">Support</span>
           <Link href="/about" className="text-muted-foreground hover:text-foreground">
             About
           </Link>
@@ -67,8 +67,10 @@ export function PublicFooter() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-5xl px-4 pb-8 text-xs text-muted-foreground">
-        © {new Date().getFullYear()} LayerFlow. All rights reserved.
+      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-2 px-4 pb-8 text-xs text-muted-foreground">
+        <span>© {new Date().getFullYear()} LayerFlow. All rights reserved.</span>
+        <span aria-hidden>·</span>
+        <span>Powered by SinSoft</span>
       </div>
     </footer>
   );

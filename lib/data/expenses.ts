@@ -156,25 +156,41 @@ export async function getExpensesByCategory(
 ): Promise<CategoryBreakdownRow[]> {
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from("expenses")
-    .select("category, amount")
-    .eq("farm_id", context.farmId)
-    .gte("expense_date", range.from)
-    .lte("expense_date", range.to);
+  const [expensesResult, feedResult] = await Promise.all([
+    supabase
+      .from("expenses")
+      .select("category, amount")
+      .eq("farm_id", context.farmId)
+      .gte("expense_date", range.from)
+      .lte("expense_date", range.to),
+    supabase
+      .from("feed_usage")
+      .select("total_cost")
+      .eq("farm_id", context.farmId)
+      .gte("usage_date", range.from)
+      .lte("usage_date", range.to),
+  ]);
 
-  if (error) {
-    logger.error("expense category breakdown failed", { reason: error.message });
+  if (expensesResult.error) {
+    logger.error("expense category breakdown failed", { reason: expensesResult.error.message });
     return [];
   }
+  if (feedResult.error) {
+    logger.error("expense category breakdown feed lookup failed", {
+      reason: feedResult.error.message,
+    });
+  }
 
-  // FEED-category rows are excluded here too, same as operatingCostsFromExpenses
-  // (lib/domain/calculations.ts): feed is costed through feed_usage, so counting
-  // a manually-logged FEED expense here as well would make this chart's total
-  // disagree with the Cost/Profit KPI cards it sits next to on Reports.
-  const rows = ((data ?? []) as { category: ExpenseCategory; amount: number }[]).filter(
-    (row) => row.category !== "FEED"
-  );
+  // A manually-logged FEED expense row is still dropped here -- same
+  // reasoning as operatingCostsFromExpenses (lib/domain/calculations.ts):
+  // feed is costed through feed_usage, so counting both would charge the
+  // farm twice for the same sacks. The category's real "Feed" total below
+  // comes from feed_usage directly instead, so this breakdown's grand total
+  // agrees with the Cost/Profit KPI cards rather than silently excluding
+  // feed altogether.
+  const rows = (
+    (expensesResult.data ?? []) as { category: ExpenseCategory; amount: number }[]
+  ).filter((row) => row.category !== "FEED");
   const byCategory = new Map<ExpenseCategory, { total: number; count: number }>();
 
   for (const row of rows) {
@@ -182,6 +198,14 @@ export async function getExpensesByCategory(
     entry.total += Number(row.amount ?? 0);
     entry.count += 1;
     byCategory.set(row.category, entry);
+  }
+
+  const feedRows = (feedResult.data ?? []) as { total_cost: number }[];
+  if (feedRows.length > 0) {
+    byCategory.set("FEED", {
+      total: feedRows.reduce((sum, row) => sum + Number(row.total_cost ?? 0), 0),
+      count: feedRows.length,
+    });
   }
 
   const grandTotal = [...byCategory.values()].reduce((sum, entry) => sum + entry.total, 0);

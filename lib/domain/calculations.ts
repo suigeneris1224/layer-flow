@@ -251,7 +251,11 @@ export function percentChange(current: number, previous: number): number | null 
  * Feed is costed through `feed_usage`, so FEED-category expense rows are
  * excluded here -- counting both would charge the farm twice for the same
  * sacks. The expenses screen still lists them; only cost/profit maths skips
- * them. Shared by the dashboard and by Reports so the two can never disagree.
+ * them. `lib/data/expenses.ts::getExpensesByCategory` follows the same rule
+ * for its own breakdown, replacing any manually-logged FEED row with the
+ * real feed_usage total instead of dropping feed entirely -- so its grand
+ * total and this function's output never disagree. Shared by the dashboard
+ * and by Reports so the two can never disagree with each other either.
  */
 export function operatingCostsFromExpenses(
   feedCost: number,

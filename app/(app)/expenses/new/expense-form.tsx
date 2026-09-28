@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -96,6 +97,18 @@ export function ExpenseForm({
             ))}
           </Select>
         </Field>
+
+        {category === "FEED" && (
+          <StatusNote tone="info">
+            Feed cost is already tracked from what you record under{" "}
+            <Link href="/health" className="font-medium underline">
+              Health &rarr; Feed
+            </Link>
+            , and that&apos;s what shows up in your category breakdown and cost/profit numbers.
+            An expense recorded here as Feed will still appear in this list, but won&apos;t be
+            counted anywhere else -- to avoid charging the farm twice for the same feed.
+          </StatusNote>
+        )}
 
         <Field
           label="Amount"

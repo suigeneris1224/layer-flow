@@ -213,7 +213,7 @@ export function ManualQrPayment({
                 </Button>
               </dd>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Paste this in GCash/Maya&apos;s own message field when you send.
+                Paste this in GCash/Maya/Bank&apos;s own message (Note) field when you send.
               </p>
             </div>
             <button

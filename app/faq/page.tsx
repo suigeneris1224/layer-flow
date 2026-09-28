@@ -57,7 +57,7 @@ const GROUPS: FaqGroup[] = [
       {
         question: "How do I pay?",
         answer:
-          "Billing is prepaid and manual — you renew when you're ready, through our PayMongo checkout (GCash, Maya, QR Ph, or local cards). Nothing is charged automatically without you initiating it.",
+          "Billing is prepaid and manual right now — you transfer to our designated bank or e-wallet account and submit your reference number and proof of payment for review, usually processed within a business day. An automated online checkout (GCash, Maya, QR Ph, or cards via PayMongo) is coming soon. Either way, nothing is charged automatically without you initiating it.",
       },
       {
         question: "What happens if my subscription lapses?",

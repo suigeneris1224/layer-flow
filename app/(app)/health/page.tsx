@@ -51,19 +51,28 @@ export default async function HealthPage({
   const today = farmToday(context.timezone);
   const supabase = await createSupabaseServerClient();
 
+  // Only one tab is ever rendered at a time, so only its query (or two, for
+  // Feed's cost pre-fill) needs to run -- fetching all three record types on
+  // every single tab switch was pure wasted latency for the other two.
   const [flocks, mortality, feed, vaccinations, lastFeedResult] = await Promise.all([
     getFlocks(context.farmId),
-    getMortalityRecords(context.farmId, { limit: RECENT_LIMIT }),
-    getFeedUsage(context.farmId, { limit: RECENT_LIMIT }),
-    getVaccinations(context.farmId, { limit: RECENT_LIMIT }),
+    tab === "mortality"
+      ? getMortalityRecords(context.farmId, { limit: RECENT_LIMIT })
+      : Promise.resolve([]),
+    tab === "feed" ? getFeedUsage(context.farmId, { limit: RECENT_LIMIT }) : Promise.resolve([]),
+    tab === "vaccinations"
+      ? getVaccinations(context.farmId, { limit: RECENT_LIMIT })
+      : Promise.resolve([]),
     // Same pre-fill the production form uses: one number instead of two.
-    supabase
-      .from("feed_usage")
-      .select("cost_per_kg, sack_size_kg, sack_price")
-      .eq("farm_id", context.farmId)
-      .order("usage_date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    tab === "feed"
+      ? supabase
+          .from("feed_usage")
+          .select("cost_per_kg, sack_size_kg, sack_price")
+          .eq("farm_id", context.farmId)
+          .order("usage_date", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   // A retired flock can still receive a correction to its history, so every

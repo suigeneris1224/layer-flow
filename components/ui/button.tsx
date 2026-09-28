@@ -6,7 +6,13 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   // min-h-11 keeps every button at a 44px touch target, which is the whole
   // point on a phone in a poultry house.
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors pointer-coarse:transition-transform pointer-coarse:active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+  //
+  // cursor-pointer is explicit, not decorative: a Link/button here has both
+  // a :hover style below and a JS-handled click (Next's router, or a React
+  // onClick) rather than a plain browser navigation, which is exactly the
+  // combination that makes iOS Safari treat the first tap as only "hover"
+  // and require a second tap to actually fire the click.
+  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors pointer-coarse:transition-transform pointer-coarse:active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
   {
     variants: {
       variant: {

@@ -18,7 +18,9 @@ export type RateLimitAction =
   | "password_reset"
   | "invite"
   | "manual_payment"
-  | "paymongo_checkout";
+  | "paymongo_checkout"
+  | "support_request"
+  | "support_reply";
 
 /**
  * Generous enough that a farmer fumbling their password, or an owner
@@ -40,6 +42,14 @@ export const RATE_LIMITS: Record<RateLimitAction, RateLimitRule> = {
   // backing out of the hosted page), so this is generous -- PayMongo's own
   // API throttles abusive request volume before this rule would ever matter.
   paymongo_checkout: { windowSeconds: 60 * 60, max: 20 },
+  // Scoped per farm, not per user, same reasoning as `invite`: caps how many
+  // support emails one farm can generate regardless of which member (any
+  // role can file a request -- there's no manager/owner gate on this action)
+  // is doing the submitting.
+  support_request: { windowSeconds: 24 * 60 * 60, max: 5 },
+  // No email is sent on a reply -- this is about spam/noise, not quota, so
+  // it's more generous.
+  support_reply: { windowSeconds: 60 * 60, max: 10 },
 };
 
 export interface RateLimitDecision {

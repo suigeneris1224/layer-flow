@@ -8,6 +8,8 @@ import { supportReplySchema, supportRequestSchema, toFieldErrors } from "@/lib/v
 import { sendEmail } from "@/lib/email/client";
 import { buildSupportRequestNotificationEmail } from "@/lib/email/templates";
 import { logger } from "@/lib/observability/logger";
+import { consumeRateLimit } from "@/lib/data/rate-limit";
+import { formatRetryMessage } from "@/lib/domain/rate-limit";
 import {
   describeDatabaseError,
   describeUnknownError,
@@ -29,6 +31,11 @@ const SUPPORT_EMAIL = "support@getlayerflow.com";
 export async function submitSupportRequestAction(input: unknown): Promise<ActionResult> {
   const user = await requireUser();
   const context = await requireFarmContext();
+
+  const limit = await consumeRateLimit(context.farmId, "support_request");
+  if (!limit.allowed) {
+    return failure(formatRetryMessage(limit.retryAfterSeconds));
+  }
 
   const parsed = supportRequestSchema.safeParse(input);
   if (!parsed.success) {
@@ -106,6 +113,11 @@ export async function replyToSupportRequestAction(
 ): Promise<ActionResult> {
   const user = await requireUser();
   const context = await requireFarmContext();
+
+  const limit = await consumeRateLimit(context.farmId, "support_reply");
+  if (!limit.allowed) {
+    return failure(formatRetryMessage(limit.retryAfterSeconds));
+  }
 
   const parsed = supportReplySchema.safeParse(input);
   if (!parsed.success) {

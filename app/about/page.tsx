@@ -29,8 +29,8 @@ export default function AboutPage() {
                 reports, alerts, and an estimated operating profit you can actually trust.
               </p>
               <p className="mt-2">
-                It works offline first, so a weak signal at the coop never costs you a day&apos;s
-                numbers, and it&apos;s priced and timed for the Philippines by default — pesos,
+                Recording works offline first, so a weak signal at the coop never costs you a
+                day&apos;s numbers, and it&apos;s priced and timed for the Philippines by default — pesos,
                 trays, and Philippine time zones, not a currency picker bolted onto a tool built
                 for somewhere else. See{" "}
                 <Link href="/how-it-works" className="text-primary hover:underline">

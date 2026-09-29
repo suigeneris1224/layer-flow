@@ -179,7 +179,7 @@ const FAQ_ITEMS = [
   {
     question: "Does LayerFlow work offline?",
     answer:
-      "Offline support is new: the app is designed to keep working through a weak signal and sync your records once you're back online, starting with the Starter plan.",
+      "Yes, on the Starter plan and up. Recording keeps working through a weak signal, and syncs automatically once you're back online.",
   },
   {
     question: "Can multiple people use one farm?",

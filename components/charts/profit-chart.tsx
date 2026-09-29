@@ -16,8 +16,6 @@ export function ProfitChart({ data, currency }: { data: DailyMoneyPoint[]; curre
     );
   }
 
-  const tickInterval = Math.max(0, Math.floor(data.length / 10) - 1);
-
   return (
     <div>
       <div className="h-[180px] w-full lg:h-[230px]">
@@ -29,7 +27,8 @@ export function ProfitChart({ data, currency }: { data: DailyMoneyPoint[]; curre
               dataKey="day"
               tickLine={false}
               axisLine={false}
-              interval={tickInterval}
+              interval="preserveStartEnd"
+              minTickGap={12}
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             />
             <YAxis

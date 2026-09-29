@@ -55,8 +55,9 @@ export function ProductionChart({ data }: { data: SeriesPoint[] }) {
               background: "hsl(var(--surface))",
               fontSize: 12,
             }}
-            formatter={(value: number, name) => [
-              `${formatNumber(value)} eggs`,
+            formatter={(value, name) => [
+              // Days after today are null (see buildProductionSeries).
+              typeof value === "number" ? `${formatNumber(value)} eggs` : "—",
               name === "thisWeek" ? "This week" : "Last week",
             ]}
           />

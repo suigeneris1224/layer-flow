@@ -58,7 +58,8 @@ const RECENT_ACTIVITY_LIMIT = 5;
 
 export interface SeriesPoint {
   day: string;
-  thisWeek: number;
+  /** `null` for days after today, so the line stops instead of dropping to 0. */
+  thisWeek: number | null;
   lastWeek: number;
 }
 
@@ -809,7 +810,7 @@ function buildProductionSeries(
     const date = shiftDate(monday, index);
     return {
       day: weekdayShort(date),
-      thisWeek: byDate.get(date) ?? 0,
+      thisWeek: date > today ? null : (byDate.get(date) ?? 0),
       lastWeek: byDate.get(shiftDate(date, -7)) ?? 0,
     };
   });

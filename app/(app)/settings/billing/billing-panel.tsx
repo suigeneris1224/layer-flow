@@ -71,10 +71,11 @@ export function BillingPanel({
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-muted-foreground">Status</dt>
-          <dd className="font-medium">{status}</dd>
+          <dd className="font-medium">{status === "TRIALING" ? "Free trial" : status}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="text-muted-foreground">Renews</dt>
+          {/* A trial charges nothing, so its end date is never a renewal. */}
+          <dt className="text-muted-foreground">{status === "TRIALING" ? "Trial ends" : "Renews"}</dt>
           <dd className="font-medium">
             {currentPeriodEnd ? formatDate(currentPeriodEnd) : "Not yet set"}
           </dd>

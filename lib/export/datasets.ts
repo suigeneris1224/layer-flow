@@ -5,6 +5,8 @@ import type { SaleEntry } from "@/lib/data/sales";
 import type { ExpenseEntry } from "@/lib/data/expenses";
 import { PLANS } from "@/lib/subscriptions/plans";
 import type { PaymentHistoryRow as MergedPaymentHistoryRow } from "@/lib/domain/payment-history";
+import type { WaitlistEntry } from "@/lib/data/waitlist";
+import { flockSizeLabel } from "@/lib/domain/waitlist";
 
 /**
  * The shape each dataset takes in a spreadsheet.
@@ -231,3 +233,21 @@ export function paymentHistoryToRows(
     currency: "PHP",
   }));
 }
+
+/**
+ * The paid-plan waitlist, for contacting farmers when paid plans open. Every
+ * row has a consent timestamp -- consent is required to join at all.
+ */
+export const WAITLIST_COLUMNS: readonly CsvColumn<WaitlistEntry>[] = [
+  { header: "Joined", value: (row) => row.joinedAt.slice(0, 10) },
+  { header: "Farm", value: (row) => row.farmName },
+  { header: "Owner email", value: (row) => row.ownerEmail },
+  // Local 09XX form: a leading "+" would be defanged as a formula by toCsv
+  // (showing as '+639...), and 09XX is how farmers read their own numbers.
+  { header: "Mobile number", value: (row) => row.mobileNumber.replace(/^\+63/, "0") },
+  { header: "Flock size", value: (row) => flockSizeLabel(row.flockSize) },
+  { header: "Plan wanted", value: (row) => PLANS[row.planWanted].name },
+  { header: "Trial started", value: (row) => row.trialStartedAt?.slice(0, 10) ?? null },
+  { header: "Trial ends", value: (row) => row.trialEndsAt?.slice(0, 10) ?? null },
+  { header: "Contact consent", value: (row) => row.contactConsentAt.slice(0, 10) },
+];

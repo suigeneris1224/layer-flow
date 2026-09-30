@@ -417,6 +417,63 @@ export function buildWelcomeEmail(ctx: WelcomeEmailContext): BuiltEmail {
   return { subject: "Welcome to LayerFlow", html, text: wrapText(bodyLines) };
 }
 
+export interface WaitlistConfirmationEmailContext {
+  fullName: string;
+  planName: string;
+  /** Null when no trial started (the account already had one, or is on a paid plan). */
+  trialEndsAt: string | null;
+}
+
+/**
+ * Sent when an owner joins the paid-plan waitlist (BILLING_MODE=validation,
+ * see joinWaitlistAction). Honest about why: paid plans aren't open yet, no
+ * payment is taken, and a trial ends back on Free with every record kept.
+ */
+export function buildWaitlistConfirmationEmail(ctx: WaitlistConfirmationEmailContext): BuiltEmail {
+  const trialLine = ctx.trialEndsAt
+    ? `Your free ${ctx.planName} trial is on now and runs until ${formatDate(ctx.trialEndsAt)}. When it ends you go back to Free and keep all your records -- nothing is charged.`
+    : `We'll let you know as soon as ${ctx.planName} opens.`;
+  const bodyLines = [
+    `You're on the LayerFlow waitlist for ${ctx.planName}.`,
+    trialLine,
+    `Paid plans open soon. No payment is needed today, and waitlist members get a founding-farmer offer when they open.`,
+  ];
+
+  const html = renderEmailHtml({
+    preheader: `You're on the waitlist for ${ctx.planName}.`,
+    eyebrow: "WAITLIST",
+    headline: "You're on the list!",
+    heroMessage: `We'll email you as soon as ${ctx.planName} opens.`,
+    heroIcon: "check-circle",
+    greetingName: ctx.fullName,
+    intro: [trialLine],
+    features: [
+      {
+        icon: "calendar",
+        title: "No payment today",
+        text: "Paid plans aren't open yet, so nothing is charged.",
+      },
+      {
+        icon: "leaf",
+        title: "Your records stay yours",
+        text: "Whatever plan you're on, every record you've made is kept.",
+      },
+      {
+        icon: "mail",
+        title: "A founding-farmer offer",
+        text: "Waitlist members hear first, with an offer when paid plans open.",
+      },
+    ],
+    cta: { label: "Go to your dashboard", href: `${publicEnv.appUrl}/dashboard` },
+  });
+
+  return {
+    subject: `You're on the LayerFlow waitlist for ${ctx.planName}`,
+    html,
+    text: wrapText(bodyLines),
+  };
+}
+
 /**
  * Sent when a subscription is cancelled. Not wired to a trigger yet -- there
  * is no cancel-subscription action in the codebase today (only an admin/dev

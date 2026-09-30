@@ -129,6 +129,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 STORAGE_BUCKET=layerflow
 BILLING_PROVIDER=mock
+# BILLING_MODE=validation  # waitlist + free trial instead of payment (docs/billing.md)
 ```
 
 > `lib/config/env.ts` validates these at import. A missing variable fails loudly at startup rather

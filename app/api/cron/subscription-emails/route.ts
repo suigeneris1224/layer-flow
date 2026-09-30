@@ -37,11 +37,45 @@ export async function GET(request: Request) {
   }
 
   const admin = createSupabaseAdminClient();
-  const results = { pastDue: 0, renewal: 0, failed: 0 };
+  const results = { pastDue: 0, renewal: 0, failed: 0, trialsEnded: 0 };
 
   // Piggybacks on this job's existing daily schedule rather than adding a
   // second cron trigger just to keep rate_limit_hits from growing forever.
   await pruneRateLimitHits();
+
+  // Finished free trials go back to Free. getFarmContext already treats them
+  // as Free the moment they end; this just tidies the row (and the admin
+  // views) once a day. Records are never touched -- see docs/billing.md.
+  const { data: endedTrials, error: endedTrialsError } = await admin
+    .from("subscriptions")
+    .update({
+      plan: "FREE",
+      status: "ACTIVE",
+      current_period_start: null,
+      current_period_end: null,
+      past_due_reminder_sent_at: null,
+      renewal_reminder_sent_at: null,
+    })
+    .eq("status", "TRIALING")
+    .lt("current_period_end", new Date().toISOString())
+    .select("owner_id");
+  if (endedTrialsError) {
+    logger.error("cron trial expiry failed", { reason: endedTrialsError.message });
+  }
+  results.trialsEnded = endedTrials?.length ?? 0;
+  for (const row of endedTrials ?? []) {
+    await recordAuditLog(
+      {
+        farmId: null,
+        userId: null,
+        action: AUDIT_ACTIONS.PLAN_CHANGED,
+        entityType: "subscription",
+        entityId: row.owner_id,
+        metadata: { plan: "FREE", status: "ACTIVE", trigger: "trial_ended" },
+      },
+      admin
+    );
+  }
 
   // Accounts whose current_period_end falls on the UTC calendar day exactly
   // SUBSCRIPTION_REMINDER_DAYS from now. A day-bucket match, not exact
@@ -66,7 +100,8 @@ export async function GET(request: Request) {
       .gte("current_period_end", dayStart.toISOString())
       .lte("current_period_end", dayEnd.toISOString())
       .is("renewal_reminder_sent_at", null)
-      .not("status", "in", "(CANCELED,EXPIRED)"),
+      // A trial charges nothing, so it must never get a "renews soon" email.
+      .not("status", "in", "(CANCELED,EXPIRED,TRIALING)"),
   ]);
 
   if (pastDueResult.error) {

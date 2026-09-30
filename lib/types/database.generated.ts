@@ -1297,6 +1297,51 @@ export type Database = {
           },
         ]
       }
+      plan_waitlist: {
+        Row: {
+          contact_consent_at: string
+          created_at: string
+          farm_name: string
+          flock_size: Database["public"]["Enums"]["waitlist_flock_size"]
+          id: string
+          launch_notified_at: string | null
+          mobile_number: string
+          owner_id: string
+          plan_wanted: Database["public"]["Enums"]["subscription_plan"]
+          trial_ends_at: string | null
+          trial_started_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_consent_at: string
+          created_at?: string
+          farm_name: string
+          flock_size: Database["public"]["Enums"]["waitlist_flock_size"]
+          id?: string
+          launch_notified_at?: string | null
+          mobile_number: string
+          owner_id: string
+          plan_wanted: Database["public"]["Enums"]["subscription_plan"]
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_consent_at?: string
+          created_at?: string
+          farm_name?: string
+          flock_size?: Database["public"]["Enums"]["waitlist_flock_size"]
+          id?: string
+          launch_notified_at?: string | null
+          mobile_number?: string
+          owner_id?: string
+          plan_wanted?: Database["public"]["Enums"]["subscription_plan"]
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1652,6 +1697,11 @@ export type Database = {
         | "PAST_DUE"
         | "CANCELED"
         | "EXPIRED"
+      waitlist_flock_size:
+        | "UNDER_500"
+        | "FROM_500_TO_2000"
+        | "FROM_2000_TO_5000"
+        | "OVER_5000"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1805,6 +1855,12 @@ export const Constants = {
         "PAST_DUE",
         "CANCELED",
         "EXPIRED",
+      ],
+      waitlist_flock_size: [
+        "UNDER_500",
+        "FROM_500_TO_2000",
+        "FROM_2000_TO_5000",
+        "OVER_5000",
       ],
     },
   },

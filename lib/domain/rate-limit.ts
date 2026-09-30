@@ -20,7 +20,8 @@ export type RateLimitAction =
   | "manual_payment"
   | "paymongo_checkout"
   | "support_request"
-  | "support_reply";
+  | "support_reply"
+  | "waitlist_join";
 
 /**
  * Generous enough that a farmer fumbling their password, or an owner
@@ -50,6 +51,9 @@ export const RATE_LIMITS: Record<RateLimitAction, RateLimitRule> = {
   // No email is sent on a reply -- this is about spam/noise, not quota, so
   // it's more generous.
   support_reply: { windowSeconds: 60 * 60, max: 10 },
+  // Per account owner. Rejoining only updates the entry (never a second
+  // trial), so this just caps how many confirmation emails one account sends.
+  waitlist_join: { windowSeconds: 24 * 60 * 60, max: 5 },
 };
 
 export interface RateLimitDecision {

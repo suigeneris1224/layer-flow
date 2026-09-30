@@ -38,6 +38,18 @@ export function renewalBanner(
     (new Date(currentPeriodEnd).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
   );
 
+  // A trial never charges anyone, so it never gets renewal wording. Once it
+  // is over getFarmContext already reports Free, so there's nothing to say.
+  if (subject.status === "TRIALING") {
+    if (daysLeft < 0 || daysLeft > SUBSCRIPTION_REMINDER_DAYS) return null;
+    return {
+      tone: "warn",
+      message: `Your free ${planName} trial ${
+        daysLeft === 0 ? "ends today" : `ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`
+      }. After that you're back on Free and keep all your records.`,
+    };
+  }
+
   if (daysLeft < 0) {
     return {
       tone: "bad",

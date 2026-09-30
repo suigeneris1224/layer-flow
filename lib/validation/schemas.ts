@@ -2,12 +2,15 @@ import { z } from "zod";
 import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
 import { SUPPORTED_CURRENCIES, SUPPORTED_TIMEZONES } from "@/lib/domain/farm-config";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, isPasswordSecure } from "@/lib/domain/password";
+import { normalizePhMobile } from "@/lib/domain/phone";
+import { WAITLIST_FLOCK_SIZES } from "@/lib/domain/waitlist";
 import { PLAN_ORDER } from "@/lib/subscriptions/plans";
 import type {
   BillingPeriod,
   ExpenseCategory,
   SubscriptionPlan,
   SubscriptionStatus,
+  WaitlistFlockSize,
 } from "@/lib/types/database";
 
 const SUBSCRIPTION_STATUSES: SubscriptionStatus[] = [
@@ -362,6 +365,30 @@ export const checkoutPlanSchema = z.object({
   billingPeriod: z.enum(BILLING_PERIODS as [BillingPeriod, ...BillingPeriod[]], {
     errorMap: () => ({ message: "Choose a billing period" }),
   }),
+});
+
+/**
+ * Joining the paid-plan waitlist while BILLING_MODE=validation -- see
+ * joinWaitlistAction. The mobile number comes out normalised to
+ * +639XXXXXXXXX; consent must be an explicit true (Data Privacy Act).
+ */
+export const waitlistJoinSchema = checkoutPlanSchema.pick({ plan: true }).extend({
+  farmName: z.string().trim().min(1, "Enter your farm name").max(200),
+  mobileNumber: z
+    .string()
+    .transform((value, ctx) => {
+      const normalized = normalizePhMobile(value);
+      if (!normalized) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a PH mobile number like 0917 123 4567" });
+        return z.NEVER;
+      }
+      return normalized;
+    }),
+  flockSize: z.enum(
+    WAITLIST_FLOCK_SIZES.map((option) => option.value) as [WaitlistFlockSize, ...WaitlistFlockSize[]],
+    { errorMap: () => ({ message: "Choose your flock size" }) }
+  ),
+  consent: z.literal(true, { errorMap: () => ({ message: "Please agree so we can contact you" }) }),
 });
 
 /** Submitting a manual QR/bank transfer payment for review -- see app/(app)/checkout/actions.ts. */

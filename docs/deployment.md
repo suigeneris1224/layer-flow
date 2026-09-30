@@ -79,6 +79,7 @@ Cloudflare splits environment variables into two buckets, both needed:
 | `NEXT_PUBLIC_APP_URL` | Build var + runtime var | `https://yourdomain.com` (or the `*.workers.dev` URL before a custom domain is attached) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret | **Server only. Never prefix with `NEXT_PUBLIC_`.** |
 | `STORAGE_BUCKET` | Runtime var | `layerflow` |
+| `BILLING_MODE` | Runtime var | `validation`: no payments, upgrades go to the waitlist and start a 30-day trial; `live` (default): checkout takes payment. See docs/billing.md |
 | `BILLING_PROVIDER` | Runtime var | `paymongo` to enable the automated checkout tab; `mock` (default) keeps it off manual-only |
 | `PAYMONGO_SECRET_KEY` | Secret | `sk_test_...` while the business account isn't yet approved; `sk_live_...` after — no code change needed to switch |
 | `PAYMONGO_WEBHOOK_SECRET` | Secret | From PayMongo Dashboard → Developers → Webhooks. Verifies `/api/webhooks/paymongo` — see the callout below |

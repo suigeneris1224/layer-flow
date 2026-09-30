@@ -21,6 +21,9 @@ import { Panel } from "@/components/ui/panel";
 import { StatusNote } from "@/components/ui/states";
 import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
 import { PlanCard } from "@/components/subscriptions/plan-card";
+import { serverEnv } from "@/lib/config/env";
+import { canStartTrial } from "@/lib/subscriptions/trial";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BillingPanel } from "./billing-panel";
 import { DevPlanSwitcher } from "./dev-plan-switcher";
 
@@ -54,6 +57,23 @@ export default async function BillingPage() {
     getUsageSummary(context),
   ]);
   const pendingManualPayment = manualPayments.find((payment) => payment.status === "PENDING");
+
+  // Validation mode (docs/billing.md): the same /checkout links lead to the
+  // waitlist, so the buttons say what will actually happen there.
+  const validation = serverEnv.billingMode === "validation";
+  let trialAvailable = false;
+  if (validation) {
+    const supabase = await createSupabaseServerClient();
+    const { data: entry } = await supabase
+      .from("plan_waitlist")
+      .select("trial_started_at")
+      .eq("owner_id", context.ownerId)
+      .maybeSingle();
+    trialAvailable = canStartTrial(
+      { plan: context.plan, status: context.subscriptionStatus },
+      entry?.trial_started_at ?? null
+    );
+  }
   const currentRank = PLAN_ORDER.indexOf(context.plan);
   const limits = PLANS[context.plan].limits;
 
@@ -131,8 +151,11 @@ export default async function BillingPage() {
                 ? { href: "/settings/support" as Route, label: "Downgrade to Free" }
                 : {
                     href: `/checkout?plan=${id}&period=${billingPeriod}` as Route,
-                    label:
-                      rank > currentRank
+                    label: validation
+                      ? trialAvailable
+                        ? `Try ${PLANS[id].name} free`
+                        : `Join the ${PLANS[id].name} waitlist`
+                      : rank > currentRank
                         ? `Upgrade to ${PLANS[id].name}`
                         : `Downgrade to ${PLANS[id].name}`,
                   };

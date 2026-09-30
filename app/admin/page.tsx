@@ -49,9 +49,11 @@ export default async function AdminOverviewPage() {
     .filter(activeOrPastDue)
     .reduce((sum, row) => sum + PLANS[row.plan].priceCentavosAnnual, 0);
 
+  // Trials charge nothing, so their end dates aren't renewals to chase.
   const expiringSoon = rows.filter(
-    (row) => row.currentPeriodEnd !== null && daysRemaining(row.currentPeriodEnd) <= 7 && daysRemaining(row.currentPeriodEnd) >= 0
+    (row) => row.status !== "TRIALING" && row.currentPeriodEnd !== null && daysRemaining(row.currentPeriodEnd) <= 7 && daysRemaining(row.currentPeriodEnd) >= 0
   ).length;
+  const onTrial = rows.filter((row) => row.status === "TRIALING").length;
 
   // A longer look-ahead than the 7-day window above: an annual renewal is a
   // once-a-year, higher-stakes event worth surfacing with more lead time.
@@ -66,7 +68,7 @@ export default async function AdminOverviewPage() {
         description="Platform-wide numbers, soonest-expiring first. See the sidebar for accounts, payments, email and support."
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         {PLAN_ORDER.map((id) => (
           <Panel key={id} title={PLANS[id].name} bodyClassName="p-4">
             <p className="text-2xl font-bold tabular">{countByPlan[id] ?? 0}</p>
@@ -94,7 +96,11 @@ export default async function AdminOverviewPage() {
         </Panel>
         <Panel title="Expiring in 7 days" bodyClassName="p-4">
           <p className="text-2xl font-bold tabular">{expiringSoon}</p>
-          <p className="text-xs text-muted-foreground">accounts</p>
+          <p className="text-xs text-muted-foreground">paid accounts</p>
+        </Panel>
+        <Panel title="On trial" bodyClassName="p-4">
+          <p className="text-2xl font-bold tabular">{onTrial}</p>
+          <p className="text-xs text-muted-foreground">free trials, not paying</p>
         </Panel>
       </div>
 

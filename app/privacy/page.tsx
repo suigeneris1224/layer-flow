@@ -156,6 +156,16 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <span className="font-medium text-foreground">
+                    Paid-Plan Waitlist:
+                  </span>{" "}
+                  If you join the waitlist for a paid plan, we keep your farm name, mobile number,
+                  estimated flock size and the plan you chose, with the date you agreed to be
+                  contacted. We use them only to tell you when paid plans open (by email, SMS or a
+                  call) and to understand which plans farmers need. You can withdraw this consent
+                  at any time by replying to one of our emails or contacting support.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">
                     Technical Support &amp; Troubleshooting:
                   </span>{" "}
                   To diagnose local data synchronization conflicts, resolve database corruption

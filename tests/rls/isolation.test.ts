@@ -360,6 +360,53 @@ suite("RLS tenant isolation", () => {
       expect(actual?.status).toBe("PENDING");
     });
 
+    it("a waitlist entry is readable by its owner only, and writable by no client", async () => {
+      // plan_waitlist: select-own policy, and insert/update/delete revoked
+      // from `authenticated` -- joinWaitlistAction writes via the service role.
+      const admin = adminClient();
+      const { error: seedError } = await admin.from("plan_waitlist").insert({
+        owner_id: alice.id,
+        farm_name: "Alice Farm",
+        mobile_number: "+639171234567",
+        flock_size: "FROM_500_TO_2000",
+        plan_wanted: "STARTER",
+        contact_consent_at: new Date().toISOString(),
+        trial_started_at: new Date().toISOString(),
+      });
+      expect(seedError).toBeNull();
+
+      const { data: bobView } = await bob.client
+        .from("plan_waitlist")
+        .select("id")
+        .eq("owner_id", alice.id);
+      expect(bobView).toEqual([]);
+
+      const { data: aliceView } = await alice.client
+        .from("plan_waitlist")
+        .select("mobile_number")
+        .eq("owner_id", alice.id);
+      expect(aliceView?.length).toBe(1);
+
+      // Clearing trial_started_at would unlock a second trial -- must not stick.
+      await alice.client.from("plan_waitlist").update({ trial_started_at: null }).eq("owner_id", alice.id);
+      const { data: afterUpdate } = await admin
+        .from("plan_waitlist")
+        .select("trial_started_at")
+        .eq("owner_id", alice.id)
+        .single();
+      expect(afterUpdate?.trial_started_at).not.toBeNull();
+
+      const { error: insertError } = await bob.client.from("plan_waitlist").insert({
+        owner_id: bob.id,
+        farm_name: "Bob Farm",
+        mobile_number: "+639181234567",
+        flock_size: "UNDER_500",
+        plan_wanted: "PRO",
+        contact_consent_at: new Date().toISOString(),
+      });
+      expect(insertError).not.toBeNull();
+    });
+
     it("audit log entries cannot be rewritten or deleted", async () => {
       const admin = adminClient();
       const { data: before } = await admin

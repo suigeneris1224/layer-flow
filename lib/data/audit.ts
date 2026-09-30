@@ -113,4 +113,8 @@ export const AUDIT_ACTIONS = {
   PAYMONGO_CHECKOUT_CREATED: "paymongo.checkout_created",
   PAYMONGO_PAYMENT_ACTIVATED: "paymongo.payment_activated",
   PAYMONGO_PAYMENT_FAILED: "paymongo.payment_failed",
+  /** metadata carries { plan, flockSize, trialStarted }. */
+  WAITLIST_JOINED: "waitlist.joined",
+  /** metadata carries { plan, trialEndsAt }. */
+  TRIAL_STARTED: "subscription.trial_started",
 } as const;

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, FlaskConical, History, LayoutDashboard, LifeBuoy, Mail } from "lucide-react";
+import { CreditCard, FlaskConical, History, LayoutDashboard, LifeBuoy, ListChecks, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/admin/payment-history", label: "Payment history", icon: History },
+  { href: "/admin/waitlist", label: "Waitlist", icon: ListChecks },
   { href: "/admin/email-logs", label: "Email logs", icon: Mail },
   { href: "/admin/tickets", label: "Tickets", icon: LifeBuoy },
   { href: "/admin/beta-settings", label: "Beta settings", icon: FlaskConical },

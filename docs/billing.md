@@ -59,6 +59,33 @@ Counts always come from the database — `flocks` where status is `GROWING` or `
 instance. A sold or closed flock is history, not capacity in use, so it does not count against
 the limit.
 
+## Validation mode
+
+`BILLING_MODE=validation` (server-only; read through `serverEnv.billingMode`) runs LayerFlow without
+taking any money -- for before DTI/BIR registration and PayMongo live approval. `live` is the default
+and behaves exactly as described elsewhere in this doc.
+
+In validation mode every `/checkout?plan=…` shows a waitlist form instead of payment methods:
+
+- Farm name, PH mobile number (normalised to `+639XXXXXXXXX` by `lib/domain/phone.ts`), estimated
+  flock size, and a required contact-consent checkbox (Data Privacy Act; `/privacy` explains it).
+- `joinWaitlistAction` saves the entry to `plan_waitlist` (one row per account) and, if eligible,
+  starts a **30-day free trial** (`TRIAL_DAYS`): the `subscriptions` row becomes
+  `plan = <chosen>, status = 'TRIALING'` with `current_period_end` = the trial end.
+- Eligibility (`lib/subscriptions/trial.ts`): one trial per account, ever, and only from Free or a
+  lapsed plan -- never on top of a paid plan or a beta override.
+- A trial ends on time: `getFarmContext` resolves an expired `TRIALING` row as Free straight away,
+  and the daily cron resets the row to Free/ACTIVE. Records are never touched. Trials never get
+  renewal reminders.
+- The manual-payment and PayMongo actions refuse to run. Nothing is removed: switching back to
+  `live` restores checkout exactly as before, and manual transfer remains the backup payment path.
+
+The waitlist is the demand signal: `/admin/waitlist` shows counts by plan and flock size and
+exports the list (with consent dates) as CSV for the launch announcement.
+
+The public `/pricing` and landing pages are static, so their buttons don't change with the mode;
+the checkout page they link to explains it. The in-app billing page's buttons do say "Try … free".
+
 ## Two deliberate kindnesses
 
 **A lapsed subscription falls back to Free. It never locks the farm out.**

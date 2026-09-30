@@ -32,6 +32,7 @@ export type SubscriptionStatus = Public["Enums"]["subscription_status"];
 export type BillingPeriod = Public["Enums"]["billing_period"];
 export type ManualPaymentStatus = Public["Enums"]["manual_payment_status"];
 export type PaymongoPaymentStatus = Public["Enums"]["paymongo_payment_status"];
+export type WaitlistFlockSize = Public["Enums"]["waitlist_flock_size"];
 export type AccountDeletionStatus = Public["Enums"]["account_deletion_status"];
 
 // ---------------------------------------------------------------------------

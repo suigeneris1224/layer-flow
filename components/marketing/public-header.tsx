@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/components/nav/brand";
+import { PublicMobileMenu } from "@/components/marketing/public-mobile-menu";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,10 @@ export function PublicHeader() {
         >
           Pricing
         </Link>
-        <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+        <Link
+          href="/login"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden sm:inline-flex")}
+        >
           Sign in
         </Link>
         <Link
@@ -47,6 +51,7 @@ export function PublicHeader() {
         >
           Start free
         </Link>
+        <PublicMobileMenu />
       </nav>
     </header>
   );

@@ -1,4 +1,5 @@
 import "server-only";
+import { isTrialOver } from "@/lib/subscriptions/trial";
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -167,12 +168,19 @@ export const getFarmContext = cache(async (): Promise<FarmContext | null> => {
   const supabase = await createSupabaseServerClient();
   const { data: subscription } = await supabase
     .from("subscriptions")
-    .select("plan, status")
+    .select("plan, status, current_period_end")
     .eq("owner_id", selected.ownerId)
     .maybeSingle();
 
   let plan: SubscriptionPlan = subscription?.plan ?? "FREE";
   let subscriptionStatus: SubscriptionStatus = subscription?.status ?? "ACTIVE";
+
+  // A finished trial is Free from the moment it ends -- the daily cron resets
+  // the row itself, but access must not outlive the trial by up to a day.
+  if (isTrialOver(subscriptionStatus, subscription?.current_period_end ?? null)) {
+    plan = "FREE";
+    subscriptionStatus = "ACTIVE";
+  }
   let isBetaOverride = false;
 
   // Beta testing gives the OWNER of their own farm full Pro access with no

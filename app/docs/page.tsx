@@ -56,16 +56,23 @@ export default function DocsPage() {
               aria-label="Sections"
               className="lg:sticky lg:top-20 lg:shrink-0"
             >
-              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
-                {SECTIONS.map((section) => (
-                  <a
-                    key={section.id}
-                    href={`#${section.id}`}
-                    className="shrink-0 whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground lg:whitespace-normal lg:border-0 lg:px-2 lg:py-1.5 lg:text-sm"
-                  >
-                    {section.title}
-                  </a>
-                ))}
+              <div className="relative">
+                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
+                  {SECTIONS.map((section) => (
+                    <a
+                      key={section.id}
+                      href={`#${section.id}`}
+                      className="shrink-0 whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground lg:whitespace-normal lg:border-0 lg:px-2 lg:py-1.5 lg:text-sm"
+                    >
+                      {section.title}
+                    </a>
+                  ))}
+                </div>
+                {/* Hints that the pill strip scrolls further -- only relevant while it's horizontal. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent lg:hidden"
+                />
               </div>
             </nav>
 

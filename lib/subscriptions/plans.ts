@@ -176,6 +176,9 @@ export function formatPlanPrice(plan: PlanDefinition, period: BillingPeriod = "M
   return `₱${(centavos / 100).toLocaleString("en-PH")}`;
 }
 
+/** Length of the free trial a waitlist signup starts while BILLING_MODE=validation. */
+export const TRIAL_DAYS = 30;
+
 /** Mock-billing period length, for simulating a current_period_end since there's no real checkout yet. */
 export const BILLING_PERIOD_DAYS: Record<BillingPeriod, number> = {
   MONTHLY: 30,

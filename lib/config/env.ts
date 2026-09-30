@@ -62,6 +62,16 @@ export const serverEnv = {
   get billingProvider(): string {
     return process.env.BILLING_PROVIDER ?? "mock";
   },
+  /**
+   * "live" (default): checkout takes payment as usual. "validation": no money
+   * is taken -- every upgrade goes to the waitlist form, which starts a free
+   * trial instead (docs/billing.md, "Validation mode"). Server-only on
+   * purpose: a NEXT_PUBLIC_ value is baked in at build time, so flipping it
+   * would need a rebuild; pages read this and pass it down as a prop.
+   */
+  get billingMode(): "live" | "validation" {
+    return process.env.BILLING_MODE === "validation" ? "validation" : "live";
+  },
   /** "mock" (default, logs instead of sending) or "brevo". */
   get emailProvider(): string {
     return process.env.EMAIL_PROVIDER ?? "mock";

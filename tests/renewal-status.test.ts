@@ -43,8 +43,21 @@ describe("renewalBanner", () => {
   });
 
   it("uses singular wording for exactly 1 day left", () => {
-    const result = renewalBanner({ plan: "PRO", status: "TRIALING" }, daysFromNow(1), NOW);
+    const result = renewalBanner({ plan: "PRO", status: "ACTIVE" }, daysFromNow(1), NOW);
     expect(result?.message).toMatch(/renews in 1 day\b/);
+  });
+
+  it("gives a trial trial wording, never renewal wording", () => {
+    const result = renewalBanner({ plan: "PRO", status: "TRIALING" }, daysFromNow(1), NOW);
+    expect(result?.tone).toBe("warn");
+    expect(result?.message).toMatch(/free Pro trial ends in 1 day\b/);
+    expect(result?.message).toMatch(/back on Free/);
+    expect(result?.message).not.toMatch(/renew/i);
+  });
+
+  it("stays quiet for a trial far from its end, or already over", () => {
+    expect(renewalBanner({ plan: "STARTER", status: "TRIALING" }, daysFromNow(20), NOW)).toBeNull();
+    expect(renewalBanner({ plan: "STARTER", status: "TRIALING" }, daysFromNow(-1), NOW)).toBeNull();
   });
 
   it("says 'renews today' for 0 days left", () => {

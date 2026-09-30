@@ -24,13 +24,6 @@ const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
  * the real number to actually send money. Masking is a privacy default for
  * anyone glancing at the screen, not an access control.
  */
-function maskAccountName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length < 2) return parts[0] ?? name;
-  const lastInitial = parts[parts.length - 1]?.[0]?.toUpperCase() ?? "";
-  return `${parts[0]} ${lastInitial}.`;
-}
-
 function maskAccountNumber(number: string): string {
   const digits = number.replace(/\s+/g, "");
   if (digits.length <= 6) return number;
@@ -166,13 +159,7 @@ export function ManualQrPayment({
           />
           <dl className="flex w-full flex-col gap-2 text-sm sm:flex-1">
             <div>
-              <dt className="text-muted-foreground">Account name</dt>
-              <dd className="font-medium">
-                {revealed ? method.accountName : maskAccountName(method.accountName)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{method.label}</dt>
+              <dt className="text-muted-foreground">Or manually copy the GCash number</dt>
               <dd className="flex items-center gap-2 font-medium">
                 <span className="tabular">
                   {revealed ? method.accountNumber : maskAccountNumber(method.accountNumber)}

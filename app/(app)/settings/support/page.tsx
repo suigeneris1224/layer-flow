@@ -30,6 +30,19 @@ export default async function SupportPage() {
         </StatusNote>
       )}
 
+      <p className="text-sm text-muted-foreground">
+        Looking for a how-to instead?{" "}
+        <a
+          href="/docs"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium text-primary hover:underline"
+        >
+          Browse the documentation
+        </a>
+        .
+      </p>
+
       <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
         <div className="lg:col-span-2">
           <SupportForm priority={priority} />

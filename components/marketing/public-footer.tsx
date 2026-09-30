@@ -16,7 +16,7 @@ import { Brand } from "@/components/nav/brand";
 export function PublicFooter() {
   return (
     <footer className="footer-scope border-t border-footer-border bg-footer-bg text-footer-foreground">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-4">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-3 lg:grid-cols-5">
         <div className="[&>div]:items-start">
           <Brand />
           <p className="mt-3 text-sm text-muted-foreground">
@@ -38,21 +38,28 @@ export function PublicFooter() {
         </div>
 
         <div className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-foreground">Support</span>
+          <span className="font-medium text-foreground">Company</span>
           <Link href="/about" className="text-muted-foreground hover:text-foreground">
             About
-          </Link>
-          <Link href="/contact" className="text-muted-foreground hover:text-foreground">
-            Contact
-          </Link>
-          <Link href="/faq" className="text-muted-foreground hover:text-foreground">
-            FAQ
           </Link>
           <Link href="/privacy" className="text-muted-foreground hover:text-foreground">
             Privacy Policy
           </Link>
           <Link href="/terms" className="text-muted-foreground hover:text-foreground">
             Terms and Conditions
+          </Link>
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm">
+          <span className="font-medium text-foreground">Support</span>
+          <Link href="/docs" className="text-muted-foreground hover:text-foreground">
+            Documentation
+          </Link>
+          <Link href="/contact" className="text-muted-foreground hover:text-foreground">
+            Contact
+          </Link>
+          <Link href="/faq" className="text-muted-foreground hover:text-foreground">
+            FAQ
           </Link>
         </div>
 

@@ -7,7 +7,7 @@ import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getFarmCardsForUser } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
-import { getSalesOverview, type SalesOverviewRange } from "@/lib/data/sales-overview";
+import { getSalesOverview } from "@/lib/data/sales-overview";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
@@ -24,7 +24,6 @@ import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { FlockStatusPanel } from "@/components/dashboard/flock-status-panel";
 import { FarmCards } from "@/components/farms/farm-cards";
 import { TodayStatus } from "@/components/dashboard/today-status";
-import { SalesRangeToggle } from "@/components/dashboard/sales-range-toggle";
 import { formatCurrencyCompact, formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -33,18 +32,11 @@ export const metadata: Metadata = { title: "Overview" };
 // Today's numbers change as the farmer records; never serve a cached page.
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ salesRange?: string }>;
-}) {
+export default async function DashboardPage() {
   const context = await requireFarmContext();
   const isOwner = canManageBilling(context);
   const showRenewalBanner = isOwner && !context.isBetaOverride;
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
-  const { salesRange: salesRangeParam } = await searchParams;
-  const salesRange: SalesOverviewRange =
-    salesRangeParam === "year" ? "year" : salesRangeParam === "week" ? "week" : "month";
 
   const [data, farms, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),
@@ -56,7 +48,7 @@ export default async function DashboardPage({
   const hasTeamRole = farms.some((farm) => farm.role !== "OWNER");
 
   const salesOverview = data.money.isComplete
-    ? await getSalesOverview(context.farmId, salesRange, data.date)
+    ? await getSalesOverview(context.farmId, data.date)
     : null;
 
   return (
@@ -193,15 +185,14 @@ export default async function DashboardPage({
             <h2 className="flex items-center gap-1 text-sm font-semibold">
               Sales overview
               <InfoTip label="About sales overview">
-                Total value of egg sales recorded for the selected period, broken down by day
-                (This week, This month) or by month (This year). The percentage compares against
-                the same number of days in the prior week, month, or year, so a few days into a
-                new period isn&apos;t compared against a full previous one.
+                Total value of egg sales recorded so far this month, by day. The percentage
+                compares against the same number of days last month, so a few days into a new
+                month isn&apos;t compared against a full previous one. For any other range, see
+                Reports.
               </InfoTip>
             </h2>
           }
           className="lg:col-span-6 xl:col-span-5"
-          action={salesOverview && <SalesRangeToggle value={salesRange} />}
         >
           {salesOverview ? (
             <>
@@ -217,9 +208,7 @@ export default async function DashboardPage({
               <SalesChart
                 data={salesOverview.series}
                 currency={context.currency}
-                emptyMessage={`No sales recorded ${
-                  salesRange === "week" ? "this week" : salesRange === "month" ? "this month" : "this year"
-                }.`}
+                emptyMessage="No sales recorded this month."
               />
             </>
           ) : (

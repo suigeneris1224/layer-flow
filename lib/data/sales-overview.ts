@@ -1,12 +1,9 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { resolveReportRange, eachDate, samePeriodLastMonth, sameRangeLastYear } from "@/lib/domain/reports";
+import { resolveReportRange, eachDate, samePeriodLastMonth } from "@/lib/domain/reports";
 import { percentChange } from "@/lib/domain/calculations";
-import { shiftDate } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
-
-export type SalesOverviewRange = "week" | "month" | "year";
 
 export interface SalesOverviewPoint {
   label: string;
@@ -17,83 +14,48 @@ export interface SalesOverview {
   total: number;
   series: SalesOverviewPoint[];
   rangeLabel: string;
-  /** Change against the same (day-count-matched) period last month/year. Null with nothing to compare against. */
+  /** Change against the same (day-count-matched) period last month. Null with nothing to compare against. */
   deltaPercent: number | null;
   deltaLabel: string;
 }
-
-const MONTH_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface SaleRow {
   sale_date: string;
   total_amount: number;
 }
 
-/** One point per day this week/month, or one per month so far this year. */
-function buildSeries(rows: SaleRow[], range: SalesOverviewRange, from: string, to: string): SalesOverviewPoint[] {
-  if (range === "week" || range === "month") {
-    const byDate = new Map<string, number>();
-    for (const row of rows) {
-      byDate.set(row.sale_date, (byDate.get(row.sale_date) ?? 0) + Number(row.total_amount));
-    }
-    return eachDate(from, to).map((date) => ({
-      label:
-        range === "week"
-          ? WEEKDAY_SHORT[new Date(`${date}T00:00:00Z`).getUTCDay()]
-          : String(Number(date.slice(8, 10))),
-      amount: byDate.get(date) ?? 0,
-    }));
-  }
-
-  const byMonth = new Map<string, number>();
+/**
+ * One point per day this month. Week/Year used to be options here too, but
+ * they duplicated /reports (which already covers any range with its own
+ * picker) -- this panel now only ever shows the current month.
+ */
+function buildSeries(rows: SaleRow[], from: string, to: string): SalesOverviewPoint[] {
+  const byDate = new Map<string, number>();
   for (const row of rows) {
-    const ym = row.sale_date.slice(0, 7);
-    byMonth.set(ym, (byMonth.get(ym) ?? 0) + Number(row.total_amount));
+    byDate.set(row.sale_date, (byDate.get(row.sale_date) ?? 0) + Number(row.total_amount));
   }
-
-  const year = from.slice(0, 4);
-  const startMonth = Number(from.slice(5, 7));
-  const endMonth = Number(to.slice(5, 7));
-  return Array.from({ length: endMonth - startMonth + 1 }, (_, index) => {
-    const month = startMonth + index;
-    const ym = `${year}-${String(month).padStart(2, "0")}`;
-    return { label: MONTH_SHORT[month - 1], amount: byMonth.get(ym) ?? 0 };
-  });
+  return eachDate(from, to).map((date) => ({
+    label: String(Number(date.slice(8, 10))),
+    amount: byDate.get(date) ?? 0,
+  }));
 }
 
 /**
  * Total sales and a chart series for the dashboard's Sales overview panel,
- * calendar-aligned ("This month"/"This year") rather than the fixed 30-day
- * window getDashboardData uses elsewhere on the page -- a separate, cheap
- * query rather than widening that already-large fetch for one panel.
+ * calendar-aligned to "This month" rather than the fixed 30-day window
+ * getDashboardData uses elsewhere on the page -- a separate, cheap query
+ * rather than widening that already-large fetch for one panel.
  */
-export async function getSalesOverview(
-  farmId: string,
-  range: SalesOverviewRange,
-  today: string
-): Promise<SalesOverview> {
+export async function getSalesOverview(farmId: string, today: string): Promise<SalesOverview> {
   const supabase = await createSupabaseServerClient();
-  const resolved = resolveReportRange(range, today);
+  const resolved = resolveReportRange("month", today);
 
-  // Day-count-matched, not the full previous period -- 4 days into this
+  // Day-count-matched, not the full previous month -- 4 days into this
   // month against all 31 days of last month would always look like a
-  // collapse. samePeriodLastMonth/sameRangeLastYear both clamp day-of-month
-  // the same way, so a month-to-date and a year-to-date comparison are each
-  // measuring the same number of days on both sides. A week is already a
-  // fixed length, so a plain 7-day shift back does the same job.
-  const comparisonRange =
-    range === "week"
-      ? { from: shiftDate(resolved.from, -7), to: shiftDate(resolved.to, -7) }
-      : range === "month"
-        ? samePeriodLastMonth(resolved.from, resolved.to)
-        : sameRangeLastYear(resolved.from, resolved.to);
-  const deltaLabel =
-    range === "week" ? "vs last week" : range === "month" ? "vs last month" : "vs last year";
+  // collapse. samePeriodLastMonth clamps day-of-month, so a month-to-date
+  // comparison measures the same number of days on both sides.
+  const comparisonRange = samePeriodLastMonth(resolved.from, resolved.to);
+  const deltaLabel = "vs last month";
 
   const [current, previous] = await Promise.all([
     supabase
@@ -127,7 +89,7 @@ export async function getSalesOverview(
 
   return {
     total,
-    series: buildSeries(rows, range, resolved.from, resolved.to),
+    series: buildSeries(rows, resolved.from, resolved.to),
     rangeLabel: resolved.label,
     deltaPercent: previous.error ? null : percentChange(total, previousTotal),
     deltaLabel,

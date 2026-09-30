@@ -44,7 +44,7 @@ export default function DocsPage() {
       <PublicHeader />
 
       <main id="main" className="flex-1">
-        <PageShell className="py-10 lg:py-14">
+        <PageShell className="max-w-5xl py-10 lg:py-14">
           <PageHeader
             title="Documentation"
             description="A practical guide to running your farm in LayerFlow — from your first flock to your first report."

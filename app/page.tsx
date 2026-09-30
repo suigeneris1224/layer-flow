@@ -212,7 +212,7 @@ export default function LandingPage() {
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 to-background" aria-hidden />
 
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 lg:grid-cols-2 lg:items-center lg:py-20">
+          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-12 lg:grid-cols-2 lg:items-center lg:py-20">
             <div>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">
                 Poultry farm management, simplified
@@ -272,7 +272,7 @@ export default function LandingPage() {
         {/* Trust strip */}
         {/* ================================================================ */}
         <section className="border-y border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-6xl grid-cols-3 gap-4 px-4 py-8 text-center">
+          <div className="mx-auto grid w-full max-w-5xl grid-cols-3 gap-4 px-4 py-8 text-center">
             <div>
               <p className="text-2xl font-bold tabular">100%</p>
               <p className="text-xs text-muted-foreground sm:text-sm">Cloud-based</p>
@@ -291,7 +291,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* How it works */}
         {/* ================================================================ */}
-        <section id="how-it-works" className="mx-auto w-full max-w-6xl px-4 py-14">
+        <section id="how-it-works" className="mx-auto w-full max-w-5xl px-4 py-14">
           <Reveal>
             <h2 className="text-2xl font-bold tracking-tight">How it works</h2>
             <p className="mt-1 text-muted-foreground">Four numbers, in the order they matter.</p>
@@ -327,7 +327,7 @@ export default function LandingPage() {
         {/* Problem */}
         {/* ================================================================ */}
         <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-14 lg:grid-cols-2 lg:items-center">
+          <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-14 lg:grid-cols-2 lg:items-center">
             <Reveal>
               <svg viewBox="0 0 240 200" className="mx-auto w-full max-w-xs text-primary" aria-hidden>
                 <rect x="20" y="30" width="90" height="60" rx="8" className="fill-surface stroke-border" strokeWidth="2" transform="rotate(-6 65 60)" />
@@ -358,7 +358,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* Solution / feature grid */}
         {/* ================================================================ */}
-        <section id="features" aria-label="Capabilities" className="mx-auto w-full max-w-6xl px-4 py-14">
+        <section id="features" aria-label="Capabilities" className="mx-auto w-full max-w-5xl px-4 py-14">
           <Reveal>
             <h2 className="text-2xl font-bold tracking-tight">Everything your layer farm needs.</h2>
             <p className="mt-1 text-muted-foreground">
@@ -383,7 +383,7 @@ export default function LandingPage() {
         {/* Showcase A: production entry */}
         {/* ================================================================ */}
         <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-14 lg:grid-cols-2 lg:items-center">
+          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-14 lg:grid-cols-2 lg:items-center">
             <Reveal>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">
                 Daily production
@@ -431,7 +431,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* Showcase B: profitability */}
         {/* ================================================================ */}
-        <section className="mx-auto w-full max-w-6xl px-4 py-14">
+        <section className="mx-auto w-full max-w-5xl px-4 py-14">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <Reveal className="lg:order-2">
               <p className="text-sm font-medium uppercase tracking-widest text-primary">
@@ -473,7 +473,7 @@ export default function LandingPage() {
         {/* Showcase C: flocks */}
         {/* ================================================================ */}
         <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-14 lg:grid-cols-2 lg:items-center">
+          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-14 lg:grid-cols-2 lg:items-center">
             <Reveal>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">Flocks</p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
@@ -513,7 +513,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* Offline */}
         {/* ================================================================ */}
-        <section className="mx-auto w-full max-w-6xl px-4 py-14">
+        <section className="mx-auto w-full max-w-5xl px-4 py-14">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <Reveal>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">
@@ -558,7 +558,7 @@ export default function LandingPage() {
         {/* Alerts & insights */}
         {/* ================================================================ */}
         <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto w-full max-w-6xl px-4 py-14">
+          <div className="mx-auto w-full max-w-5xl px-4 py-14">
             <Reveal>
               <div className="text-center">
                 <h2 className="text-2xl font-bold tracking-tight">Know when something changes.</h2>
@@ -589,7 +589,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* Pricing */}
         {/* ================================================================ */}
-        <section aria-label="Pricing" className="mx-auto w-full max-w-6xl px-4 py-14">
+        <section aria-label="Pricing" className="mx-auto w-full max-w-5xl px-4 py-14">
           <Reveal>
             <div className="text-center">
               <h2 className="text-2xl font-bold tracking-tight">Start simple. Grow with your farm.</h2>
@@ -626,7 +626,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* Final CTA */}
         {/* ================================================================ */}
-        <section className="mx-auto w-full max-w-6xl px-4 py-16">
+        <section className="mx-auto w-full max-w-5xl px-4 py-16">
           <Reveal>
             <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-primary/5 px-6 py-12 text-center">
               <h2 className="text-2xl font-bold tracking-tight lg:text-3xl">

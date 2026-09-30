@@ -169,6 +169,16 @@ export function weekdayShort(date: string): string {
   return WEEKDAY_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay()];
 }
 
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** Short month name for a YYYY-MM-DD (or YYYY-MM) date, e.g. "Sep". */
+export function monthShort(date: string): string {
+  return MONTH_LABELS[Number(date.slice(5, 7)) - 1];
+}
+
 /**
  * "Sep 7 - 13, 2026" for a range within one month, expanding to repeat the
  * month and/or year on the end date once the range crosses either boundary.

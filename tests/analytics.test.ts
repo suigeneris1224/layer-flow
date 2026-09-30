@@ -14,7 +14,7 @@ describe("buildLayingRateSeries", () => {
       productionRow("2026-09-07", 60, 100), // last Monday
     ];
 
-    const series = buildLayingRateSeries(rows, range);
+    const series = buildLayingRateSeries(rows, range, undefined, "2026-09-20");
 
     expect(series[0].day).toBe("Mon");
     expect(series[0].layingRate).toBe(80);
@@ -30,11 +30,24 @@ describe("buildLayingRateSeries", () => {
       productionRow("2026-08-01", 70, 100),
     ];
 
-    const series = buildLayingRateSeries(rows, range);
+    const series = buildLayingRateSeries(rows, range, undefined, "2026-09-30");
 
-    const first = series.find((point) => point.day === "09-01");
+    // Bare day number, not "MM-DD" -- see buildLayingRateSeries.
+    const first = series.find((point) => point.day === "1");
     expect(first?.layingRate).toBe(90);
     expect(first?.previous).toBe(70);
+  });
+
+  it("stops the line at today instead of dropping to 0 for future days", () => {
+    const range = resolveReportRange("month", "2026-09-15");
+    const rows = [productionRow("2026-09-01", 90, 100)];
+
+    const series = buildLayingRateSeries(rows, range, undefined, "2026-09-10");
+
+    const beforeToday = series.find((point) => point.day === "1");
+    const afterToday = series.find((point) => point.day === "15");
+    expect(beforeToday?.layingRate).toBe(90);
+    expect(afterToday?.layingRate).toBeNull();
   });
 
   it("compares a rolling 30-day range against the 30 days right before it", () => {
@@ -44,10 +57,34 @@ describe("buildLayingRateSeries", () => {
       productionRow("2026-07-18", 40, 100), // exactly 30 days before range.from
     ];
 
-    const series = buildLayingRateSeries(rows, range);
+    const series = buildLayingRateSeries(rows, range, undefined, "2026-09-15");
 
     expect(series[0].layingRate).toBe(50);
     expect(series[0].previous).toBe(40);
+  });
+
+  it("aggregates a year into one point per elapsed month, compared to the same month last year", () => {
+    const range = resolveReportRange("year", "2026-09-15"); // Jan 1 .. Sep 15, 2026
+    const rows = [
+      productionRow("2026-01-05", 60, 100), // January, this year
+      productionRow("2026-01-20", 40, 100), // January, this year
+      productionRow("2025-01-10", 50, 100), // January, last year
+      productionRow("2026-02-01", 90, 100), // February, this year
+    ];
+
+    const series = buildLayingRateSeries(rows, range, undefined, "2026-09-15");
+
+    // One point per elapsed month (Jan..Sep), not one per day.
+    expect(series).toHaveLength(9);
+    expect(series.map((point) => point.day).slice(0, 2)).toEqual(["Jan", "Feb"]);
+
+    const jan = series[0];
+    expect(jan.layingRate).toBe(50); // (60+40) eggs / (100+100) hens
+    expect(jan.previous).toBe(50); // last January: 50 eggs / 100 hens
+
+    const feb = series[1];
+    expect(feb.layingRate).toBe(90);
+    expect(feb.previous).toBe(0); // nothing recorded last February
   });
 });
 

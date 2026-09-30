@@ -14,11 +14,12 @@ import {
   flockAgeWeeks,
   roundPercent,
 } from "@/lib/domain/calculations";
-import { farmToday, weekdayShort } from "@/lib/format";
+import { farmToday, monthShort, weekdayShort } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 import {
   comparisonWindow,
   eachDate,
+  shiftYear,
   type ComparisonWindow,
   type ResolvedRange,
 } from "@/lib/domain/reports";
@@ -33,7 +34,8 @@ import {
 
 export interface LayingRatePoint {
   day: string;
-  layingRate: number;
+  /** `null` for days after today, so the line stops instead of dropping to 0 (see buildLayingRateSeries). */
+  layingRate: number | null;
   /** Same date one comparison period back (see lib/domain/reports.ts's comparisonWindow). 0 when there's no data that far back. */
   previous: number;
 }
@@ -196,7 +198,7 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
   const totalHensDays = sum(currentRangeRows, (row) => row.hens_present);
   const totalFeedKg = sum(feedRows, (row) => Number(row.quantity_kg));
 
-  const layingRateSeries = buildLayingRateSeries(productionRows, range, comparison);
+  const layingRateSeries = buildLayingRateSeries(productionRows, range, comparison, today);
   const sizeRows = sizes.data ?? [];
 
   return {
@@ -226,10 +228,23 @@ export const getAnalyticsData = cache(async function getAnalyticsData(
   };
 });
 
+/**
+ * Laying rate per point, over the resolved range, against the same point one
+ * comparison period back.
+ *
+ * Point granularity and label follow the same convention as the dashboard's
+ * Sales overview chart (lib/data/sales-overview.ts's buildSeries), which
+ * solved the same "too many wide labels" problem this chart used to have:
+ * one point per day for Week/Month (short enough ranges that a day is
+ * readable), one point per *month* for Year -- 365 raw "MM-DD"-labeled
+ * points crowded together, where a season-scale trend doesn't need day
+ * granularity anyway.
+ */
 export function buildLayingRateSeries(
   rows: readonly { production_date: string; eggs_collected: number; hens_present: number }[],
   range: ResolvedRange,
-  comparison: ComparisonWindow = comparisonWindow(range)
+  comparison: ComparisonWindow = comparisonWindow(range),
+  today: string = farmToday()
 ): LayingRatePoint[] {
   const byDate = new Map<string, { eggs: number; hens: number }>();
   for (const row of rows) {
@@ -242,11 +257,59 @@ export function buildLayingRateSeries(
   const rate = (entry: { eggs: number; hens: number } | undefined) =>
     entry ? layingRate(entry.eggs, entry.hens) : 0;
 
+  if (range.value === "year" || range.value.startsWith("y:")) {
+    return buildMonthlyLayingRateSeries(byDate, range);
+  }
+
   return eachDate(range.from, range.to).map((date) => ({
-    day: range.value === "week" ? weekdayShort(date) : date.slice(5),
-    layingRate: rate(byDate.get(date)),
+    // Bare day number for Month (e.g. "15"), not "MM-DD" -- same reasoning
+    // as buildSeries' month branch: much narrower labels at the same point
+    // count. Week keeps its weekday label; it's only ever 7 points wide.
+    day: range.value === "week" ? weekdayShort(date) : String(Number(date.slice(8, 10))),
+    // Days after today are null (see LayingRatePoint) -- Year never reaches
+    // here (resolveReportRange always clamps it to elapsed months), so this
+    // only matters for Week/Month/the rolling 30-/90-day ranges.
+    layingRate: date > today ? null : rate(byDate.get(date)),
     previous: rate(byDate.get(comparison.shift(date))),
   }));
+}
+
+/**
+ * One point per calendar month in `range` -- the Year branch of
+ * buildLayingRateSeries. `range.to` is always clamped to an already-elapsed
+ * month (resolveReportRange), so every bucket here is a real, fully- or
+ * partially-recorded month, never a future one.
+ */
+function buildMonthlyLayingRateSeries(
+  byDate: Map<string, { eggs: number; hens: number }>,
+  range: ResolvedRange
+): LayingRatePoint[] {
+  const byMonth = new Map<string, { eggs: number; hens: number }>();
+  for (const [date, entry] of byDate) {
+    const ym = date.slice(0, 7);
+    const bucket = byMonth.get(ym) ?? { eggs: 0, hens: 0 };
+    bucket.eggs += entry.eggs;
+    bucket.hens += entry.hens;
+    byMonth.set(ym, bucket);
+  }
+
+  const rate = (entry: { eggs: number; hens: number } | undefined) =>
+    entry ? layingRate(entry.eggs, entry.hens) : 0;
+
+  const startMonth = Number(range.from.slice(5, 7));
+  const endMonth = Number(range.to.slice(5, 7));
+
+  return Array.from({ length: endMonth - startMonth + 1 }, (_, index) => {
+    const month = startMonth + index;
+    const ym = `${range.from.slice(0, 4)}-${String(month).padStart(2, "0")}`;
+    const previousYm = shiftYear(`${ym}-01`).slice(0, 7);
+
+    return {
+      day: monthShort(`${ym}-01`),
+      layingRate: rate(byMonth.get(ym)),
+      previous: rate(byMonth.get(previousYm)),
+    };
+  });
 }
 
 /**

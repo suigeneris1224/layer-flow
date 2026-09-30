@@ -44,7 +44,7 @@ export default async function DashboardPage({
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
   const { salesRange: salesRangeParam } = await searchParams;
   const salesRange: SalesOverviewRange =
-    salesRangeParam === "year" ? "year" : salesRangeParam === "month" ? "month" : "week";
+    salesRangeParam === "year" ? "year" : salesRangeParam === "week" ? "week" : "month";
 
   const [data, farms, subscriptionPeriod] = await Promise.all([
     getDashboardData(context),

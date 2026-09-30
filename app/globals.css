@@ -193,6 +193,24 @@
     --muted-foreground: var(--footer-muted-foreground);
     --border: var(--footer-border);
   }
+
+  /* Lets a component switch layout by its own rendered width instead of the
+     viewport's -- needed wherever a responsive grid can put a fixed-size
+     viewport breakpoint (e.g. sm:/lg:) in a narrow column at exactly that
+     breakpoint. Tailwind here is v3, with no container-query variants, but
+     native CSS container queries need no plugin. See egg-size-donut.tsx. */
+  .cq-panel {
+    container-type: inline-size;
+  }
+
+  /* Row layout only once the donut's own container is wide enough for a
+     150px donut plus a readable legend column (~360px) -- see cq-panel
+     above and egg-size-donut.tsx. */
+  @container (min-width: 360px) {
+    .donut-row {
+      flex-direction: row;
+    }
+  }
 }
 
 /* Mobile-only route-change feel (below `lg`, the same cutoff MobileTabBar

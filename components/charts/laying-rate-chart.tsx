@@ -19,7 +19,7 @@ export function LayingRateChart({
   currentLabel: string;
   previousLabel: string;
 }) {
-  const hasData = data.some((point) => point.layingRate > 0);
+  const hasData = data.some((point) => (point.layingRate ?? 0) > 0);
 
   if (!hasData) {
     return (
@@ -70,8 +70,9 @@ export function LayingRateChart({
                 background: "hsl(var(--surface))",
                 fontSize: 12,
               }}
-              formatter={(value: number, name) => [
-                formatPercent(value),
+              formatter={(value, name) => [
+                // Days after today are null (see buildLayingRateSeries).
+                typeof value === "number" ? formatPercent(value) : "—",
                 name === "previous" ? previousLabel : currentLabel,
               ]}
             />

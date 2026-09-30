@@ -155,7 +155,10 @@ export function ManualQrPayment({
             width={192}
             height={192}
             unoptimized
-            className="size-48 shrink-0 rounded-md border border-border bg-white object-contain"
+            // Fills the card on mobile (qr.png is now a tight square crop,
+            // no baked-in whitespace) and drops back to a compact fixed
+            // size once the panel switches to the side-by-side layout.
+            className="mx-auto aspect-square w-full max-w-72 shrink-0 rounded-md border border-border bg-white object-contain sm:mx-0 sm:size-48 sm:max-w-none"
           />
           <dl className="flex w-full flex-col gap-2 text-sm sm:flex-1">
             <div>

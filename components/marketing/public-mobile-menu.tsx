@@ -75,18 +75,20 @@ export function PublicMobileMenu() {
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
-            className={cn(
-              "fixed inset-0 z-[50] flex sm:hidden transition-opacity duration-200",
-              visible ? "opacity-100" : "opacity-0"
-            )}
+            className="fixed inset-0 z-[50] sm:hidden"
             onClick={hide}
           >
-            <div className="absolute inset-0 bg-foreground/40" />
+            <div
+              className={cn(
+                "absolute inset-0 bg-foreground/40 transition-opacity duration-200",
+                visible ? "opacity-100" : "opacity-0"
+              )}
+            />
 
             <div
               className={cn(
-                "relative flex h-dvh w-[min(85vw,300px)] flex-col bg-surface shadow-pop transition-transform duration-[320ms] ease-sheet",
-                visible ? "translate-x-0" : "-translate-x-full"
+                "absolute inset-x-0 top-0 flex max-h-[85vh] w-full flex-col overflow-y-auto bg-surface shadow-pop transition-transform duration-[320ms] ease-sheet",
+                visible ? "translate-y-0" : "-translate-y-full"
               )}
               onClick={(event) => event.stopPropagation()}
             >

@@ -76,6 +76,10 @@ export function ProductionChart({ data }: { data: SeriesPoint[] }) {
             stroke="hsl(var(--chart-1))"
             strokeWidth={2.5}
             fill="url(#thisWeekFill)"
+            // Recharts skips the dot for a null point, so this only marks
+            // recorded days -- see buildProductionSeries' future-day null.
+            dot={{ r: 3, strokeWidth: 0, fill: "hsl(var(--chart-1))" }}
+            activeDot={{ r: 5 }}
           />
         </AreaChart>
       </ResponsiveContainer>

@@ -193,6 +193,7 @@ export default async function DashboardPage() {
             </h2>
           }
           className="lg:col-span-6 xl:col-span-5"
+          action={salesOverview && <span className="text-xs text-muted-foreground">This month</span>}
         >
           {salesOverview ? (
             <>

@@ -6,10 +6,12 @@ import {
   ClipboardList,
   Egg,
   HeartCrack,
+  Pencil,
   Syringe,
   Wheat,
 } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
+import { canManageFlock } from "@/lib/auth/permissions";
 import { getFlock, getFlockSummary } from "@/lib/data/flocks";
 import { getProductionHistory } from "@/lib/data/production";
 import {
@@ -98,6 +100,8 @@ export default async function FlockDetailPage({
   const flock = await getFlock(context.farmId, id);
   if (!flock) notFound();
 
+  const canManage = canManageFlock(context);
+
   const [summary, production, mortality, feed, vaccinations] = await Promise.all([
     getFlockSummary(context.farmId, id),
     getProductionHistory(context.farmId, { flockId: id, limit: RECENT_LIMIT }),
@@ -117,13 +121,24 @@ export default async function FlockDetailPage({
         title={flock.name}
         description={`${flock.breed} · ${flock.houseName} · ${STATUS_LABEL[flock.status]}`}
         action={
-          <Link
-            href={`/production?flock=${flock.id}` as Route}
-            className={cn(buttonVariants({ variant: "outline", size: "md" }))}
-          >
-            <ClipboardList className="size-4" aria-hidden />
-            Full history
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {canManage && (
+              <Link
+                href={`/flocks?flock=${flock.id}#flock-form` as Route}
+                className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+              >
+                <Pencil className="size-4" aria-hidden />
+                Edit
+              </Link>
+            )}
+            <Link
+              href={`/production?flock=${flock.id}` as Route}
+              className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+            >
+              <ClipboardList className="size-4" aria-hidden />
+              Full history
+            </Link>
+          </div>
         }
       />
 

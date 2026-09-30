@@ -32,7 +32,10 @@ export async function saveAlertThresholdsAction(input: unknown): Promise<ActionR
 
   const parsed = alertThresholdsSchema.safeParse(input);
   if (!parsed.success) {
-    return failure("Please check the form below.", toFieldErrors(parsed.error));
+    return failure(
+      "Fix the highlighted field below — any others can stay blank to use their defaults.",
+      toFieldErrors(parsed.error)
+    );
   }
 
   try {

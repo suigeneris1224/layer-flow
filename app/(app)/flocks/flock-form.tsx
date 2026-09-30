@@ -47,16 +47,21 @@ export function FlockForm({
   houses,
   canAdd,
   defaultBreed,
+  initialSelectedId,
 }: {
   flocks: FlockOption[];
   houses: HouseOption[];
   canAdd: boolean;
   /** Farm-level default (Settings → Farm → Production defaults), pre-fills a new flock only. */
   defaultBreed: string | null;
+  /** Deep-linked from the flock list/detail page's "Edit" link (?flock=). */
+  initialSelectedId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<string>(canAdd ? NEW : (flocks[0]?.id ?? NEW));
+  const [selected, setSelected] = useState<string>(
+    initialSelectedId ?? (canAdd ? NEW : (flocks[0]?.id ?? NEW))
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<string | null>(null);

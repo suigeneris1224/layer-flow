@@ -31,13 +31,22 @@ const STATUS_TONE: Record<string, string> = {
   CLOSED: "text-muted-foreground",
 };
 
-export default async function FlocksPage() {
+export default async function FlocksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ flock?: string }>;
+}) {
   const context = await requireFarmContext();
   const [flocks, houseOptions, defaults] = await Promise.all([
     getFlocks(context.farmId),
     getHouseOptions(context.farmId),
     getFarmDefaults(context.farmId),
   ]);
+
+  const { flock: flockParam } = await searchParams;
+  const initialSelectedId = flocks.some((flock) => flock.id === flockParam)
+    ? flockParam
+    : undefined;
 
   const canManage = canManageFlock(context);
   const entitlement = { plan: context.plan, status: context.subscriptionStatus };
@@ -75,6 +84,7 @@ export default async function FlocksPage() {
                   <th scope="col" className="py-2 text-right font-medium">Hens</th>
                   <th scope="col" className="py-2 text-left font-medium">Placed</th>
                   <th scope="col" className="py-2 text-right font-medium">Status</th>
+                  {canManage && <th scope="col" className="py-2 text-right font-medium" />}
                 </tr>
               </thead>
               <tbody>
@@ -105,6 +115,16 @@ export default async function FlocksPage() {
                     <td className={cn("py-2.5 text-right font-medium", STATUS_TONE[flock.status])}>
                       {STATUS_LABEL[flock.status]}
                     </td>
+                    {canManage && (
+                      <td className="py-2.5 text-right">
+                        <Link
+                          href={`/flocks?flock=${flock.id}#flock-form` as Route}
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Edit
+                        </Link>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -123,12 +143,17 @@ export default async function FlocksPage() {
         houseOptions.length === 0 ? (
           <StatusNote tone="info">Add a house before you can add a flock.</StatusNote>
         ) : (
-          <FlockForm
-            flocks={flocks}
-            houses={houseOptions}
-            canAdd={canAdd}
-            defaultBreed={defaults.flockBreed}
-          />
+          // id target for the flock list/detail page's "Edit" links (?flock=<id>#flock-form) --
+          // a plain anchor, no JS needed for the scroll.
+          <div id="flock-form">
+            <FlockForm
+              flocks={flocks}
+              houses={houseOptions}
+              canAdd={canAdd}
+              defaultBreed={defaults.flockBreed}
+              initialSelectedId={initialSelectedId}
+            />
+          </div>
         )
       ) : (
         <StatusNote tone="info">

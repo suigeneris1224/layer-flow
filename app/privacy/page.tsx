@@ -154,6 +154,7 @@ export default function PrivacyPage() {
                   maintenance announcements, or data-driven poultry health insights via SMS, push
                   notifications, or email.
                 </li>
+                {/*
                 <li>
                   <span className="font-medium text-foreground">
                     Paid-Plan Waitlist:
@@ -164,6 +165,7 @@ export default function PrivacyPage() {
                   call) and to understand which plans farmers need. You can withdraw this consent
                   at any time by replying to one of our emails or contacting support.
                 </li>
+                */}
                 <li>
                   <span className="font-medium text-foreground">
                     Technical Support &amp; Troubleshooting:

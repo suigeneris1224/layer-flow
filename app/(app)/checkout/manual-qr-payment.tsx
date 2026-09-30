@@ -152,13 +152,17 @@ export function ManualQrPayment({
           <Image
             src={method.qrImageSrc}
             alt={`${method.label} QR code`}
-            width={192}
-            height={192}
+            // Matches qr.png's real 647:1015 crop (QR plus the masked
+            // Mobile No./User ID lines below it) -- sized by width only
+            // below, so the browser needs the real ratio to compute the
+            // right height instead of pillar/letterboxing it again.
+            width={324}
+            height={508}
             unoptimized
-            // Fills the card on mobile (qr.png is now a tight square crop,
-            // no baked-in whitespace) and drops back to a compact fixed
-            // size once the panel switches to the side-by-side layout.
-            className="mx-auto aspect-square w-full max-w-72 shrink-0 rounded-md border border-border bg-white object-contain sm:mx-0 sm:size-48 sm:max-w-none"
+            // Fills the card on mobile, centered; drops to a narrower fixed
+            // width once the panel switches to the side-by-side layout,
+            // with height following the image's own aspect ratio.
+            className="mx-auto w-full max-w-72 shrink-0 rounded-md border border-border bg-white object-contain sm:mx-0 sm:w-40 sm:max-w-none"
           />
           <dl className="flex w-full flex-col gap-2 text-sm sm:flex-1">
             <div>

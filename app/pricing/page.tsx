@@ -41,7 +41,13 @@ const FEATURE_ROWS: Feature[] = [
 
 export default function PricingPage() {
   return (
-    <div className="flex min-h-dvh flex-col">
+    // min-w-0: without it, a flex item's default min-width is auto, not 0 --
+    // Safari in particular can let the comparison table below (wrapped in
+    // .scroll-x-flush specifically so IT scrolls instead of the page) bleed
+    // its min-content width up through <main> and widen the whole page.
+    // app/(app)/layout.tsx's shared shell already guards against this same
+    // footgun the same way; this page builds its own wrapper inline.
+    <div className="flex min-h-dvh min-w-0 flex-col">
       <PublicHeader />
 
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16">

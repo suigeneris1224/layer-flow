@@ -77,7 +77,14 @@ export const serverEnv = {
     return process.env.EMAIL_PROVIDER ?? "mock";
   },
   get emailFrom(): string {
-    return process.env.EMAIL_FROM ?? "LayerFlow <support@getlayerflow.com>";
+    return process.env.EMAIL_FROM ?? "LayerFlow <noreply@getlayerflow.com>";
+  },
+  /**
+   * Where a farmer's reply goes. The sender is a noreply address, so without
+   * this a reply to a receipt or reminder would reach nobody.
+   */
+  get emailReplyTo(): string {
+    return process.env.EMAIL_REPLY_TO ?? "support@getlayerflow.com";
   },
   get brevoApiKey(): string {
     const key = process.env.BREVO_API_KEY;

@@ -26,6 +26,10 @@
   "vars": {
     "ADMIN_EMAILS": "marlonsinadjan89@gmail.com",
     "EMAIL_FROM": "LayerFlow <marlonsinadjan89@gmail.com>",
+    // Switch EMAIL_FROM to "LayerFlow <noreply@getlayerflow.com>" once the
+    // domain is verified in Brevo (docs/deployment.md, "Domain and HTTPS") --
+    // until then Brevo rejects sends from it.
+    "EMAIL_REPLY_TO": "support@getlayerflow.com",
     "EMAIL_PROVIDER": "brevo",
     // "validation" = no payments: upgrades go to the waitlist + free trial.
     // Switch to "live" once DTI/BIR registration and PayMongo live are done
@@ -36,7 +40,7 @@
     // not just baked into the build.
     "NEXT_PUBLIC_SUPABASE_URL": "https://dvsvanhbpbbmtqwaulyz.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_YPsnO1h2cnZ-zuVgPe2atw_eqj_ttA3",
-    "NEXT_PUBLIC_APP_URL": "https://layerflow.marlonsinadjan89.workers.dev"
+    "NEXT_PUBLIC_APP_URL": "https://getlayerflow.com"
   },
 
   "observability": {

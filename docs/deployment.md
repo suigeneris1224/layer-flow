@@ -84,6 +84,7 @@ Cloudflare splits environment variables into two buckets, both needed:
 | `PAYMONGO_SECRET_KEY` | Secret | `sk_test_...` while the business account isn't yet approved; `sk_live_...` after — no code change needed to switch |
 | `PAYMONGO_WEBHOOK_SECRET` | Secret | From PayMongo Dashboard → Developers → Webhooks. Verifies `/api/webhooks/paymongo` — see the callout below |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | Runtime var | `EMAIL_PROVIDER=mock` logs instead of sending (local/dev/test); set to `brevo` in production |
+| `EMAIL_REPLY_TO` | Runtime var | Where farmers' replies go, since `EMAIL_FROM` is a noreply address. Default `support@getlayerflow.com` |
 | `BREVO_API_KEY` | Secret | Required when `EMAIL_PROVIDER=brevo`. Free-tier Brevo caps at 300 emails/day |
 | `CRON_SECRET` | Secret | The scheduled Worker (`workers/cron-worker.ts`) sends it as `Authorization: Bearer <value>` — same value the route already expected under Vercel Cron |
 | `BREVO_WEBHOOK_SECRET` | Secret | Any random string. Brevo's delivery webhook (`/api/webhooks/brevo`) must send it back as `?secret=<value>`, or the route rejects the request — see the callout below |
@@ -149,6 +150,22 @@ or the "Trigger Cron" button on the Worker's dashboard page once deployed.
 Add a custom domain to the Worker from its Cloudflare dashboard page (**Settings → Domains &
 Routes**) — HTTPS and renewal are automatic. Update `NEXT_PUBLIC_APP_URL` and the Supabase Site
 URL to match, or auth redirects will break.
+
+For **getlayerflow.com** (the bare domain is canonical):
+
+1. Add both `getlayerflow.com` and `www.getlayerflow.com` as custom domains, then a zone
+   **Redirect Rule** ("Redirect from WWW to root") so `www` 301s to the bare domain.
+2. `NEXT_PUBLIC_APP_URL=https://getlayerflow.com` in **both** `wrangler.jsonc` (runtime) and
+   `.env.production.local` (build) — it is baked into the bundle at `next build`, so changing it
+   means a rebuild, not just a redeploy.
+3. Supabase → Authentication → URL Configuration: Site URL `https://getlayerflow.com`, plus the
+   two `/auth/callback` redirect URLs from step 3 on the new domain.
+4. Brevo → Senders, Domains & Dedicated IPs → add `getlayerflow.com`, put its DKIM/DMARC records in
+   Cloudflare DNS (DNS only), verify, then add the sender `noreply@getlayerflow.com`. Only then set
+   `EMAIL_FROM="LayerFlow <noreply@getlayerflow.com>"` — Brevo rejects an unverified sender.
+5. Move the Brevo and PayMongo webhook URLs (step 5's callouts) to the new domain.
+6. For Meta ads: Business Settings → Brand safety → Domains → verify `getlayerflow.com` with the
+   DNS TXT record Meta gives you.
 
 Since the app is already hosted on Cloudflare, domain purchase and DNS both live in the same
 account and zone as everything below — there's no separate registrar/DNS host to keep in sync

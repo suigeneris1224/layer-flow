@@ -72,6 +72,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       },
       body: JSON.stringify({
         sender: parseFromHeader(serverEnv.emailFrom),
+        replyTo: { email: serverEnv.emailReplyTo },
         to: [input.to],
         subject: input.subject,
         htmlContent: input.htmlContent,

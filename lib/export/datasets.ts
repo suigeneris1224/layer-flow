@@ -15,15 +15,17 @@ import { flockSizeLabel } from "@/lib/domain/waitlist";
  * them. Nothing here reaches a database, so the column contract is testable
  * without one.
  *
- * A null customer or a null flock is an empty cell, never "Walk-in" or "None".
- * A data file must not invent an entity name a bookkeeper might go looking for
- * in their own ledger.
+ * A null flock is an empty cell -- the UI omits it too (see expenses/page.tsx),
+ * so there's no established name to carry through. A null sale customer is
+ * the one exception: the app's own UI always calls it "Walk-in" (sales/page.tsx,
+ * sales/[id]/payment/page.tsx), so the export uses that same term rather than
+ * a blank cell a bookkeeper can't tell apart from missing data.
  */
 
 export interface SaleRow {
   saleDate: string;
   saleId: string;
-  customer: string | null;
+  customer: string;
   /** 1-based within the sale; null when the sale has no line items at all. */
   lineNo: number | null;
   sizeName: string | null;
@@ -87,7 +89,7 @@ export function salesToRows(sales: readonly SaleEntry[], currency: string): Sale
     const head = {
       saleDate: sale.saleDate,
       saleId: sale.id,
-      customer: sale.customerName,
+      customer: sale.customerName ?? "Walk-in",
       saleTotal: sale.totalAmount,
       amountPaid: sale.amountPaid,
       outstanding: sale.outstanding,
@@ -173,7 +175,7 @@ export interface PaymentHistoryCsvRow {
   submittedDate: string;
   paymentId: string;
   source: string;
-  payerName: string | null;
+  payerName: string;
   farm: string | null;
   ownerEmail: string | null;
   plan: string;
@@ -220,7 +222,7 @@ export function paymentHistoryToRows(
     submittedDate: payment.createdAt,
     paymentId: payment.id,
     source: SOURCE_LABELS[payment.source],
-    payerName: payment.payerName,
+    payerName: payment.payerName ?? payment.ownerEmail ?? "—",
     farm: payment.farmName,
     ownerEmail: payment.ownerEmail,
     plan: PLANS[payment.plan].name,

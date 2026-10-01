@@ -3,11 +3,13 @@ import {
   EXPENSE_COLUMNS,
   SALES_COLUMNS,
   expensesToRows,
+  paymentHistoryToRows,
   salesToRows,
 } from "@/lib/export/datasets";
 import { toCsv } from "@/lib/export/csv";
 import type { SaleEntry } from "@/lib/data/sales";
 import type { ExpenseEntry } from "@/lib/data/expenses";
+import type { PaymentHistoryRow } from "@/lib/domain/payment-history";
 
 function sale(overrides: Partial<SaleEntry> = {}): SaleEntry {
   return {
@@ -74,10 +76,10 @@ describe("salesToRows", () => {
     expect(rows[0].sizeName).toBeNull();
   });
 
-  it("leaves a walk-in customer empty rather than naming one", () => {
+  it("names a walk-in customer the same way the app's own UI does", () => {
     const rows = salesToRows([sale({ customerName: null })], "PHP");
-    expect(rows[0].customer).toBeNull();
-    expect(toCsv(rows, SALES_COLUMNS)).not.toContain("Walk-in");
+    expect(rows[0].customer).toBe("Walk-in");
+    expect(toCsv(rows, SALES_COLUMNS)).toContain("Walk-in");
   });
 
   it("writes money as a bare number a spreadsheet can add up", () => {
@@ -136,5 +138,41 @@ describe("expensesToRows", () => {
       "Amount",
       "Currency",
     ]);
+  });
+});
+
+function payment(overrides: Partial<PaymentHistoryRow> = {}): PaymentHistoryRow {
+  return {
+    id: "pay-1",
+    source: "manual",
+    createdAt: "2026-08-31T00:00:00Z",
+    payerName: "Maria Santos",
+    ownerEmail: "maria@example.com",
+    farmName: "Santos Farm",
+    plan: "STARTER",
+    billingPeriod: "MONTHLY",
+    amountCentavos: 50000,
+    referenceNumber: "REF-1",
+    paymentNote: null,
+    status: "APPROVED",
+    settledAt: "2026-08-31T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("paymentHistoryToRows", () => {
+  it("falls back to the owner's email when there's no payer name, same as the admin table", () => {
+    const rows = paymentHistoryToRows([payment({ payerName: null })]);
+    expect(rows[0].payerName).toBe("maria@example.com");
+  });
+
+  it("falls back to an em dash when neither is known", () => {
+    const rows = paymentHistoryToRows([payment({ payerName: null, ownerEmail: null })]);
+    expect(rows[0].payerName).toBe("—");
+  });
+
+  it("leaves an unattributed farm empty, matching the admin table omitting it too", () => {
+    const rows = paymentHistoryToRows([payment({ farmName: null })]);
+    expect(rows[0].farm).toBeNull();
   });
 });

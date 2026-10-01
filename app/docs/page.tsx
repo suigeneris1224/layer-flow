@@ -208,7 +208,7 @@ export default function DocsPage() {
                 <h2 className="text-lg font-semibold tracking-tight">
                   Dashboard, reports and analytics
                 </h2>
-                <div className="mt-4 grid gap-5 lg:grid-cols-2 lg:items-center">
+                <div className="mt-4 flex flex-col gap-5">
                   <div className="flex flex-col gap-3 text-sm text-muted-foreground">
                     <p>
                       The Dashboard gives you today at a glance — eggs, sales, costs, and estimated
@@ -218,6 +218,9 @@ export default function DocsPage() {
                       run more than one farm, so you can compare them side by side.
                     </p>
                   </div>
+                  {/* Full width, not a side-by-side column -- DashboardMockup's internal
+                      breakpoints assume more room than a half column here (sidebar nav +
+                      2-up split) leaves it; see how-it-works, which uses it the same way. */}
                   <DashboardMockup />
                 </div>
               </section>

@@ -25,7 +25,7 @@
   // `wrangler secret put`), never here. See docs/deployment.md.
   "vars": {
     "ADMIN_EMAILS": "marlonsinadjan89@gmail.com",
-    "EMAIL_FROM": "LayerFlow <marlonsinadjan89@gmail.com>",
+    "EMAIL_FROM": "LayerFlow <noreply@getlayerflow.com>",
     // Switch EMAIL_FROM to "LayerFlow <noreply@getlayerflow.com>" once the
     // domain is verified in Brevo (docs/deployment.md, "Domain and HTTPS") --
     // until then Brevo rejects sends from it.

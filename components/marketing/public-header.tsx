@@ -40,7 +40,13 @@ export function PublicHeader() {
   }, [open]);
 
   return (
-    <header className="w-full">
+    // pt-safe: without it, an installed/standalone PWA (appleWebApp.capable
+    // + viewportFit: "cover" in app/layout.tsx) renders this header under
+    // the iOS status bar instead of below it, so the wordmark collides with
+    // the time/battery icons. Already built for this in app/globals.css,
+    // just never wired up on the public side (the authenticated app's own
+    // topbar doesn't need it -- different header, out of scope here).
+    <header className="w-full pt-safe">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
         <Link href="/" className="shrink-0">
           <Brand />

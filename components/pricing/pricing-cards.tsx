@@ -35,6 +35,14 @@ export function PricingCards() {
           const plan = PLANS[id];
           const bullets = LIMIT_ROWS.filter((key) => plan.limits[key] !== 0).map((key) => {
             const value = plan.limits[key];
+            // describeLimit's history_days branch already returns a complete
+            // phrase ("30 days"/"Unlimited") -- appending the plural/singular
+            // label here too would double up the unit ("30 days days of
+            // history"). Every other key returns a bare count/"Unlimited",
+            // which does need the label appended.
+            if (key === "history_days") {
+              return value === null ? "Unlimited history" : `${value} days of history`;
+            }
             const label = value === 1 ? LIMIT_LABELS[key].singular : LIMIT_LABELS[key].plural;
             return `${describeLimit(key, value)} ${label}`;
           });

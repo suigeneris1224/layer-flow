@@ -11,6 +11,10 @@
   // node:crypto randomUUID() usage (app/(app)/team/actions.ts,
   // app/onboarding/actions.ts, app/(app)/farms/actions.ts).
   "compatibility_flags": ["nodejs_compat"],
+  // Production is served only at getlayerflow.com (custom domain, attached in
+  // the dashboard). Without this, every deploy re-enables the
+  // layerflow.<account>.workers.dev URL, since Wrangler defaults it to true.
+  "workers_dev": false,
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
@@ -25,10 +29,9 @@
   // `wrangler secret put`), never here. See docs/deployment.md.
   "vars": {
     "ADMIN_EMAILS": "marlonsinadjan89@gmail.com",
+    // Must be a sender verified in Brevo (getlayerflow.com's DKIM/DMARC) or
+    // Brevo rejects the send. Noreply, so replies go to EMAIL_REPLY_TO.
     "EMAIL_FROM": "LayerFlow <noreply@getlayerflow.com>",
-    // Switch EMAIL_FROM to "LayerFlow <noreply@getlayerflow.com>" once the
-    // domain is verified in Brevo (docs/deployment.md, "Domain and HTTPS") --
-    // until then Brevo rejects sends from it.
     "EMAIL_REPLY_TO": "support@getlayerflow.com",
     "EMAIL_PROVIDER": "brevo",
     // "validation" = no payments: upgrades go to the waitlist + free trial.

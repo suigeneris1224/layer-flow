@@ -182,7 +182,7 @@ const FAQ_ITEMS = [
   {
     question: "Does LayerFlow work offline?",
     answer:
-      "Yes, on the Starter plan and up. Recording keeps working through a weak signal, and syncs automatically once you're back online.",
+      "Yes, on the Starter plan and up — recording production, feed, and mortality keeps working with no signal. Your entry saves to your phone and syncs automatically once you're back online.",
   },
   {
     question: "Can multiple people use one farm?",
@@ -526,8 +526,8 @@ export default function LandingPage() {
                 No signal? Keep working.
               </h2>
               <p className="mt-3 max-w-md text-muted-foreground">
-                LayerFlow keeps critical farm records available even when your connection isn&apos;t
-                &mdash; record locally in the poultry house, and it syncs the moment you&apos;re back
+                Production, feed, and mortality keep recording even when your connection isn&apos;t
+                &mdash; saved locally in the poultry house, and synced the moment you&apos;re back
                 online.
               </p>
             </Reveal>

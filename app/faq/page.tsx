@@ -37,7 +37,7 @@ const GROUPS: FaqGroup[] = [
       {
         question: "Does LayerFlow work offline?",
         answer:
-          "Yes, on the Starter plan and up. Recording keeps working through a weak signal and syncs your records automatically once you're back online.",
+          "Yes, on the Starter plan and up — recording production, feed, and mortality keeps working with no signal. Your entry saves to your phone and syncs automatically once you're back online.",
       },
     ],
   },

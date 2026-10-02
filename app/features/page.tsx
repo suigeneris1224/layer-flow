@@ -146,7 +146,7 @@ const GROUPS = [
         icon: WifiOff,
         tint: "rose" as const,
         title: "Works offline",
-        copy: "Keep recording with no signal. LayerFlow syncs automatically once you're back in range.",
+        copy: "Keep logging production, feed, and mortality with no signal. LayerFlow syncs automatically once you're back in range.",
       },
       {
         icon: Download,

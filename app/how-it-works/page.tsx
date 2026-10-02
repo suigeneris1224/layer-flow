@@ -56,7 +56,7 @@ const BUILT_FOR = [
     icon: WifiOff,
     tint: "rose" as const,
     title: "Works without signal",
-    copy: "Recording works offline. LayerFlow syncs automatically once you're back in range, so a weak connection at the coop never costs you a day's numbers.",
+    copy: "Production, feed, and mortality keep recording offline. LayerFlow syncs automatically once you're back in range, so a weak connection at the coop never costs you a day's numbers.",
   },
   {
     icon: Users,

@@ -25,7 +25,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "./" },
   // The share image itself is app/opengraph-image.png (+ twitter-image.png),
   // picked up by file convention for every page.
-  openGraph: { siteName: "LayerFlow", locale: "en_PH", type: "website" },
+  // url "./" mirrors the canonical, so Facebook's debugger has nothing to infer.
+  openGraph: { siteName: "LayerFlow", locale: "en_PH", type: "website", url: "./" },
   twitter: { card: "summary_large_image" },
   title: {
     default: "LayerFlow — Know your flock. Know your numbers.",

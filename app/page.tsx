@@ -44,6 +44,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "LayerFlow",
     locale: "en_PH",
+    url: "/",
   },
   twitter: {
     card: "summary_large_image",

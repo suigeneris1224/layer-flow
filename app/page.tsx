@@ -214,7 +214,7 @@ export default function LandingPage() {
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 to-background" aria-hidden />
 
-          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-12 lg:grid-cols-2 lg:items-center lg:py-20">
+          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-12 lg:grid-cols-[2fr_3fr] lg:items-center lg:py-20">
             <div>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">
                 Poultry farm management, simplified

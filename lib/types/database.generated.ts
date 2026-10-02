@@ -874,6 +874,7 @@ export type Database = {
           id: string
           notes: string | null
           quantity_kg: number
+          recorded_by: string | null
           sack_price: number | null
           sack_size_kg: number | null
           total_cost: number
@@ -891,6 +892,7 @@ export type Database = {
           id?: string
           notes?: string | null
           quantity_kg: number
+          recorded_by?: string | null
           sack_price?: number | null
           sack_size_kg?: number | null
           total_cost?: number
@@ -908,6 +910,7 @@ export type Database = {
           id?: string
           notes?: string | null
           quantity_kg?: number
+          recorded_by?: string | null
           sack_price?: number | null
           sack_size_kg?: number | null
           total_cost?: number
@@ -1116,6 +1119,7 @@ export type Database = {
           quantity: number
           reason: string | null
           record_date: string
+          recorded_by: string | null
           updated_at: string
         }
         Insert: {
@@ -1129,6 +1133,7 @@ export type Database = {
           quantity: number
           reason?: string | null
           record_date: string
+          recorded_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -1142,6 +1147,7 @@ export type Database = {
           quantity?: number
           reason?: string | null
           record_date?: string
+          recorded_by?: string | null
           updated_at?: string
         }
         Relationships: [

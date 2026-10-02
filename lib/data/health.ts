@@ -30,6 +30,35 @@ function one<T>(value: T | T[] | null): T | null {
 
 type FlockJoin = { name: string } | { name: string }[] | null;
 
+/**
+ * `recorded_by` is a plain FK to `auth.users`, not to `profiles` directly,
+ * so Postgrest can't embed it in one relational select -- same reason
+ * lib/data/team.ts resolves profiles with a second query instead of a join.
+ */
+async function resolveRecordedByNames(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userIds: readonly (string | null)[]
+): Promise<Map<string, string>> {
+  const ids = [...new Set(userIds.filter((id): id is string => id !== null))];
+  if (ids.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", ids);
+
+  if (error) {
+    logger.error("recorded-by profile lookup failed", { reason: error.message });
+    return new Map();
+  }
+
+  return new Map(
+    ((data ?? []) as { id: string; full_name: string | null }[])
+      .filter((row) => row.full_name)
+      .map((row) => [row.id, row.full_name as string])
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Mortality
 // ---------------------------------------------------------------------------
@@ -42,6 +71,7 @@ export interface MortalityEntry {
   quantity: number;
   reason: string;
   notes: string;
+  recordedByName: string | null;
 }
 
 type MortalityJoin = {
@@ -51,11 +81,12 @@ type MortalityJoin = {
   quantity: number;
   reason: string | null;
   notes: string | null;
+  recorded_by: string | null;
   flocks: FlockJoin;
 };
 
 const MORTALITY_COLUMNS =
-  "id, record_date, flock_id, quantity, reason, notes, flocks!inner(name)";
+  "id, record_date, flock_id, quantity, reason, notes, recorded_by, flocks!inner(name)";
 
 /** Ad-hoc mortality incidents, newest first. Never the rows a day owns. */
 export async function getMortalityRecords(
@@ -86,7 +117,13 @@ export async function getMortalityRecords(
     return [];
   }
 
-  return ((data ?? []) as unknown as MortalityJoin[]).map((row) => ({
+  const rows = (data ?? []) as unknown as MortalityJoin[];
+  const names = await resolveRecordedByNames(
+    supabase,
+    rows.map((row) => row.recorded_by)
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     recordDate: row.record_date,
     flockId: row.flock_id,
@@ -94,6 +131,7 @@ export async function getMortalityRecords(
     quantity: row.quantity,
     reason: row.reason ?? "",
     notes: row.notes ?? "",
+    recordedByName: row.recorded_by ? (names.get(row.recorded_by) ?? null) : null,
   }));
 }
 
@@ -137,6 +175,7 @@ export interface FeedEntry {
   totalCost: number;
   feedType: string;
   notes: string;
+  recordedByName: string | null;
 }
 
 type FeedJoin = {
@@ -150,12 +189,13 @@ type FeedJoin = {
   total_cost: number;
   feed_type: string | null;
   notes: string | null;
+  recorded_by: string | null;
   flocks: FlockJoin;
 };
 
 const FEED_COLUMNS =
   "id, usage_date, flock_id, quantity_kg, cost_per_kg, sack_size_kg, sack_price, " +
-  "total_cost, feed_type, notes, flocks!inner(name)";
+  "total_cost, feed_type, notes, recorded_by, flocks!inner(name)";
 
 /** Ad-hoc feed deliveries, newest first. Never the rows a day owns. */
 export async function getFeedUsage(
@@ -186,7 +226,13 @@ export async function getFeedUsage(
     return [];
   }
 
-  return ((data ?? []) as unknown as FeedJoin[]).map((row) => ({
+  const rows = (data ?? []) as unknown as FeedJoin[];
+  const names = await resolveRecordedByNames(
+    supabase,
+    rows.map((row) => row.recorded_by)
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     usageDate: row.usage_date,
     flockId: row.flock_id,
@@ -198,6 +244,7 @@ export async function getFeedUsage(
     totalCost: Number(row.total_cost ?? 0),
     feedType: row.feed_type ?? "",
     notes: row.notes ?? "",
+    recordedByName: row.recorded_by ? (names.get(row.recorded_by) ?? null) : null,
   }));
 }
 

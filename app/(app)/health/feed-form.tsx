@@ -18,12 +18,52 @@ import {
   recordFeedUsageAction,
   updateFeedUsageAction,
 } from "./actions";
-import { feedUsageSchema, toFieldErrors } from "@/lib/validation/schemas";
+import {
+  feedUsageSchema,
+  toFieldErrors,
+  type FeedUsageInput,
+} from "@/lib/validation/schemas";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
-import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
+import { enqueueWrite, generateWriteId, listPending } from "@/lib/offline/queue";
 import { safeAction } from "@/lib/client/safe-action";
+import { findSameDayEntries } from "@/lib/domain/health";
 
 const NEW = "__new__";
+
+/**
+ * Same reasoning as mortality-form.tsx's identical helper: warn, never
+ * block -- a flock can legitimately be fed more than once a day.
+ */
+async function confirmNotDuplicate(
+  records: FeedEntry[],
+  flockId: string,
+  usageDate: string,
+  flockName: string
+): Promise<boolean> {
+  const existing = findSameDayEntries(
+    records.map((record) => ({ ...record, date: record.usageDate })),
+    flockId,
+    usageDate
+  );
+
+  const pending = await listPending().catch(() => []);
+  const queuedCount = pending.filter((item) => {
+    if (item.kind !== "feed_usage") return false;
+    const payload = item.payload as FeedUsageInput;
+    return payload.flockId === flockId && payload.usageDate === usageDate;
+  }).length;
+
+  if (existing.length === 0 && queuedCount === 0) return true;
+
+  const who = existing
+    .map((record) => `${record.recordedByName ?? "Someone"} logged ${record.quantityKg}kg`)
+    .concat(queuedCount > 0 ? [`${queuedCount} more already queued on this device, not yet synced`] : [])
+    .join("; ");
+
+  return window.confirm(
+    `${who} for ${flockName} on this date already. Add this as another entry?`
+  );
+}
 
 function toNumber(value: string): number {
   const parsed = Number(value);
@@ -120,6 +160,10 @@ export function FeedForm({
       }
 
       startTransition(async () => {
+        const flockName = flocks.find((flock) => flock.id === flockId)?.name ?? "this flock";
+        const proceed = await confirmNotDuplicate(records, flockId, usageDate, flockName);
+        if (!proceed) return;
+
         try {
           const clientId = generateWriteId();
           await enqueueWrite({
@@ -152,6 +196,12 @@ export function FeedForm({
     }
 
     startTransition(async () => {
+      if (!editing) {
+        const flockName = flocks.find((flock) => flock.id === flockId)?.name ?? "this flock";
+        const proceed = await confirmNotDuplicate(records, flockId, usageDate, flockName);
+        if (!proceed) return;
+      }
+
       const result = editing
         ? await safeAction(() => updateFeedUsageAction(editing.id, values))
         : await safeAction(() => recordFeedUsageAction(values));

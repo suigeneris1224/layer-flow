@@ -15,10 +15,54 @@ import {
   recordMortalityAction,
   updateMortalityAction,
 } from "./actions";
-import { mortalityRecordSchema, toFieldErrors } from "@/lib/validation/schemas";
+import {
+  mortalityRecordSchema,
+  toFieldErrors,
+  type MortalityRecordInput,
+} from "@/lib/validation/schemas";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
-import { enqueueWrite, generateWriteId } from "@/lib/offline/queue";
+import { enqueueWrite, generateWriteId, listPending } from "@/lib/offline/queue";
 import { safeAction } from "@/lib/client/safe-action";
+import { findSameDayEntries } from "@/lib/domain/health";
+
+/**
+ * True if the farmer should be warned before saving -- another entry (synced
+ * or still sitting in the local offline queue) already exists for this
+ * flock/date. Never blocks: a flock can legitimately lose birds more than
+ * once a day, this just asks the farmer to confirm it's not a duplicate.
+ */
+async function confirmNotDuplicate(
+  records: MortalityEntry[],
+  flockId: string,
+  recordDate: string,
+  excludeId: string | undefined,
+  flockName: string
+): Promise<boolean> {
+  const existing = findSameDayEntries(
+    records.map((record) => ({ ...record, date: record.recordDate })),
+    flockId,
+    recordDate,
+    excludeId
+  );
+
+  const pending = await listPending().catch(() => []);
+  const queuedCount = pending.filter((item) => {
+    if (item.kind !== "mortality") return false;
+    const payload = item.payload as MortalityRecordInput;
+    return payload.flockId === flockId && payload.recordDate === recordDate;
+  }).length;
+
+  if (existing.length === 0 && queuedCount === 0) return true;
+
+  const who = existing
+    .map((record) => `${record.recordedByName ?? "Someone"} logged ${record.quantity} lost`)
+    .concat(queuedCount > 0 ? [`${queuedCount} more already queued on this device, not yet synced`] : [])
+    .join("; ");
+
+  return window.confirm(
+    `${who} for ${flockName} on this date already. Add this as another entry?`
+  );
+}
 
 const NEW = "__new__";
 
@@ -93,6 +137,10 @@ export function MortalityForm({
       }
 
       startTransition(async () => {
+        const flockName = flocks.find((flock) => flock.id === flockId)?.name ?? "this flock";
+        const proceed = await confirmNotDuplicate(records, flockId, recordDate, undefined, flockName);
+        if (!proceed) return;
+
         try {
           const clientId = generateWriteId();
           await enqueueWrite({
@@ -124,6 +172,12 @@ export function MortalityForm({
     }
 
     startTransition(async () => {
+      if (!editing) {
+        const flockName = flocks.find((flock) => flock.id === flockId)?.name ?? "this flock";
+        const proceed = await confirmNotDuplicate(records, flockId, recordDate, undefined, flockName);
+        if (!proceed) return;
+      }
+
       const result = editing
         ? await safeAction(() => updateMortalityAction(editing.id, values))
         : await safeAction(() => recordMortalityAction(values));

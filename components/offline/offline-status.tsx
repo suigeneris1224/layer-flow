@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Cloud, CloudOff, Loader2, RotateCw } from "lucide-react";
 import { useConnectivity } from "@/lib/offline/use-connectivity";
 import { listPending, retryFailed } from "@/lib/offline/queue";
@@ -17,6 +18,21 @@ const KIND_LABEL: Record<PendingWrite["kind"], string> = {
 };
 
 /**
+ * Whether the page currently on screen is one of the three that actually
+ * call `enqueueWrite` -- `offlineEnabled` alone (the farm's plan
+ * entitlement) isn't enough to justify "your records are saved on this
+ * phone," since that's only true on these routes. Everywhere else
+ * (Expenses, Sales, Customers, the Vaccinations tab on this same /health
+ * page, ...) a farmer offline there gets the plain "you're offline"
+ * message instead, matching what that page's own form already says.
+ */
+function pageSupportsOffline(pathname: string, tab: string | null): boolean {
+  if (pathname === "/production/new") return true;
+  if (pathname === "/health") return tab === "feed" || tab === "mortality" || tab === null;
+  return false;
+}
+
+/**
  * The one place the offline queue's state (docs/offline-sync.md's "What the
  * farmer sees" table) is visible -- mounted once in app/(app)/layout.tsx.
  *
@@ -27,6 +43,9 @@ const KIND_LABEL: Record<PendingWrite["kind"], string> = {
  */
 export function OfflineStatus({ offlineEnabled }: { offlineEnabled: boolean }) {
   const online = useConnectivity();
+  const pathname = usePathname();
+  const tab = useSearchParams().get("tab");
+  const canSaveHere = offlineEnabled && pageSupportsOffline(pathname, tab);
   const [items, setItems] = useState<PendingWrite[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [justSynced, setJustSynced] = useState(false);
@@ -94,7 +113,7 @@ export function OfflineStatus({ offlineEnabled }: { offlineEnabled: boolean }) {
       );
     }
 
-    if (offlineEnabled) {
+    if (canSaveHere) {
       return (
         <Banner tone="warn" icon={CloudOff}>
           Offline — your records are saved on this phone.
@@ -102,10 +121,12 @@ export function OfflineStatus({ offlineEnabled }: { offlineEnabled: boolean }) {
       );
     }
 
-    // Not entitled to offline_mode and nothing queued -- the plain, honest
-    // message, matching what the record forms themselves already show
-    // (production-form.tsx et al.). Must not claim records are saved: on
-    // this plan they aren't, forms reject the submission instead.
+    // Either not entitled to offline_mode, or on a page that never queues
+    // (Expenses, Sales, Vaccinations, ...) even on a plan that is entitled
+    // -- the plain, honest message, matching what the record forms
+    // themselves already show (production-form.tsx et al.). Must not claim
+    // records are saved here: on this page they aren't, the form rejects
+    // the submission instead.
     return (
       <Banner tone="warn" icon={CloudOff}>
         You&apos;re offline. Try again once you have a connection.

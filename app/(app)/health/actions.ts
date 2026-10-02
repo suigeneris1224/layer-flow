@@ -68,6 +68,7 @@ export async function recordMortalityAction(
       quantity: parsed.data.quantity,
       reason: parsed.data.reason || null,
       notes: parsed.data.notes || null,
+      recorded_by: user.id,
     };
 
     /*
@@ -252,6 +253,7 @@ export async function recordFeedUsageAction(
       total_cost: feedCost(parsed.data.quantityKg, parsed.data.costPerKg),
       feed_type: parsed.data.feedType || null,
       notes: parsed.data.notes || null,
+      recorded_by: user.id,
     };
 
     // See the matching comment in recordMortalityAction: a clientId means the

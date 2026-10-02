@@ -42,9 +42,11 @@ export const metadata: Metadata = {
     description:
       "LayerFlow helps layer farmers track egg production, feed, expenses, sales, and profitability in one simple farm management platform.",
     type: "website",
+    siteName: "LayerFlow",
+    locale: "en_PH",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "LayerFlow — Poultry Layer Farm Management Software",
     description:
       "LayerFlow helps layer farmers track egg production, feed, expenses, sales, and profitability in one simple farm management platform.",

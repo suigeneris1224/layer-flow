@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/offline/service-worker-registration";
+import { publicEnv } from "@/lib/config/env";
 import "./globals.css";
 
 /*
@@ -16,6 +17,16 @@ const sans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  // Makes canonical, og:image and sitemap-style URLs absolute on the live
+  // domain (NEXT_PUBLIC_APP_URL), e.g. https://getlayerflow.com/pricing.
+  metadataBase: new URL(publicEnv.appUrl),
+  // "./" resolves to each route's own URL: every page is its own canonical,
+  // so www, trailing-slash and ?query variants don't compete in search.
+  alternates: { canonical: "./" },
+  // The share image itself is app/opengraph-image.png (+ twitter-image.png),
+  // picked up by file convention for every page.
+  openGraph: { siteName: "LayerFlow", locale: "en_PH", type: "website" },
+  twitter: { card: "summary_large_image" },
   title: {
     default: "LayerFlow — Know your flock. Know your numbers.",
     template: "%s · LayerFlow",

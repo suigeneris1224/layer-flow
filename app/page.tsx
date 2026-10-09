@@ -32,6 +32,7 @@ import { LandingPlanCards } from "@/components/pricing/landing-plan-cards";
 import { layingRate, operatingProfit, sellableEggs, eggsToTrays, costPerEgg } from "@/lib/domain/calculations";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { publicEnv } from "@/lib/config/env";
 
 export const metadata: Metadata = {
   title: "LayerFlow — Poultry Layer Farm Management Software",
@@ -201,9 +202,41 @@ const FAQ_ITEMS = [
   },
 ];
 
+/**
+ * Structured data so search engines recognize "LayerFlow" as the site's
+ * name and can surface the FAQ below directly in results, instead of
+ * guessing either from the raw URL. The FAQ schema reuses FAQ_ITEMS verbatim
+ * -- it must match what's actually published on the page, not new copy.
+ */
+const WEBSITE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "LayerFlow",
+  url: publicEnv.appUrl,
+};
+
+const FAQ_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
+};
+
 export default function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* JSON-LD doesn't need to live in <head> -- search engines read it anywhere in the document. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_SCHEMA) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_SCHEMA) }}
+      />
       <StickyNavBlur>
         <PublicHeader />
       </StickyNavBlur>

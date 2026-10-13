@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/offline/service-worker-registration";
+import { InstallListener } from "@/components/pwa/install-listener";
 import { publicEnv } from "@/lib/config/env";
 import "./globals.css";
 
@@ -37,8 +38,12 @@ export const metadata: Metadata = {
   applicationName: "LayerFlow",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icons/layerflow-logo.png",
-    apple: "/icons/layerflow-logo.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    // Opaque 180x180: iOS fills a transparent home-screen icon with black.
+    apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
@@ -80,6 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <ServiceWorkerRegistration />
+        <InstallListener />
         {children}
       </body>
     </html>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Brand } from "@/components/nav/brand";
+import { InstallButton } from "@/components/pwa/install-button";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -127,6 +128,7 @@ export function PublicHeader() {
             ))}
           </nav>
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 pb-4">
+            <InstallButton />
             <Link
               href="/login"
               onClick={() => setOpen(false)}

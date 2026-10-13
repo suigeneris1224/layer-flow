@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { Brand } from "@/components/nav/brand";
 import { SidebarNav } from "@/components/nav/sidebar-nav";
 import { SubscriptionCard } from "@/components/nav/subscription-card";
+import { InstallButton } from "@/components/pwa/install-button";
 import { cn } from "@/lib/utils";
 import type { SubscriptionPlan } from "@/lib/types/database";
 
@@ -106,7 +107,8 @@ export function MobileDrawer({ plan }: { plan: SubscriptionPlan }) {
                 <SidebarNav onNavigate={hide} />
               </div>
 
-              <div className="p-3 pb-safe">
+              <div className="flex flex-col gap-2 p-3 pb-safe">
+                <InstallButton />
                 <SubscriptionCard plan={plan} />
               </div>
             </div>

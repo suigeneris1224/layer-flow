@@ -9,9 +9,12 @@
 // caching a farmer's numbers and serving them back stale later is worse than
 // an error, per the doc's explicit warning.
 //
-// Bump CACHE_VERSION whenever the shell-caching strategy itself changes; the
-// old versioned cache is deleted on the next activate.
-const CACHE_VERSION = "v1";
+// Bump CACHE_VERSION whenever the shell-caching strategy itself changes, AND
+// whenever the manifest or anything under /icons/ changes: those URLs aren't
+// content-hashed and are served cache-first, so without a bump an existing
+// install keeps the old file forever. The old versioned cache is deleted on
+// the next activate. (v2: proper square PWA icons + manifest colours.)
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `layerflow-shell-${CACHE_VERSION}`;
 
 self.addEventListener("install", () => {

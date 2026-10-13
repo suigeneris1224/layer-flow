@@ -1,83 +1,88 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { Brand } from "@/components/nav/brand";
+
+const COLUMNS: { title: string; links: { href: Route; label: string }[] }[] = [
+  {
+    title: "Product",
+    links: [
+      { href: "/features", label: "Features" },
+      { href: "/how-it-works", label: "How It Works" },
+      { href: "/pricing", label: "Pricing" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { href: "/blog", label: "Blog" },
+      { href: "/docs", label: "Documentation" },
+      { href: "/faq", label: "FAQ" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/privacy", label: "Privacy Policy" },
+      { href: "/terms", label: "Terms and Conditions" },
+    ],
+  },
+  {
+    title: "Get started",
+    links: [
+      { href: "/login", label: "Log in" },
+      { href: "/signup", label: "Start free" },
+    ],
+  },
+];
 
 /**
  * Footer shared by every public (signed-out) page. Only real routes.
  *
- * The dark green band is a fixed brand statement (see the --footer-* tokens
- * in app/globals.css), not the site's usual light/dark surface -- so rather
- * than re-color every link and the reused <Brand /> one by one, the three
- * tokens they lean on (--foreground, --muted-foreground, --border) are
- * rescoped to the footer's own values via the `.footer-scope` utility class
- * (app/globals.css). Every descendant's existing text-foreground/
- * text-muted-foreground/border classes then resolve correctly here with no
- * changes to those shared components.
+ * Light sage, not a dark band: the marketing pages already close on a dark
+ * green CTA band (components/marketing/cta-band.tsx), and two dark blocks in
+ * a row read as one heavy slab.
  */
 export function PublicFooter() {
   return (
-    <footer className="footer-scope border-t border-footer-border bg-footer-bg text-footer-foreground">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-3 lg:grid-cols-5">
-        <div className="[&>div]:items-start">
+    <footer className="border-t border-border bg-section">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-4 py-12 sm:grid-cols-3 lg:grid-cols-[1.6fr_repeat(5,1fr)]">
+        <div className="col-span-2 sm:col-span-3 lg:col-span-1 [&>div]:items-start">
           <Brand />
-          <p className="mt-3 text-sm text-muted-foreground">
-            A modern farm management platform designed for Philippine layer farmers, in one dashboard. Track your flock, feed, and finances with ease.
+          <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+            Simple farm management for Philippine layer farmers. Track your flock, feed, and
+            finances in one place.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-foreground">Product</span>
-          <Link href="/features" className="text-muted-foreground hover:text-foreground">
-            Features
-          </Link>
-          <Link href="/how-it-works" className="text-muted-foreground hover:text-foreground">
-            How It Works
-          </Link>
-          <Link href="/pricing" className="text-muted-foreground hover:text-foreground">
-            Pricing
-          </Link>
-        </div>
-
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-foreground">Company</span>
-          <Link href="/about" className="text-muted-foreground hover:text-foreground">
-            About
-          </Link>
-          <Link href="/privacy" className="text-muted-foreground hover:text-foreground">
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className="text-muted-foreground hover:text-foreground">
-            Terms and Conditions
-          </Link>
-        </div>
-
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-foreground">Support</span>
-          <Link href="/docs" className="text-muted-foreground hover:text-foreground">
-            Documentation
-          </Link>
-          <Link href="/contact" className="text-muted-foreground hover:text-foreground">
-            Contact
-          </Link>
-          <Link href="/faq" className="text-muted-foreground hover:text-foreground">
-            FAQ
-          </Link>
-        </div>
-
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-foreground">Get Started</span>
-          <Link href="/login" className="text-muted-foreground hover:text-foreground">
-            Login
-          </Link>
-          <Link href="/signup" className="text-muted-foreground hover:text-foreground">
-            Start Free
-          </Link>
-        </div>
+        {COLUMNS.map((column) => (
+          <div key={column.title} className="flex flex-col gap-2.5 text-sm">
+            <span className="font-semibold text-foreground">{column.title}</span>
+            {column.links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-muted-foreground transition-colors hover:text-primary-strong"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        ))}
       </div>
 
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-2 px-4 pb-8 text-xs text-muted-foreground">
-        <span>© {new Date().getFullYear()} LayerFlow. All rights reserved.</span>
-        <span aria-hidden>·</span>
-        <span>Powered by SinSoft</span>
+      <div className="border-t border-border">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-2 px-4 py-5 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} LayerFlow. All rights reserved.</span>
+          <span aria-hidden>·</span>
+          <span>Powered by SinSoft</span>
+        </div>
       </div>
     </footer>
   );

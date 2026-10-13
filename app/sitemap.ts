@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { publicEnv } from "@/lib/config/env";
+import { POSTS } from "@/lib/blog/posts";
 
 /**
- * The 10 real content pages -- the ones worth ranking for, matching
+ * The real content pages -- the ones worth ranking for, matching
  * app/robots.ts's allowlist minus the login/signup/reset-password forms
  * (public, but no unique content to prioritize).
  *
@@ -21,6 +22,7 @@ const CONTENT_PAGES: {
   { path: "/pricing", priority: 0.9, changeFrequency: "monthly" },
   { path: "/features", priority: 0.8, changeFrequency: "monthly" },
   { path: "/how-it-works", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/blog", priority: 0.7, changeFrequency: "weekly" },
   { path: "/docs", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
   { path: "/about", priority: 0.5, changeFrequency: "yearly" },
@@ -30,9 +32,20 @@ const CONTENT_PAGES: {
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return CONTENT_PAGES.map(({ path, priority, changeFrequency }) => ({
+  const pages = CONTENT_PAGES.map(({ path, priority, changeFrequency }) => ({
     url: `${publicEnv.appUrl}${path}`,
     changeFrequency,
     priority,
   }));
+
+  // Blog posts DO have a real date -- their own published/modified date in
+  // lib/blog/posts.ts -- so unlike the pages above they report one.
+  const posts = POSTS.map((post) => ({
+    url: `${publicEnv.appUrl}/blog/${post.slug}`,
+    lastModified: post.dateModified ?? post.datePublished,
+    changeFrequency: "yearly" as const,
+    priority: 0.6,
+  }));
+
+  return [...pages, ...posts];
 }

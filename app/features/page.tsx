@@ -1,224 +1,258 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { Route } from "next";
 import {
+  ArrowRight,
   BarChart3,
+  Bell,
   Boxes,
-  ClipboardList,
-  Download,
-  FolderTree,
-  GitCompare,
-  HeartPulse,
-  LifeBuoy,
+  Egg,
+  FileSpreadsheet,
+  GitCompareArrows,
+  Headphones,
   PhilippinePeso,
-  Tags,
-  TriangleAlert,
+  Ruler,
   Users,
-  Warehouse,
-  Wheat,
   WifiOff,
+  type LucideIcon,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { IconChip, type ChipTint } from "@/components/ui/icon-chip";
+import { MarketingPage } from "@/components/marketing/marketing-page";
+import { PageHero } from "@/components/marketing/page-hero";
+import { PhotoSlot } from "@/components/marketing/photo-slot";
+import { Section, SectionHeading } from "@/components/marketing/section";
+import { PlanBadge } from "@/components/marketing/plan-badge";
+import { MockupThumb } from "@/components/marketing/mockup-thumb";
+import { CtaBand } from "@/components/marketing/cta-band";
 import { FeatureCard } from "@/components/marketing/feature-card";
-import { PublicHeader } from "@/components/marketing/public-header";
-import { PublicFooter } from "@/components/marketing/public-footer";
 import { Reveal } from "@/components/marketing/reveal";
+import { ProductionMockup } from "@/components/marketing/production-mockup";
+import { InventoryMockup } from "@/components/marketing/inventory-mockup";
+import { MoneyMockup } from "@/components/marketing/money-mockup";
+import { DashboardMockup } from "@/components/marketing/dashboard-mockup";
+import { NotificationsMockup } from "@/components/marketing/notifications-mockup";
+import { TeamMockup } from "@/components/marketing/team-mockup";
+import { MobileMockup } from "@/components/marketing/mobile-mockup";
+import { breadcrumbSchema, softwareApplicationSchema } from "@/lib/marketing/structured-data";
+import type { Feature } from "@/lib/subscriptions/plans";
 import { cn } from "@/lib/utils";
 
+const DESCRIPTION =
+  "Every LayerFlow feature for layer farms: egg production and flock records, egg inventory, sales and customers, expenses, reports, alerts, team access, and offline recording.";
+
 export const metadata: Metadata = {
-  title: "Features",
-  description: "Everything LayerFlow does, from the morning egg count to comparing farms.",
+  title: "Features — Egg Production, Feed, Sales & Profit Tracking",
+  description: DESCRIPTION,
+  openGraph: { title: "LayerFlow Features", description: DESCRIPTION, url: "/features" },
 };
 
-const GROUPS = [
+/**
+ * Plan pills come from the real gate via PlanBadge, not guessed: production
+ * and inventory are ungated (`null`), the rest name the Feature that unlocks
+ * them in lib/subscriptions/plans.ts.
+ */
+const CORE: {
+  icon: LucideIcon;
+  tint: ChipTint;
+  title: string;
+  copy: string;
+  plan: Feature | null;
+  docs: string;
+  mockup: React.ReactNode;
+}[] = [
   {
-    title: "Daily recording",
-    subtitle: "The routine that feeds everything else.",
-    features: [
-      {
-        icon: ClipboardList,
-        tint: "green" as const,
-        title: "Production",
-        copy: "Log eggs collected, broken and dirty counts, and a breakdown by size, in under a minute.",
-      },
-      {
-        icon: Wheat,
-        tint: "amber" as const,
-        title: "Feed, by the kilo or the sack",
-        copy: "Enter feed cost per kilo directly, or tell it your sack size and price and let it do the math.",
-      },
-      {
-        icon: HeartPulse,
-        tint: "rose" as const,
-        title: "Flock health",
-        copy: "Track every flock from placement to production, with mortality and vaccination records.",
-      },
-    ],
+    icon: Egg,
+    tint: "green",
+    title: "Egg production and flock management",
+    copy: "Record eggs collected, broken and dirty counts, egg sizes, mortality, and vaccinations — laying rate is calculated for you.",
+    plan: null,
+    docs: "/docs#daily-recording",
+    mockup: <ProductionMockup />,
   },
   {
-    title: "Stock and pricing",
-    subtitle: "What's on hand, and what it's worth.",
-    features: [
-      {
-        icon: Boxes,
-        tint: "teal" as const,
-        title: "Egg inventory",
-        copy: "See what's in stock by size, so you know what you can sell before you promise it.",
-      },
-      {
-        icon: Tags,
-        tint: "violet" as const,
-        title: "Egg pricing",
-        copy: "Set a price per size and change it whenever the market does, with a history you can look back on.",
-      },
-    ],
+    icon: Boxes,
+    tint: "amber",
+    title: "Inventory and egg stock",
+    copy: "Know what's available to sell by size, set tray prices, and avoid selling stock you don't have.",
+    plan: null,
+    docs: "/docs#inventory-pricing",
+    mockup: <InventoryMockup />,
   },
   {
-    title: "Money in, money out",
-    subtitle: "Sales, customers, and the real cost of running the farm.",
-    features: [
-      {
-        icon: PhilippinePeso,
-        tint: "teal" as const,
-        title: "Sales & customers",
-        copy: "Record sales by tray or by egg, to a customer on file or a walk-in, paid in full or on credit.",
-      },
-      {
-        icon: FolderTree,
-        tint: "amber" as const,
-        title: "Expenses",
-        copy: "Track every peso spent, categorized, so you can see where it's actually going.",
-      },
-      {
-        icon: BarChart3,
-        tint: "green" as const,
-        title: "Profitability",
-        copy: "Revenue minus feed and expenses, as estimated operating profit you can trust.",
-      },
-    ],
+    icon: PhilippinePeso,
+    tint: "teal",
+    title: "Sales, customers, and expenses",
+    copy: "Record sales by tray or by egg, track customer balances and credit, and log feed and every other farm expense.",
+    plan: "egg_sales",
+    docs: "/docs#sales",
+    mockup: <MoneyMockup />,
   },
   {
-    title: "See what's happening",
-    subtitle: "Turn daily numbers into trends worth acting on.",
-    features: [
-      {
-        icon: BarChart3,
-        tint: "violet" as const,
-        title: "Reports & analytics",
-        copy: "Laying rate, feed cost per hen, and egg-size mix, charted over any period you choose.",
-      },
-      {
-        icon: TriangleAlert,
-        tint: "rose" as const,
-        title: "Alerts",
-        copy: "A production drop, a low-stock size, or a stale price gets flagged before it costs you.",
-      },
-    ],
+    icon: BarChart3,
+    tint: "violet",
+    title: "Reports and farm performance",
+    copy: "See production trends, cost per egg, revenue, and estimated operating profit over any period.",
+    plan: "reports",
+    docs: "/docs#reports",
+    mockup: <DashboardMockup />,
   },
   {
-    title: "Run more than one farm",
-    subtitle: "For operations with staff, or more than one flock to manage.",
-    features: [
-      {
-        icon: Warehouse,
-        tint: "teal" as const,
-        title: "Multiple farms",
-        copy: "Keep every farm you run under one account, each with its own records.",
-      },
-      {
-        icon: Users,
-        tint: "amber" as const,
-        title: "Team accounts",
-        copy: "Bring on farmhands, managers, and clerks, each with their own login and role.",
-      },
-      {
-        icon: GitCompare,
-        tint: "green" as const,
-        title: "Compare farms",
-        copy: "See revenue, cost, and profit side by side across every farm you run.",
-      },
-    ],
+    icon: Bell,
+    tint: "rose",
+    title: "Alerts and notifications",
+    copy: "Get flagged when production drops, mortality runs high, or a vaccination is overdue — plus low-stock and loss alerts on Pro.",
+    plan: "alerts",
+    docs: "/docs#notifications",
+    mockup: <NotificationsMockup />,
   },
   {
-    title: "Built for the field",
-    subtitle: "The details that matter outside the office.",
-    features: [
-      {
-        icon: WifiOff,
-        tint: "rose" as const,
-        title: "Works offline",
-        copy: "Keep logging production, feed, and mortality with no signal. LayerFlow syncs automatically once you're back in range.",
-      },
-      {
-        icon: Download,
-        tint: "violet" as const,
-        title: "CSV export",
-        copy: "Pull your sales and expense records out as a spreadsheet whenever you need them.",
-      },
-      {
-        icon: LifeBuoy,
-        tint: "teal" as const,
-        title: "Support",
-        copy: "Reach us right from the app when something's not working, with faster handling on Pro.",
-      },
-    ],
+    icon: Users,
+    tint: "teal",
+    title: "Team and multi-farm management",
+    copy: "Invite managers and workers with role-based access, and run several farms from one account.",
+    plan: "multi_farm",
+    docs: "/docs#team",
+    mockup: <TeamMockup />,
+  },
+  {
+    icon: WifiOff,
+    tint: "green",
+    title: "Offline recording and sync",
+    copy: "Record production, feed, and mortality with no signal. Entries sync automatically when you're back online.",
+    plan: "offline_mode",
+    docs: "/docs#offline",
+    mockup: (
+      <div className="flex justify-center pt-2">
+        <MobileMockup className="max-w-[240px]">
+          <p className="rounded-md bg-chip-amber px-2 py-1 text-[11px] font-medium text-chip-amber-fg">
+            Offline — 2 entries waiting to sync
+          </p>
+          <p className="mt-3 text-xs font-semibold">Record production</p>
+          <div className="mt-2 rounded-md border border-border px-2.5 py-1.5 text-xs">Eggs collected · 820</div>
+        </MobileMockup>
+      </div>
+    ),
+  },
+];
+
+const MORE: { icon: LucideIcon; tint: ChipTint; title: string; copy: string; plan: Feature }[] = [
+  {
+    icon: Ruler,
+    tint: "amber",
+    title: "Egg size analytics",
+    copy: "Your daily size mix, and how it shifts as the flock ages.",
+    plan: "egg_size_analytics",
+  },
+  {
+    icon: GitCompareArrows,
+    tint: "violet",
+    title: "Flock comparison",
+    copy: "Laying rate, feed efficiency, and cost per egg, side by side.",
+    plan: "flock_comparison",
+  },
+  {
+    icon: FileSpreadsheet,
+    tint: "teal",
+    title: "CSV export",
+    copy: "Take your sales and expense records out as a spreadsheet.",
+    plan: "data_export",
+  },
+  {
+    icon: Headphones,
+    tint: "rose",
+    title: "Priority support",
+    copy: "Your questions go to the front of the queue when you need help.",
+    plan: "priority_support",
   },
 ];
 
 export default function FeaturesPage() {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <PublicHeader />
+    <MarketingPage
+      jsonLd={[
+        softwareApplicationSchema(),
+        breadcrumbSchema([
+          { name: "Home", path: "/" },
+          { name: "Features", path: "/features" },
+        ]),
+      ]}
+    >
+      <PageHero
+        eyebrow="Features"
+        title={
+          <>
+            Everything your layer farm needs. <span className="text-primary-strong">Nothing you don&apos;t.</span>
+          </>
+        }
+        lead="Manage daily production, track feed and expenses, record sales, and understand your farm's performance without juggling separate records."
+        actions={
+          <>
+            <Link href="/signup" className={cn(buttonVariants({ variant: "primary", size: "lg" }))}>
+              Start free
+              <ArrowRight className="size-4" aria-hidden />
+            </Link>
+            <Link href="/pricing" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+              Compare plans
+            </Link>
+          </>
+        }
+        media={<PhotoSlot photo="featuresHero" priority className="shadow-pop" />}
+      />
 
-      <main id="main" className="flex-1">
-        <section className="mx-auto w-full max-w-5xl px-4 py-14 text-center">
-          <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
-            Everything your farm needs, in one place
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Built for the whole operation, not just the spreadsheet it replaces.
-          </p>
-          <Link
-            href="/signup"
-            className={cn(buttonVariants({ variant: "primary", size: "lg" }), "mt-6")}
-          >
-            Start free
-          </Link>
-        </section>
+      <Section>
+        <SectionHeading eyebrow="Core features" title="One place for every number your farm produces." />
 
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-14 px-4 pb-16">
-          {GROUPS.map((group) => (
-            <Reveal key={group.title}>
-              <section aria-label={group.title}>
-                <h2 className="text-xl font-semibold">{group.title}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{group.subtitle}</p>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.features.map((feature) => (
-                    <FeatureCard key={feature.title} {...feature} />
-                  ))}
+        <ul className="mt-10 flex flex-col gap-4">
+          {CORE.map((feature) => (
+            <li key={feature.title}>
+              <Reveal>
+                <div className="grid items-center gap-5 rounded-2xl border border-border bg-surface p-5 shadow-card transition-shadow hover:shadow-pop sm:p-6 md:grid-cols-[1fr_17rem] lg:grid-cols-[1fr_20rem]">
+                  <div className="flex gap-4">
+                    <IconChip icon={feature.icon} tint={feature.tint} size="lg" />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold text-foreground">{feature.title}</h3>
+                        <PlanBadge feature={feature.plan} />
+                      </div>
+                      <p className="mt-1.5 text-sm text-muted-foreground">{feature.copy}</p>
+                      <Link
+                        href={feature.docs as Route}
+                        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary-strong hover:underline"
+                      >
+                        Learn more
+                        <span className="sr-only"> about {feature.title.toLowerCase()}</span>
+                        <ArrowRight className="size-3.5" aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
+                  <MockupThumb className="hidden sm:block">{feature.mockup}</MockupThumb>
                 </div>
-              </section>
-            </Reveal>
+              </Reveal>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section tone="tint">
+        <SectionHeading
+          title="And for growing farms"
+          lead="Deeper analysis and team tools on the Pro plan."
+        />
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {MORE.map((item) => (
+            <FeatureCard key={item.title} {...item} />
           ))}
         </div>
+      </Section>
 
-        <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto w-full max-w-5xl px-4 py-14 text-center">
-            <h2 className="text-xl font-semibold">Not sure which plan you need?</h2>
-            <p className="mt-1 text-muted-foreground">
-              Every plan starts free. See which one includes what.
-            </p>
-            <Link
-              href="/pricing"
-              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "mt-5")}
-            >
-              See plans &amp; pricing
-            </Link>
-          </div>
-        </section>
-      </main>
-
-      <PublicFooter />
-    </div>
+      <CtaBand
+        tone="soft"
+        title="Ready to explore all features?"
+        lead="See the complete feature list and what each plan includes."
+        primary={{ href: "/pricing", label: "View pricing" }}
+        secondary={{ href: "/how-it-works", label: "See how it works" }}
+      />
+    </MarketingPage>
   );
 }

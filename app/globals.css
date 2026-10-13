@@ -76,18 +76,23 @@
     --chart-5: 174 62% 42%;
     --chart-grid: 214 20% 93%;
 
-    /* The public footer's dark green band. Same hue (142) as --primary/--brand
-       below, just darkened into a background instead of a button fill, so the
-       footer reads as the same brand green as "Start free" rather than an
-       off-family teal. Identical in both themes on purpose -- it's a fixed
-       brand statement, not something that should flip with the site's
-       light/dark toggle. Lightness gaps mirror the ones the .dark theme
-       already uses at a similar background (8-11%), which is what keeps text
-       on it readable. */
-    --footer-background: 142 32% 11%;
-    --footer-foreground: 142 20% 95%;
-    --footer-muted-foreground: 142 10% 72%;
-    --footer-border: 142 20% 22%;
+    /* Marketing pages' soft sage section tint -- alternating bands, hero
+       washes, the public footer. Same hue family as --primary so the site
+       reads as one green, faint enough that body and muted text still clear
+       4.5:1 on it (checked in scripts/contrast.mjs). */
+    --section: 140 30% 96%;
+    /* --primary as TEXT on --section: plain --primary only just clears 4.5:1
+       on pure white, so links/eyebrows on the tint need this darker step. */
+    --primary-strong: 142 76% 24%;
+
+    /* The dark green call-to-action band on the marketing pages. Same hue
+       (142) as --primary/--brand, darkened into a background. Identical in
+       both themes on purpose -- it's a fixed brand statement, not something
+       that should flip with the site's light/dark toggle. */
+    --band-background: 142 32% 11%;
+    --band-foreground: 142 20% 95%;
+    --band-muted-foreground: 142 10% 72%;
+    --band-border: 142 20% 22%;
   }
 
   .dark {
@@ -135,11 +140,14 @@
     --chart-5: 174 58% 50%;
     --chart-grid: 222 20% 20%;
 
+    --section: 150 22% 10%;
+    --primary-strong: 142 62% 56%;
+
     /* Same fixed dark green as :root -- see the comment there. */
-    --footer-background: 142 32% 11%;
-    --footer-foreground: 142 20% 95%;
-    --footer-muted-foreground: 142 10% 72%;
-    --footer-border: 142 20% 22%;
+    --band-background: 142 32% 11%;
+    --band-foreground: 142 20% 95%;
+    --band-muted-foreground: 142 10% 72%;
+    --band-border: 142 20% 22%;
   }
 
   * {
@@ -183,15 +191,16 @@
     padding-top: env(safe-area-inset-top);
   }
 
-  /* PublicFooter's dark green band rescopes --foreground/--muted-foreground/
-     --border to its own fixed values (see the --footer-* tokens above) so
-     every descendant's existing text-foreground/text-muted-foreground/border
-     classes resolve correctly there -- a CSS class instead of an inline
-     `style` prop so it doesn't need `style-src 'unsafe-inline'` in the CSP. */
-  .footer-scope {
-    --foreground: var(--footer-foreground);
-    --muted-foreground: var(--footer-muted-foreground);
-    --border: var(--footer-border);
+  /* The marketing CTA band (components/marketing/cta-band.tsx) rescopes
+     --foreground/--muted-foreground/--border to its own fixed values (see the
+     --band-* tokens above) so every descendant's existing text-foreground/
+     text-muted-foreground/border classes resolve correctly there -- a CSS
+     class instead of an inline `style` prop so it doesn't need
+     `style-src 'unsafe-inline'` in the CSP. */
+  .band-scope {
+    --foreground: var(--band-foreground);
+    --muted-foreground: var(--band-muted-foreground);
+    --border: var(--band-border);
   }
 
   /* Lets a component switch layout by its own rendered width instead of the

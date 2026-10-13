@@ -61,6 +61,12 @@ Collapsing them into one token is how the original palette ended up shipping whi
 | Errors, destructive | `destructive` |
 | Status | `good` · `warn` · `bad` |
 | Charts | `--chart-1` … `--chart-5`, `--chart-grid` |
+| Marketing section tint (sage) | `bg-section` |
+| Primary as text on `section` | `text-primary-strong` |
+| Marketing CTA band (fixed dark green) | `bg-band-bg` + `.band-scope` |
+
+`primary` only just clears 4.5:1 on pure white, so on the sage `section` tint, links and eyebrows
+use `primary-strong`. The marketing site uses `primary-strong` for all text links for consistency.
 
 ### Icon chips — five, and only five
 
@@ -276,6 +282,30 @@ One family: **Plus Jakarta Sans**, self-hosted via `next/font`. Do not add a sec
 | KPI figure | `.stat-figure` |
 | Body | `text-sm` |
 | Caption, label | `text-xs text-muted-foreground` |
+
+---
+
+## 11. Marketing pages
+
+The public site (`app/page.tsx`, `/features`, `/how-it-works`, `/pricing`, `/about`, `/docs`,
+`/faq`, `/blog`) is built from a small kit in `components/marketing/` — reach for these before
+writing a new section by hand:
+
+- `MarketingPage` — sticky header, `<main>`, footer, and the page's JSON-LD (`jsonLd` prop;
+  builders in `lib/marketing/structured-data.ts`).
+- `PageHero` — eyebrow, h1, lead, actions, and a photo or mockup on a sage wash.
+- `Section` (`tone="plain" | "tint"`) and `SectionHeading` — alternate plain and tinted bands.
+- `PhotoSlot` — every photograph. Slots are declared in `lib/marketing/photos.ts` with their alt
+  text; until a file is supplied and `available` flipped to `true`, a branded placeholder shows.
+- `PlanBadge` — takes the gating `Feature`, never a string, so a pill can't drift from the gate.
+- `MockupThumb` — a product mockup shrunk into a thumbnail window.
+- `CtaBand` — the closing call to action (`tone="dark"` band or `tone="soft"` card).
+- `TestimonialSection` and the About page's team grid render nothing until
+  `lib/marketing/social-proof.ts` has real entries. Never put a placeholder quote there.
+
+FAQ answers live once, in `lib/marketing/faq.ts`; pages pick questions with `pickFaq()` and
+emit matching `faqSchema()`. Blog post metadata is in `lib/blog/posts.ts`, bodies in
+`components/blog/posts/`.
 
 ---
 

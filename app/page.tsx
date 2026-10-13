@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  AlertCircle,
   ArrowRight,
-  BarChart3,
   Check,
   CheckCircle2,
   ClipboardList,
-  Cloud,
   Egg,
-  HeartPulse,
-  RefreshCw,
+  Layers,
+  Minus,
+  PhilippinePeso,
+  Smartphone,
   TrendingUp,
-  TriangleAlert,
   Users,
   Wallet,
   Wheat,
@@ -20,96 +18,138 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { IconChip } from "@/components/ui/icon-chip";
-import { PublicFooter } from "@/components/marketing/public-footer";
-import { StickyNavBlur } from "@/components/marketing/sticky-nav-blur";
-import { PublicHeader } from "@/components/marketing/public-header";
+import { MarketingPage } from "@/components/marketing/marketing-page";
+import { Section, SectionHeading, Eyebrow } from "@/components/marketing/section";
 import { FeatureCard } from "@/components/marketing/feature-card";
 import { DashboardMockup } from "@/components/marketing/dashboard-mockup";
 import { MobileMockup } from "@/components/marketing/mobile-mockup";
 import { Reveal } from "@/components/marketing/reveal";
+import { TestimonialSection } from "@/components/marketing/testimonial";
+import { CtaBand } from "@/components/marketing/cta-band";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { LandingPlanCards } from "@/components/pricing/landing-plan-cards";
+import { faqSchema, pickFaq } from "@/lib/marketing/faq";
+import { softwareApplicationSchema, websiteSchema } from "@/lib/marketing/structured-data";
 import { layingRate, operatingProfit, sellableEggs, eggsToTrays, costPerEgg } from "@/lib/domain/calculations";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
+import type { Feature } from "@/lib/subscriptions/plans";
 import { cn } from "@/lib/utils";
-import { publicEnv } from "@/lib/config/env";
+
+const TITLE = "LayerFlow — Poultry Layer Farm Management Software";
+const DESCRIPTION =
+  "LayerFlow helps Philippine layer farmers track egg production, feed, expenses, sales, and profitability in one simple farm management app. Start free.";
 
 export const metadata: Metadata = {
-  title: "LayerFlow — Poultry Layer Farm Management Software",
-  description:
-    "LayerFlow helps layer farmers track egg production, feed, expenses, sales, and profitability in one simple farm management platform.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
   openGraph: {
-    title: "LayerFlow — Poultry Layer Farm Management Software",
-    description:
-      "LayerFlow helps layer farmers track egg production, feed, expenses, sales, and profitability in one simple farm management platform.",
+    title: TITLE,
+    description: DESCRIPTION,
     type: "website",
     siteName: "LayerFlow",
     locale: "en_PH",
     url: "/",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "LayerFlow — Poultry Layer Farm Management Software",
-    description:
-      "LayerFlow helps layer farmers track egg production, feed, expenses, sales, and profitability in one simple farm management platform.",
-  },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-/** The chain the product exists to close, in the farmer's own order. */
-const FLOW = [
-  { icon: Egg, title: "Your eggs", copy: "Log the morning collection in under a minute." },
-  { icon: Wheat, title: "Your cost", copy: "Feed and expenses, counted as you go." },
-  { icon: Wallet, title: "Your profit", copy: "What the flock actually earned today." },
-  { icon: TrendingUp, title: "Your decision", copy: "See a drop early, while you can still act." },
+const TRUST = [
+  { icon: CheckCircle2, title: "Free plan available", copy: "No credit card required" },
+  { icon: PhilippinePeso, title: "Philippine peso pricing", copy: "Local units and trays" },
+  { icon: Layers, title: "For layer farms", copy: "100–5,000 hens" },
 ];
 
-/** Real, shipped capabilities -- traceable to lib/subscriptions/plans.ts and the app itself. */
-const FEATURES = [
+const PROBLEMS = [
   {
     icon: ClipboardList,
-    tint: "green" as const,
-    title: "Production",
-    copy: "Record daily egg production in seconds, with a breakdown by size.",
+    tint: "rose" as const,
+    title: "Production records",
+    copy: "Egg counts and flock information scattered across notebooks, spreadsheets, and messages.",
   },
   {
     icon: Wheat,
     tint: "amber" as const,
-    title: "Feed",
-    copy: "Track feed usage and cost per hen as you go.",
-  },
-  {
-    icon: HeartPulse,
-    tint: "rose" as const,
-    title: "Flocks",
-    copy: "Monitor every flock from placement to production, including mortality and vaccinations.",
-  },
-  {
-    icon: Users,
-    tint: "teal" as const,
-    title: "Sales",
-    copy: "Track egg sales, customers, and part-payments.",
+    title: "Rising costs",
+    copy: "Feed expenses accumulate, but understanding their impact on each egg can take time.",
   },
   {
     icon: Wallet,
     tint: "violet" as const,
-    title: "Profitability",
-    copy: "Understand revenue, costs, and estimated operating profit.",
-  },
-  {
-    icon: BarChart3,
-    tint: "green" as const,
-    title: "Reports",
-    copy: "See trends across production, cost, and sales to make better decisions.",
+    title: "Unclear profitability",
+    copy: "Sales may look healthy while the full cost of running the farm remains difficult to calculate.",
   },
 ];
 
-const PROBLEMS = [
-  "Production records scattered across notebooks and group chats.",
-  "No easy way to see what feed is actually costing per hen.",
-  "Sales and expenses tracked separately, if at all.",
-  "No clear view of whether the farm is actually profitable.",
-  "Hard to compare how one flock is doing against another.",
+/** The chain the product exists to close, in the farmer's own order. */
+const FLOW = [
+  {
+    icon: Egg,
+    title: "Record production",
+    copy: "Eggs collected, broken and dirty counts, and sizes.",
+  },
+  {
+    icon: Wheat,
+    title: "Track feed & expenses",
+    copy: "Feed by the kilo or the sack, and every other cost.",
+  },
+  {
+    icon: PhilippinePeso,
+    title: "Manage sales",
+    copy: "Customers on file or walk-ins, cash or on credit.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Review performance",
+    copy: "Revenue, costs, and estimated operating profit.",
+  },
 ];
+
+/** "Built for the realities of running a layer farm." Plan pills come from the real gate. */
+const DIFFERENTIATORS: {
+  icon: typeof Egg;
+  tint: "green" | "amber" | "teal" | "rose" | "violet";
+  title: string;
+  copy: string;
+  plan: Feature | null;
+}[] = [
+  {
+    icon: Smartphone,
+    tint: "green",
+    title: "Mobile friendly",
+    copy: "Large buttons and simple forms, made for a phone in the poultry house.",
+    plan: null,
+  },
+  {
+    icon: WifiOff,
+    tint: "rose",
+    title: "Offline recording",
+    copy: "Record production, feed, and mortality offline. It syncs when you're back online.",
+    plan: "offline_mode",
+  },
+  {
+    icon: PhilippinePeso,
+    tint: "amber",
+    title: "Philippine pesos & trays",
+    copy: "Familiar currency, egg trays, and local conventions by default.",
+    plan: null,
+  },
+  {
+    icon: Users,
+    tint: "teal",
+    title: "Multi-farm & team",
+    copy: "Add farms and staff, each with access scoped to their role.",
+    plan: "multi_farm",
+  },
+];
+
+const HOME_FAQ = pickFaq([
+  "What is LayerFlow?",
+  "Who is LayerFlow for?",
+  "Can I start for free?",
+  "Does LayerFlow work offline?",
+  "Can I manage multiple farms?",
+  "Is my farm data secure?",
+]);
 
 // -- Showcase A: production entry, computed with the app's real formulas so the
 // numbers on the page can never drift from what the product would actually show.
@@ -128,568 +168,341 @@ const SHOWCASE_COSTS = 119_300;
 const showcaseProfit = operatingProfit(SHOWCASE_REVENUE, SHOWCASE_COSTS);
 const showcaseCostPerEgg = costPerEgg(SHOWCASE_COSTS, 19_560);
 
-// -- Showcase C: flocks (numbers chosen so the displayed laying rate matches what
-// layingRate() actually computes, not just typed-in percentages).
-const FLOCKS = [
-  { name: "Flock #001", breed: "ISA Brown", hens: 942, eggs: 820 },
-  { name: "Flock #002", breed: "Lohmann Brown", hens: 816, eggs: 685 },
-];
-
-const ALERTS = [
-  {
-    level: "good" as const,
-    icon: CheckCircle2,
-    message: "Production is normal.",
-  },
-  {
-    level: "warn" as const,
-    icon: TriangleAlert,
-    message: "Feed cost is 8% higher than your recent average.",
-  },
-  {
-    level: "bad" as const,
-    icon: AlertCircle,
-    message: "Egg production is down 11% compared with your recent average.",
-  },
-];
-
-const ALERT_TONE = {
-  good: { wash: "bg-[hsl(var(--status-good))]/10", text: "text-[hsl(var(--status-good))]" },
-  warn: { wash: "bg-[hsl(var(--status-warn))]/10", text: "text-[hsl(var(--status-warn))]" },
-  bad: { wash: "bg-[hsl(var(--status-bad))]/10", text: "text-[hsl(var(--status-bad))]" },
-};
-
-const FAQ_ITEMS = [
-  {
-    question: "What is LayerFlow?",
-    answer:
-      "LayerFlow is farm operations software for layer farms: it tracks production, feed, sales, expenses, and profitability in one dashboard, instead of scattered notebooks and spreadsheets.",
-  },
-  {
-    question: "Who is LayerFlow for?",
-    answer:
-      "Layer farms in the Philippines with roughly 100 to 5,000 hens — from a single-flock backyard operation to a multi-house commercial farm with staff.",
-  },
-  {
-    question: "Can I start for free?",
-    answer:
-      "Yes. The Free plan covers one farm, one house, and one flock with 30 days of history — no card required.",
-  },
-  {
-    question: "Can I use LayerFlow on my phone?",
-    answer:
-      "Yes, LayerFlow is built mobile-first: large touch targets, 16px inputs that don't trigger an iOS zoom, and a layout designed for a phone in a poultry house.",
-  },
-  {
-    question: "Does LayerFlow work offline?",
-    answer:
-      "Yes, on the Starter plan and up — recording production, feed, and mortality keeps working with no signal. Your entry saves to your phone and syncs automatically once you're back online.",
-  },
-  {
-    question: "Can multiple people use one farm?",
-    answer:
-      "Yes, from the Pro plan. Invite teammates by role — worker, manager, or owner — so everyone sees the same numbers.",
-  },
-  {
-    question: "Can I manage multiple farms?",
-    answer:
-      "Yes, on the Pro plan, with reporting that rolls up across every farm you run.",
-  },
-  {
-    question: "Is my farm data secure?",
-    answer:
-      "Your farm's data is isolated at the database level — no other farm can read it, including in shared infrastructure. See our Privacy page for details.",
-  },
-];
-
 /**
- * Structured data so search engines recognize "LayerFlow" as the site's
- * name and can surface the FAQ below directly in results, instead of
- * guessing either from the raw URL. The FAQ schema reuses FAQ_ITEMS verbatim
- * -- it must match what's actually published on the page, not new copy.
+ * A hand-built trend, not real chart data -- same technique as
+ * dashboard-mockup.tsx's CHART_POINTS -- just enough to read as "revenue,
+ * cost and profit moving together over a few weeks". Colour order matches
+ * the real in-app chart (components/charts/profit-chart.tsx): chart-1 is
+ * always revenue, chart-2 always cost, extended here with chart-3 for
+ * profit since this one also shows the gap between them.
  */
-const WEBSITE_SCHEMA = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "LayerFlow",
-  url: publicEnv.appUrl,
-};
-
-const FAQ_SCHEMA = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: { "@type": "Answer", text: item.answer },
-  })),
-};
+const CHART_SERIES = [
+  { revenue: 30, cost: 22, profit: 8 },
+  { revenue: 34, cost: 24, profit: 10 },
+  { revenue: 32, cost: 25, profit: 7 },
+  { revenue: 38, cost: 26, profit: 12 },
+  { revenue: 36, cost: 23, profit: 13 },
+  { revenue: 40, cost: 27, profit: 13 },
+  { revenue: 42, cost: 26, profit: 16 },
+  { revenue: 39, cost: 25, profit: 14 },
+];
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-dvh flex-col">
-      {/* JSON-LD doesn't need to live in <head> -- search engines read it anywhere in the document. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_SCHEMA) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_SCHEMA) }}
-      />
-      <StickyNavBlur>
-        <PublicHeader />
-      </StickyNavBlur>
+    <MarketingPage jsonLd={[websiteSchema(), softwareApplicationSchema(), faqSchema(HOME_FAQ)]}>
+      {/* ================================================================ */}
+      {/* Hero */}
+      {/* ================================================================ */}
+      <section className="relative overflow-hidden bg-section">
+        <div
+          className="pointer-events-none absolute -right-40 -top-40 size-[32rem] rounded-full bg-brand/10 blur-3xl"
+          aria-hidden
+        />
+        <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-4 pb-16 pt-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:pb-24 lg:pt-16">
+          <div>
+            <Eyebrow>Poultry farm management, made for the Philippines</Eyebrow>
 
-      <main id="main" className="flex-1">
-        {/* ================================================================ */}
-        {/* Hero */}
-        {/* ================================================================ */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 to-background" aria-hidden />
+            <h1 className="mt-4 text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl lg:text-[3.4rem]">
+              Know your flock.
+              <br />
+              Know what your <span className="text-primary-strong">farm earns.</span>
+            </h1>
 
-          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-12 lg:grid-cols-[2fr_3fr] lg:items-center lg:py-20">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-widest text-primary">
-                Poultry farm management, simplified
-              </p>
+            <p className="mt-5 max-w-xl text-lg text-muted-foreground">
+              Track egg production, feed costs, sales, expenses, and estimated operating profit in
+              one simple dashboard. Spend less time piecing together records and more time making
+              informed farm decisions.
+            </p>
 
-              <h1 className="mt-3 text-4xl font-bold leading-[1.1] tracking-tight lg:text-5xl">
-                Know your flock.
-                <br />
-                Know your numbers.
-              </h1>
-
-              <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-                Track egg production, feed, mortality, sales, expenses, and profitability &mdash;
-                all in one simple dashboard. Built for 100 to 5,000 hens, and for a phone in a
-                poultry house.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/signup"
-                  className={cn(buttonVariants({ variant: "primary", size: "lg" }), "sm:w-auto")}
-                >
-                  Start free
-                  <ArrowRight className="size-4" aria-hidden />
-                </Link>
-                <Link
-                  href="#how-it-works"
-                  className={cn(buttonVariants({ variant: "outline", size: "lg" }), "sm:w-auto")}
-                >
-                  See how it works
-                </Link>
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="rounded-md border border-border bg-muted px-2.5 py-1">
-                  100–5,000 hens
-                </span>
-                <span className="rounded-md border border-border bg-muted px-2.5 py-1">
-                  Priced in ₱
-                </span>
-                <span className="rounded-md border border-border bg-muted px-2.5 py-1">
-                  Philippine time
-                </span>
-                <span className="rounded-md border border-border bg-muted px-2.5 py-1">
-                  Free for one flock, no card
-                </span>
-              </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/signup" className={cn(buttonVariants({ variant: "primary", size: "lg" }))}>
+                Start free
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+              <Link href="/features" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+                Explore the dashboard
+              </Link>
             </div>
 
-            <Reveal>
-              <DashboardMockup />
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* Trust strip */}
-        {/* ================================================================ */}
-        <section className="border-y border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-5xl grid-cols-3 gap-4 px-4 py-8 text-center">
-            <div>
-              <p className="text-2xl font-bold tabular">100%</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Cloud-based</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular">24/7</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Farm access</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular">1</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Simple dashboard</p>
-            </div>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* How it works */}
-        {/* ================================================================ */}
-        <section id="how-it-works" className="mx-auto w-full max-w-5xl px-4 py-14">
-          <Reveal>
-            <h2 className="text-2xl font-bold tracking-tight">How it works</h2>
-            <p className="mt-1 text-muted-foreground">Four numbers, in the order they matter.</p>
-
-            <div className="relative mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="absolute inset-x-0 top-5 hidden h-px bg-border lg:block" aria-hidden />
-
-              {FLOW.map((step, index) => (
-                <div key={step.title} className="relative flex flex-col gap-3">
-                  <span className="relative z-10 inline-flex size-10 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold">
-                    {index + 1}
+            <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+              {TRUST.map((item) => (
+                <li key={item.title} className="flex items-start gap-2.5">
+                  <item.icon className="mt-0.5 size-5 shrink-0 text-primary-strong" aria-hidden />
+                  <span className="text-sm leading-tight">
+                    <span className="block font-semibold text-foreground">{item.title}</span>
+                    <span className="text-muted-foreground">{item.copy}</span>
                   </span>
-                  <div>
-                    <h3 className="flex items-center gap-2 font-semibold">
-                      <step.icon className="size-4 text-primary" aria-hidden />
-                      {step.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{step.copy}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Reveal className="relative">
+            <div className="lg:translate-x-4">
+              <DashboardMockup />
+            </div>
+
+            {/* Phone preview, overlapping the dashboard's corner -- same showcase
+                numbers used in the workflow section below, so the two never
+                disagree. Hidden below sm: a phone frame has no room to sit
+                beside the dashboard once the hero itself stacks to one column. */}
+            <div className="absolute -bottom-10 -left-4 hidden w-32 sm:block lg:-left-8 lg:w-36">
+              <MobileMockup className="border-4 shadow-pop">
+                <p className="text-[10px] font-semibold">Today</p>
+                <div className="mt-2 flex flex-col gap-1.5 text-[9px]">
+                  <div className="flex items-center justify-between rounded-md bg-muted px-2 py-1">
+                    <span className="text-muted-foreground">Eggs</span>
+                    <span className="tabular font-medium">{formatNumber(SHOWCASE_EGGS)}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md bg-muted px-2 py-1">
+                    <span className="text-muted-foreground">Laying</span>
+                    <span className="tabular font-medium">{formatPercent(showcaseLayingRate)}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md bg-muted px-2 py-1">
+                    <span className="text-muted-foreground">Trays</span>
+                    <span className="tabular font-medium">{showcaseTrays.trays}</span>
                   </div>
                 </div>
-              ))}
+              </MobileMockup>
             </div>
-
-            <p className="mt-8 text-sm">
-              <Link href="/how-it-works" className="font-medium text-primary hover:underline">
-                See the full walkthrough →
-              </Link>
-            </p>
           </Reveal>
-        </section>
+        </div>
+      </section>
 
-        {/* ================================================================ */}
-        {/* Problem */}
-        {/* ================================================================ */}
-        <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-14 lg:grid-cols-2 lg:items-center">
-            <Reveal>
-              <svg viewBox="0 0 240 200" className="mx-auto w-full max-w-xs text-primary" aria-hidden>
-                <rect x="20" y="30" width="90" height="60" rx="8" className="fill-surface stroke-border" strokeWidth="2" transform="rotate(-6 65 60)" />
-                <rect x="60" y="70" width="90" height="60" rx="8" className="fill-surface stroke-border" strokeWidth="2" transform="rotate(4 105 100)" />
-                <rect x="110" y="40" width="90" height="60" rx="8" className="fill-surface stroke-primary" strokeWidth="2" transform="rotate(-2 155 70)" />
-                <line x1="130" y1="60" x2="180" y2="60" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                <line x1="130" y1="72" x2="170" y2="72" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                <line x1="130" y1="84" x2="175" y2="84" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-            </Reveal>
+      {/* ================================================================ */}
+      {/* Problem */}
+      {/* ================================================================ */}
+      <Section>
+        <Reveal>
+          <SectionHeading
+            title={
+              <>
+                Your farm generates the numbers.
+                <br className="hidden sm:block" /> Are you seeing the whole picture?
+              </>
+            }
+            lead="Egg counts, expenses, and sales are important — but when they're scattered, it's hard to know if your farm is truly profitable."
+          />
 
-            <Reveal>
-              <h2 className="text-2xl font-bold tracking-tight lg:text-3xl">
-                Running a layer farm shouldn&apos;t mean running a spreadsheet.
-              </h2>
-              <ul className="mt-6 flex flex-col gap-3">
-                {PROBLEMS.map((problem) => (
-                  <li key={problem} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                    {problem}
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {PROBLEMS.map((problem) => (
+              <FeatureCard key={problem.title} {...problem} />
+            ))}
+          </div>
+
+          <p className="mt-8 flex items-center justify-center gap-2 text-sm font-medium text-primary-strong">
+            <ArrowRight className="size-4 rotate-90 sm:rotate-0" aria-hidden />
+            LayerFlow brings these numbers together in one place.
+          </p>
+        </Reveal>
+      </Section>
+
+      {/* ================================================================ */}
+      {/* Workflow */}
+      {/* ================================================================ */}
+      <Section tone="tint" id="how-it-works">
+        <Reveal>
+          <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
+            <div>
+              <SectionHeading
+                title="From morning egg collection to better farm decisions."
+                lead="A simple 4-step workflow keeps your farm records organized and your numbers clear."
+              />
+
+              <ol className="mt-10 grid gap-6 sm:grid-cols-2">
+                {FLOW.map((step, index) => (
+                  <li key={step.title} className="flex gap-4">
+                    <div className="flex flex-col items-center gap-2">
+                      <IconChip icon={step.icon} tint="green" />
+                      <span className="text-xs font-semibold tabular text-primary-strong">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">{step.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{step.copy}</p>
+                    </div>
                   </li>
                 ))}
-              </ul>
-            </Reveal>
-          </div>
-        </section>
+              </ol>
 
-        {/* ================================================================ */}
-        {/* Solution / feature grid */}
-        {/* ================================================================ */}
-        <section id="features" aria-label="Capabilities" className="mx-auto w-full max-w-5xl px-4 py-14">
-          <Reveal>
-            <h2 className="text-2xl font-bold tracking-tight">Everything your layer farm needs.</h2>
-            <p className="mt-1 text-muted-foreground">
-              Built for the whole operation, not just the spreadsheet it replaces.
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURES.map((feature) => (
-                <FeatureCard key={feature.title} {...feature} />
-              ))}
+              <p className="mt-8 text-sm">
+                <Link href="/how-it-works" className="font-medium text-primary-strong hover:underline">
+                  See the full walkthrough →
+                </Link>
+              </p>
             </div>
 
-            <p className="mt-8 text-sm">
-              <Link href="/features" className="font-medium text-primary hover:underline">
-                See all features →
-              </Link>
-            </p>
-          </Reveal>
-        </section>
+            <MobileMockup>
+              <p className="text-xs font-semibold">Record production</p>
+              <p className="text-[11px] text-muted-foreground">Flock #001</p>
 
-        {/* ================================================================ */}
-        {/* Showcase A: production entry */}
-        {/* ================================================================ */}
-        <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-14 lg:grid-cols-2 lg:items-center">
-            <Reveal>
-              <p className="text-sm font-medium uppercase tracking-widest text-primary">
-                Daily production
-              </p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
-                Record today&apos;s production in seconds.
-              </h2>
-              <p className="mt-3 max-w-md text-muted-foreground">
-                Hens present, eggs collected, broken and dirty &mdash; a handful of numbers, and
-                LayerFlow works out the rest: laying rate, sellable eggs, and trays.
-              </p>
-            </Reveal>
-
-            <Reveal>
-              <MobileMockup>
-                <p className="text-xs font-semibold">Record production</p>
-                <p className="text-[11px] text-muted-foreground">Flock #001</p>
-
-                <div className="mt-3 flex flex-col gap-2 text-xs">
-                  <Row label="Hens present" value={formatNumber(SHOWCASE_HENS)} />
-                  <Row label="Eggs collected" value={formatNumber(SHOWCASE_EGGS)} />
-                  <Row label="Broken eggs" value={formatNumber(SHOWCASE_BROKEN)} />
-                  <Row label="Dirty eggs" value={formatNumber(SHOWCASE_DIRTY)} />
-                  <Row label="Feed used" value={`${formatNumber(SHOWCASE_FEED_KG)} kg`} />
-                </div>
-
-                <div className="mt-3 rounded-lg bg-muted p-2.5 text-[11px]">
-                  <p className="tabular">
-                    <span className="font-semibold">{formatPercent(showcaseLayingRate)}</span>{" "}
-                    laying rate
-                  </p>
-                  <p className="mt-0.5 tabular text-muted-foreground">
-                    {showcaseTrays.trays} trays + {showcaseTrays.looseEggs} eggs
-                  </p>
-                </div>
-
-                <div className="mt-3 rounded-md bg-primary py-2 text-center text-[11px] font-medium text-primary-foreground">
-                  Save today&apos;s record
-                </div>
-              </MobileMockup>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* Showcase B: profitability */}
-        {/* ================================================================ */}
-        <section className="mx-auto w-full max-w-5xl px-4 py-14">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <Reveal className="lg:order-2">
-              <p className="text-sm font-medium uppercase tracking-widest text-primary">
-                Profitability
-              </p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
-                Know where your money is going.
-              </h2>
-              <p className="mt-3 max-w-md text-muted-foreground">
-                LayerFlow connects production, feed, expenses, and sales so you can see the real
-                operational picture of your farm &mdash; not just revenue.
-              </p>
-            </Reveal>
-
-            <Reveal className="lg:order-1">
-              <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
-                <div className="grid grid-cols-2 gap-3">
-                  <Stat label="Revenue" value={formatCurrency(SHOWCASE_REVENUE)} />
-                  <Stat label="Operating costs" value={formatCurrency(SHOWCASE_COSTS)} />
-                  <Stat label="Est. operating profit" value={formatCurrency(showcaseProfit)} accent />
-                  <Stat label="Cost / egg" value={formatCurrency(showcaseCostPerEgg)} />
-                </div>
-                <svg viewBox="0 0 200 50" className="mt-4 h-14 w-full text-primary" aria-hidden>
-                  <polyline
-                    points="0,40 25,36 50,38 75,26 100,30 125,16 150,20 175,8 200,12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              <div className="mt-3 flex flex-col gap-2 text-xs">
+                <Row label="Hens present" value={formatNumber(SHOWCASE_HENS)} />
+                <Row label="Eggs collected" value={formatNumber(SHOWCASE_EGGS)} />
+                <Row label="Broken eggs" value={formatNumber(SHOWCASE_BROKEN)} />
+                <Row label="Dirty eggs" value={formatNumber(SHOWCASE_DIRTY)} />
+                <Row label="Feed used" value={`${formatNumber(SHOWCASE_FEED_KG)} kg`} />
               </div>
-            </Reveal>
-          </div>
-        </section>
 
-        {/* ================================================================ */}
-        {/* Showcase C: flocks */}
-        {/* ================================================================ */}
-        <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-14 lg:grid-cols-2 lg:items-center">
-            <Reveal>
-              <p className="text-sm font-medium uppercase tracking-widest text-primary">Flocks</p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
-                See every flock at a glance.
-              </h2>
-              <p className="mt-3 max-w-md text-muted-foreground">
-                Age, current hens, production, feed and mortality &mdash; per flock, so you can
-                compare one house against another instead of guessing.
-              </p>
-            </Reveal>
-
-            <Reveal className="flex flex-col gap-3">
-              {FLOCKS.map((flock) => {
-                const rate = layingRate(flock.eggs, flock.hens);
-                return (
-                  <div
-                    key={flock.name}
-                    className="flex items-center justify-between rounded-lg border border-border bg-surface p-4"
-                  >
-                    <div>
-                      <p className="font-semibold">{flock.name}</p>
-                      <p className="text-xs text-muted-foreground">{flock.breed}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="tabular font-semibold">{formatNumber(flock.hens)} hens</p>
-                      <p className="tabular text-xs text-muted-foreground">
-                        {formatPercent(rate)} laying rate
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* Offline */}
-        {/* ================================================================ */}
-        <section className="mx-auto w-full max-w-5xl px-4 py-14">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <Reveal>
-              <p className="text-sm font-medium uppercase tracking-widest text-primary">
-                Built for weak signal
-              </p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
-                No signal? Keep working.
-              </h2>
-              <p className="mt-3 max-w-md text-muted-foreground">
-                Production, feed, and mortality keep recording even when your connection isn&apos;t
-                &mdash; saved locally in the poultry house, and synced the moment you&apos;re back
-                online.
-              </p>
-            </Reveal>
-
-            <Reveal>
-              <MobileMockup>
-                <div className="flex flex-col gap-2.5 text-xs">
-                  <div className="flex items-center gap-2 rounded-lg bg-muted p-2.5">
-                    <WifiOff className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="font-medium">Offline mode</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-[hsl(var(--status-good))]/10 p-2.5">
-                    <Check className="size-4 shrink-0 text-[hsl(var(--status-good))]" aria-hidden />
-                    <span className="text-[hsl(var(--status-good))]">Record saved locally</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-muted p-2.5">
-                    <RefreshCw className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <span>Syncing…</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-[hsl(var(--status-good))]/10 p-2.5">
-                    <Cloud className="size-4 shrink-0 text-[hsl(var(--status-good))]" aria-hidden />
-                    <span className="text-[hsl(var(--status-good))]">Records synchronized</span>
-                  </div>
-                </div>
-              </MobileMockup>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* Alerts & insights */}
-        {/* ================================================================ */}
-        <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto w-full max-w-5xl px-4 py-14">
-            <Reveal>
-              <div className="text-center">
-                <h2 className="text-2xl font-bold tracking-tight">Know when something changes.</h2>
-                <p className="mx-auto mt-1 max-w-lg text-muted-foreground">
-                  Simple operational alerts help you notice changes before they become bigger
-                  problems &mdash; no AI, no diagnosis, just what the numbers did.
+              <div className="mt-3 rounded-lg bg-muted p-2.5 text-[11px]">
+                <p className="tabular">
+                  <span className="font-semibold">{formatPercent(showcaseLayingRate)}</span> laying rate
+                </p>
+                <p className="mt-0.5 tabular text-muted-foreground">
+                  {showcaseTrays.trays} trays + {showcaseTrays.looseEggs} eggs
                 </p>
               </div>
 
-              <div className="mx-auto mt-8 flex max-w-md flex-col gap-2">
-                {ALERTS.map((alert) => {
-                  const tone = ALERT_TONE[alert.level];
+              <div className="mt-3 rounded-md bg-primary py-2 text-center text-[11px] font-medium text-primary-foreground">
+                Save today&apos;s record
+              </div>
+            </MobileMockup>
+          </div>
+        </Reveal>
+      </Section>
+
+      {/* ================================================================ */}
+      {/* Financial overview */}
+      {/* ================================================================ */}
+      <Section>
+        <Reveal>
+          <SectionHeading
+            title="See how your numbers add up."
+            lead="Track the relationship between egg production, feed consumption, sales, and expenses to build a clearer picture of your farm's performance."
+          />
+
+          <div className="mt-10 grid gap-5 lg:grid-cols-[3fr_2fr] lg:items-stretch">
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-semibold">Financial overview</p>
+                <p className="text-xs text-muted-foreground">Last 30 days</p>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <Stat label="Revenue" value={formatCurrency(SHOWCASE_REVENUE)} />
+                <Stat label="Operating costs" value={formatCurrency(SHOWCASE_COSTS)} />
+                <Stat label="Est. operating profit" value={formatCurrency(showcaseProfit)} accent />
+                <Stat label="Cost / egg" value={formatCurrency(showcaseCostPerEgg)} />
+              </div>
+
+              <p className="mt-6 text-xs font-medium text-muted-foreground">Profitability trend</p>
+              <svg viewBox="0 0 200 60" className="mt-2 h-28 w-full" aria-hidden>
+                {CHART_SERIES.map((point, index) => {
+                  const groupWidth = 200 / CHART_SERIES.length;
+                  const x = index * groupWidth + 3;
+                  const barWidth = 5.5;
                   return (
-                    <div
-                      key={alert.message}
-                      className={cn("flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm", tone.wash)}
-                    >
-                      <alert.icon className={cn("size-4 shrink-0", tone.text)} aria-hidden />
-                      <span className={tone.text}>{alert.message}</span>
-                    </div>
+                    <g key={index}>
+                      <rect x={x} y={60 - point.revenue} width={barWidth} height={point.revenue} rx="1.5" className="fill-[hsl(var(--chart-1))]" />
+                      <rect x={x + barWidth + 1} y={60 - point.cost} width={barWidth} height={point.cost} rx="1.5" className="fill-[hsl(var(--chart-2))]" />
+                      <rect x={x + (barWidth + 1) * 2} y={60 - point.profit} width={barWidth} height={point.profit} rx="1.5" className="fill-[hsl(var(--chart-3))]" />
+                    </g>
                   );
                 })}
+              </svg>
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                <Legend swatch="bg-[hsl(var(--chart-1))]" label="Revenue" />
+                <Legend swatch="bg-[hsl(var(--chart-2))]" label="Cost" />
+                <Legend swatch="bg-[hsl(var(--chart-3))]" label="Profit" />
               </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* Pricing */}
-        {/* ================================================================ */}
-        <section aria-label="Pricing" className="mx-auto w-full max-w-5xl px-4 py-14">
-          <Reveal>
-            <div className="text-center">
-              <h2 className="text-2xl font-bold tracking-tight">Start simple. Grow with your farm.</h2>
-              <p className="mt-1 text-muted-foreground">Start free. Move up when your farm does.</p>
             </div>
 
-            <div className="mt-8">
-              <LandingPlanCards />
-            </div>
-          </Reveal>
-        </section>
+            <div className="flex flex-col rounded-2xl border border-border bg-section p-6 text-sm">
+              <p className="font-semibold text-foreground">
+                What&apos;s included in estimated operating profit?
+              </p>
+              <ul className="mt-4 flex flex-col gap-2 text-muted-foreground">
+                {["Egg sales revenue", "Feed costs", "Other operating expenses"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Check className="size-4 shrink-0 text-primary-strong" aria-hidden />
+                    {item}
+                  </li>
+                ))}
+              </ul>
 
-        {/* ================================================================ */}
-        {/* FAQ */}
-        {/* ================================================================ */}
-        <section id="faq" className="border-t border-border bg-muted/30">
-          <div className="mx-auto w-full max-w-3xl px-4 py-14">
-            <Reveal>
-              <h2 className="text-center text-2xl font-bold tracking-tight">
-                Frequently asked questions
-              </h2>
-              <div className="mt-8">
-                <FaqAccordion items={FAQ_ITEMS} />
-              </div>
-              <p className="mt-8 text-center text-sm">
-                <Link href="/faq" className="font-medium text-primary hover:underline">
-                  See the full FAQ →
+              <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Not included
+              </p>
+              <ul className="mt-2 flex flex-col gap-2 text-muted-foreground">
+                {["Depreciation", "Owner's draw / personal expenses", "Financing costs"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Minus className="size-4 shrink-0 text-muted-foreground/60" aria-hidden />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <p className="mt-auto pt-6">
+                <Link href="/blog/reading-your-farms-operating-profit" className="font-medium text-primary-strong hover:underline">
+                  Learn more about our metrics →
                 </Link>
               </p>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* Final CTA */}
-        {/* ================================================================ */}
-        <section className="mx-auto w-full max-w-5xl px-4 py-16">
-          <Reveal>
-            <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-primary/5 px-6 py-12 text-center">
-              <h2 className="text-2xl font-bold tracking-tight lg:text-3xl">
-                Run your farm with better numbers.
-              </h2>
-              <p className="max-w-md text-muted-foreground">
-                Start tracking production, costs, sales, and profitability in one simple place.
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href="/signup" className={cn(buttonVariants({ variant: "primary", size: "lg" }))}>
-                  Start free
-                  <ArrowRight className="size-4" aria-hidden />
-                </Link>
-                <Link
-                  href="/how-it-works"
-                  className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
-                >
-                  Explore the dashboard
-                </Link>
-              </div>
             </div>
-          </Reveal>
-        </section>
-      </main>
+          </div>
+        </Reveal>
+      </Section>
 
-      <PublicFooter />
-    </div>
+      {/* ================================================================ */}
+      {/* Differentiators */}
+      {/* ================================================================ */}
+      <Section tone="tint">
+        <Reveal>
+          <SectionHeading
+            title="Built for the realities of running a layer farm."
+            lead="The details that matter outside the office."
+          />
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {DIFFERENTIATORS.map((item) => (
+              <FeatureCard key={item.title} {...item} />
+            ))}
+          </div>
+        </Reveal>
+      </Section>
+
+      <TestimonialSection />
+
+      {/* ================================================================ */}
+      {/* Pricing */}
+      {/* ================================================================ */}
+      <Section aria-label="Pricing">
+        <Reveal>
+          <SectionHeading
+            align="center"
+            eyebrow="Pricing"
+            title="Simple, transparent pricing"
+            lead="Choose the plan that fits your farm. Start free, no credit card required."
+          />
+          <div className="mt-10">
+            <LandingPlanCards />
+          </div>
+        </Reveal>
+      </Section>
+
+      {/* ================================================================ */}
+      {/* FAQ */}
+      {/* ================================================================ */}
+      <Section tone="tint" id="faq">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.6fr]">
+          <div>
+            <SectionHeading title="Common questions" lead="The short answers to what farmers ask us most." />
+            <p className="mt-6 text-sm">
+              <Link href="/faq" className="font-medium text-primary-strong hover:underline">
+                See the full FAQ →
+              </Link>
+            </p>
+          </div>
+          <FaqAccordion items={HOME_FAQ} />
+        </div>
+      </Section>
+
+      <CtaBand
+        title="Your farm already produces the data. Put it to work."
+        lead="Bring production, feed, sales, and expenses together in one place."
+        secondary={{ href: "/how-it-works", label: "See how it works" }}
+      />
+    </MarketingPage>
   );
 }
 
@@ -708,5 +521,14 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <p className={cn("text-lg font-bold tabular", accent && "text-primary")}>{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+function Legend({ swatch, label }: { swatch: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={cn("size-2.5 rounded-full", swatch)} aria-hidden />
+      {label}
+    </span>
   );
 }

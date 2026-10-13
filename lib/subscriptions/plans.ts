@@ -150,6 +150,20 @@ export function requiredPlanFor(feature: Feature): SubscriptionPlan | null {
   return PLAN_ORDER.find((id) => PLANS[id].features.includes(feature)) ?? null;
 }
 
+/**
+ * Marketing label for which plans include a feature -- "All plans",
+ * "Starter & Pro", "Pro". Derived from the gate itself so a badge on the
+ * public site can't drift from what the app actually unlocks. `null` means
+ * an ungated capability (production, inventory, pricing).
+ */
+export function planAvailabilityLabel(feature: Feature | null): string {
+  if (feature === null) return "All plans";
+  const first = requiredPlanFor(feature);
+  if (first === null) return "Coming soon";
+  const included = PLAN_ORDER.slice(PLAN_ORDER.indexOf(first)).map((id) => PLANS[id].name);
+  return included.length === PLAN_ORDER.length ? "All plans" : included.join(" & ");
+}
+
 /** The cheapest plan whose limit exceeds the current one. */
 export function nextPlanForLimit(
   current: SubscriptionPlan,

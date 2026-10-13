@@ -20,6 +20,7 @@
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "db:backup": "node scripts/backup.mjs",
     "email:icons": "node scripts/generate-email-icons.mjs",
+    "photos:optimize": "node scripts/optimize-marketing-photos.mjs",
     "build:check": "cross-env NEXT_DIST_DIR=.next-verify next build",
     "check:contrast": "node scripts/contrast.mjs && node scripts/contrast.mjs --dark",
     "cf:build": "opennextjs-cloudflare build",

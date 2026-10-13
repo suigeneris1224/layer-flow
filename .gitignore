@@ -28,3 +28,6 @@ backups
 # Claude Code machine-local settings (permissions, per-machine config).
 # launch.json is intentionally shared; settings.local.json is not.
 .claude/settings.local.json
+
+# Marketing photo originals -- only the optimized output in public/marketing/ is committed.
+/public/marketing/_src/

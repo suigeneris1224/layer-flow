@@ -25,7 +25,7 @@ Free ChatGPT allows only a few images a day, and the limit changes over time, so
    isn't exactly 4:3 or 16:10.
 3. Check it against the **rejection checklist**. To fix one detail, reply in the same chat ("same
    image, but the hens should be white"). That's cheaper than starting over.
-4. Download it (hover the image → download icon). Save it into `public/marketing/_src/`, renamed to
+4. Download it (hover the image → download icon). Save it into `marketing-src/`, renamed to
    the slot's file name with any extension, e.g. `features-hero.png`.
 5. Run `npm run photos:optimize`. It center-crops each image to its slot (keeping the subject in
    frame) and writes a compressed JPEG into `public/marketing/`.

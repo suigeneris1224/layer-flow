@@ -30,4 +30,5 @@ backups
 .claude/settings.local.json
 
 # Marketing photo originals -- only the optimized output in public/marketing/ is committed.
-/public/marketing/_src/
+# Kept outside public/ so they are never deployed.
+/marketing-src/

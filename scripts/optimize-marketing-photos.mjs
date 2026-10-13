@@ -4,9 +4,10 @@
  *
  *   npm run photos:optimize
  *
- * Reads originals from public/marketing/_src/ (gitignored), named after a
- * slot's file in lib/marketing/photos.ts with any image extension, e.g.
- * `_src/features-hero.png`. Writes `public/marketing/features-hero.jpg` at
+ * Reads originals from marketing-src/ at the repo root (gitignored), named
+ * after a slot's file in lib/marketing/photos.ts with any image extension,
+ * e.g. `marketing-src/features-hero.png`. Deliberately outside public/:
+ * everything under public/ is deployed and publicly reachable. Writes `public/marketing/features-hero.jpg` at
  * the slot's exact width x height (center crop), as a progressive JPEG.
  *
  * Slot sizes are read straight out of photos.ts, so the two can't drift.
@@ -19,7 +20,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import path from "node:path";
 import sharp from "sharp";
 
-const SRC_DIR = "public/marketing/_src";
+const SRC_DIR = "marketing-src";
 const OUT_DIR = "public/marketing";
 const MAX_BYTES = 250 * 1024;
 

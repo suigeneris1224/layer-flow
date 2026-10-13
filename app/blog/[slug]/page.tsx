@@ -13,8 +13,11 @@ import { POSTS, categoryLabel, formatPostDate, getPost, relatedPosts } from "@/l
 import { PHOTOS } from "@/lib/marketing/photos";
 import { articleSchema, breadcrumbSchema } from "@/lib/marketing/structured-data";
 
-export const dynamicParams = false;
-
+// No `dynamicParams = false`: on Cloudflare (OpenNext, no persistent
+// incremental cache -- see open-next.config.ts) the prerendered HTML isn't
+// found at request time, and dynamicParams=false turns that miss into a 404
+// for every post. Rendering on demand is cheap, and unknown slugs still 404
+// via notFound() below.
 export function generateStaticParams() {
   return POSTS.map((post) => ({ slug: post.slug }));
 }

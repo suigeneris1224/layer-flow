@@ -6,7 +6,7 @@ import type { PhotoKey } from "./photos";
  * someone real joins; the About page uses a workspace photo instead.
  *
  * Both lists are deliberately empty until there's something genuine to put
- * in them. While TESTIMONIALS is empty the homepage shows its "Built in Cebu"
+ * in them. While TESTIMONIALS is empty the homepage shows its "Made for Filipino farmers"
  * section instead (components/marketing/testimonial.tsx); while TEAM is empty
  * the About page's team grid renders nothing. A made-up quote
  * costs more trust than an absent one -- and Google's review-snippet

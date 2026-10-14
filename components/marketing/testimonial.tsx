@@ -10,13 +10,13 @@ import { Section, SectionHeading } from "./section";
  *
  * With a real testimonial in lib/marketing/social-proof.ts, it shows that
  * quote beside its photo ("Trusted by layer farmers"). Until then it shows
- * BuiltInCebu instead -- commitments that are true today, rather than an
+ * MadeForFilipinoFarmers instead -- commitments that are true today, rather than an
  * empty gap or a made-up quote. Adding the first testimonial swaps them
  * over with no other change.
  */
 export function TestimonialSection() {
   const testimonial = TESTIMONIALS[0];
-  if (!testimonial) return <BuiltInCebu />;
+  if (!testimonial) return <MadeForFilipinoFarmers />;
 
   return (
     <Section>
@@ -65,14 +65,14 @@ const COMMITMENTS = [
   },
 ];
 
-function BuiltInCebu() {
+function MadeForFilipinoFarmers() {
   return (
     <Section>
       <div className="grid overflow-hidden rounded-2xl border border-border bg-surface shadow-card lg:grid-cols-[1.15fr_1fr]">
         <div className="flex flex-col justify-center p-6 sm:p-10">
           <SectionHeading
-            eyebrow="Built in Cebu"
-            title="Made for Philippine layer farms, not adapted for them."
+            eyebrow="Made for Filipino farmers"
+            title="Built for Philippine layer farms, not adapted for them."
           />
           <ul className="mt-8 flex flex-col gap-5">
             {COMMITMENTS.map((item) => (

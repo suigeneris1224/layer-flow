@@ -34,7 +34,7 @@ export const PHOTOS = {
     1200,
     900
   ),
-  // The homepage's "Built in Cebu" section, shown until a real testimonial
+  // The homepage's "Made for Filipino farmers" section, shown until a real testimonial
   // exists (falls back to howItWorksHero if this file is ever removed).
   homeFarm: photo(
     "home-farm.jpg",

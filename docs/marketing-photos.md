@@ -9,7 +9,7 @@ its `fallback` image if the page gives one, otherwise a branded placeholder.
 |---|---|---|
 | `homeTestimonial` | `home-testimonial.jpg` | It sits beside a named customer's quote. A generated "customer" is a fake testimonial. |
 
-Until a real quote exists, the homepage shows a "Built in Cebu" section in its place, using `homeFarm`.
+Until a real quote exists, the homepage shows a "Made for Filipino farmers" section in its place, using `homeFarm`.
 
 The About page's "Who's behind it" section uses `aboutFounder`: the real developer, generated from
 their own photo as a reference. Never replace it with a stock or stranger's face.
@@ -103,7 +103,7 @@ Blog index hero.
 ## Homepage and About (1152×648, 16:9)
 
 ### `homeFarm` → `home-farm.jpg` ✅ done
-Homepage "Built in Cebu" section, beside the commitments. Falls back to the How It Works hero.
+Homepage "Made for Filipino farmers" section, beside the commitments. Falls back to the How It Works hero.
 > Wide shot from outside a long open-sided layer house in the Cebu countryside on a bright morning:
 > corrugated metal roof, wooden posts, rows of wire cages with white hens visible inside, stacked
 > plastic egg trays by the entrance, coconut palms and banana plants around it. No people.

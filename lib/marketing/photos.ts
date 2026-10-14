@@ -76,7 +76,7 @@ export const PHOTOS = {
   // photo) -- never a stock or stranger's face. See lib/marketing/social-proof.ts.
   aboutFounder: photo(
     "about-founder.jpg",
-    "LayerFlow's developer working on a laptop at a farmhouse table, a tray of eggs beside it and a layer house with white hens behind",
+    "Marlon, LayerFlow's founder and developer, working on a laptop at a farmhouse table, a tray of eggs beside it and a layer house with white hens behind",
     1152,
     648,
     true

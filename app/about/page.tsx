@@ -108,17 +108,16 @@ export default function AboutPage() {
       <Section>
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <SectionHeading eyebrow="Who's behind it" title="Built by a solo developer in Cebu." />
+            <SectionHeading eyebrow="Who's behind it" title="You'll talk to the person who builds it." />
             <div className="mt-5 flex flex-col gap-4 text-base leading-relaxed text-muted-foreground">
               <p>
                 LayerFlow is designed, built, and supported by one developer based in Cebu, working
                 directly with layer farmers to make software that fits how a farm actually runs.
               </p>
               <p>
-                That means when you send feedback or ask for help, you&apos;re talking to the person
-                who builds the product. It&apos;s early, and I say so: if a feature isn&apos;t built
-                yet, you&apos;ll hear that plainly — and what farmers ask for decides what gets built
-                next.
+                Send feedback or ask for help, and it reaches me directly — no call centre, no
+                ticket queue. It&apos;s early, and I say so: if a feature isn&apos;t built yet,
+                you&apos;ll hear that plainly, and what farmers ask for decides what gets built next.
               </p>
             </div>
             <p className="mt-6 text-sm">
@@ -127,7 +126,13 @@ export default function AboutPage() {
               </Link>
             </p>
           </div>
-          <PhotoSlot photo="aboutFounder" ratio="16/10" className="shadow-card" />
+          <figure>
+            <PhotoSlot photo="aboutFounder" ratio="16/10" className="shadow-card" />
+            <figcaption className="mt-3 text-sm">
+              <span className="font-semibold text-foreground">Marlon</span>
+              <span className="text-muted-foreground"> · Founder &amp; developer</span>
+            </figcaption>
+          </figure>
         </div>
 
         {TEAM.length > 0 && (

@@ -89,6 +89,7 @@ Cloudflare splits environment variables into two buckets, both needed:
 | `CRON_SECRET` | Secret | The scheduled Worker (`workers/cron-worker.ts`) sends it as `Authorization: Bearer <value>` — same value the route already expected under Vercel Cron |
 | `BREVO_WEBHOOK_SECRET` | Secret | Any random string. Brevo's delivery webhook (`/api/webhooks/brevo`) must send it back as `?secret=<value>`, or the route rejects the request — see the callout below |
 | `ADMIN_EMAILS` | Secret | Comma-separated, lowercase. Gates `/admin`; blank means nobody can reach it |
+| `OPEN_METEO_API_KEY` | Secret | Optional. Unset = Open-Meteo's free API, which is **non-commercial only**; set a paid customer key before relying on the weather feature in production (`lib/weather/open-meteo.ts` then uses the `customer-api` hosts) |
 
 `NEXT_PUBLIC_*` values are needed at **build** time too (to inline into the client bundle), not
 just at runtime — set them as both a Cloudflare "Build variable" and a runtime binding, or the

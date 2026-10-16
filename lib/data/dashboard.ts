@@ -29,7 +29,9 @@ import {
   vaccinationAlert,
   vaccinationDueAlert,
   biosecurityAlert,
+  heatAlert,
   type CheckGap,
+  type HeatDay,
   type DueDose,
   type Alert,
   type PricedSizeStatus,
@@ -48,6 +50,8 @@ import { getLatestVaccinationByFlock } from "@/lib/data/health";
 import { dueDosesForAlert, getFlockDoses } from "@/lib/data/vaccination-schedule";
 import { getLatestChecks } from "@/lib/data/biosecurity";
 import { daysSinceLastCheck } from "@/lib/domain/biosecurity";
+import { getWeather } from "@/lib/data/weather";
+import { heatDaysForAlert } from "@/lib/domain/weather";
 import { syncNotifications } from "@/lib/data/notifications";
 import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
 import { getNotificationPreferences } from "@/lib/data/notification-preferences";
@@ -403,6 +407,14 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
     ];
   }
 
+  // Forecast heat (weather, Starter+). getWeather is request-cached, so the
+  // dashboard's own weather panel reuses this same fetch.
+  let heatDays: HeatDay[] = [];
+  if (hasAlerts && canAccess(entitlement, "weather")) {
+    const weather = await getWeather(context);
+    if (weather.status === "ok") heatDays = heatDaysForAlert(weather.days, today);
+  }
+
   const alerts = hasAlerts
     ? buildAlerts({
         productionRows,
@@ -419,6 +431,7 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
         latestVaccinationByFlock,
         scheduledDoses,
         checkGaps,
+        heatDays,
         totalTrays: inventorySummary.totalTrays,
         ungradedEggs: inventorySummary.ungradedEggs,
         looseEggs: inventorySummary.looseEggs,
@@ -664,6 +677,8 @@ interface BuildAlertsInput {
   scheduledDoses: readonly DueDose[] | null;
   /** Routine biosecurity checks; empty when the farm isn't entitled. */
   checkGaps: readonly CheckGap[];
+  /** Today and tomorrow's forecast heat; empty when not entitled or unavailable. */
+  heatDays: readonly HeatDay[];
   totalTrays: number;
   ungradedEggs: number;
   looseEggs: number;
@@ -687,6 +702,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     latestVaccinationByFlock,
     scheduledDoses,
     checkGaps,
+    heatDays,
     totalTrays,
     ungradedEggs,
     looseEggs,
@@ -756,6 +772,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     mortalityAlert(mortalityToday, hens, thresholds.dailyMortalityRate),
     overdueVaccination ?? null,
     biosecurityAlert(checkGaps),
+    heatAlert(heatDays),
   ];
 
   if (hasAdvancedAlerts) {

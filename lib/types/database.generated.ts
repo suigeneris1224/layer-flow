@@ -1874,6 +1874,47 @@ export type Database = {
           },
         ]
       }
+      weather_snapshots: {
+        Row: {
+          daily_history: Json
+          farm_id: string
+          fetched_at: string
+          forecast: Json
+          latitude: number | null
+          location_key: string
+          location_label: string | null
+          longitude: number | null
+        }
+        Insert: {
+          daily_history?: Json
+          farm_id: string
+          fetched_at?: string
+          forecast?: Json
+          latitude?: number | null
+          location_key: string
+          location_label?: string | null
+          longitude?: number | null
+        }
+        Update: {
+          daily_history?: Json
+          farm_id?: string
+          fetched_at?: string
+          forecast?: Json
+          latitude?: number | null
+          location_key?: string
+          location_label?: string | null
+          longitude?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weather_snapshots_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: true
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       egg_grading_summary: {

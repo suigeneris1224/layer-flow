@@ -1,7 +1,7 @@
 import type { Alert, AlertType } from "@/lib/domain/alerts";
 
 /**
- * Which of lib/domain/alerts.ts's 9 AlertTypes each Settings -> Notifications
+ * Which of lib/domain/alerts.ts's AlertTypes each Settings -> Notifications
  * switch covers. Grouped into the same two categories the settings page has
  * always shown, rather than one switch per rule.
  */
@@ -11,6 +11,9 @@ export const FARM_PRODUCTION_TYPES: readonly AlertType[] = [
   "mortality",
   "egg_size",
   "vaccination",
+  "vaccination_due",
+  "biosecurity",
+  "heat",
   "underperforming_flock",
   "flock_loss",
 ];

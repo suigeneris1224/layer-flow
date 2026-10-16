@@ -23,6 +23,7 @@ export type AlertType =
   | "vaccination"
   | "vaccination_due"
   | "biosecurity"
+  | "heat"
   | "low_inventory"
   | "underperforming_flock"
   | "flock_loss"
@@ -352,6 +353,36 @@ export function biosecurityAlert(gaps: readonly CheckGap[]): Alert | null {
     level: "warn",
     message: `No ${worst.label.toLowerCase()} logged in ${worst.daysSince} days.`,
     type: "biosecurity",
+  };
+}
+
+/** One forecast day, for `heatAlert`. */
+export interface HeatDay {
+  /** "today" / "tomorrow" / a weekday -- whatever reads naturally. */
+  label: string;
+  peakHeatIndexC: number;
+  /** PAGASA level label for that peak, e.g. "Extreme caution". */
+  levelLabel: string;
+  /** Whether the peak reaches Extreme caution (33 °C) or above. */
+  significant: boolean;
+  /** Reaches Danger (42 °C) or above. */
+  danger: boolean;
+  /** "2 PM". */
+  peakHour: string;
+}
+
+/**
+ * A hot day coming (weather, Starter+). Reports the forecast heat index and
+ * PAGASA's level for it -- what it means for the birds is the farmer's call.
+ * Only the first significant day is named; Danger or worse is `bad`.
+ */
+export function heatAlert(days: readonly HeatDay[]): Alert | null {
+  const day = days.find((entry) => entry.significant);
+  if (!day) return null;
+  return {
+    level: day.danger ? "bad" : "warn",
+    message: `Heat index up to ${Math.round(day.peakHeatIndexC)}°C ${day.label} around ${day.peakHour} (${day.levelLabel}).`,
+    type: "heat",
   };
 }
 

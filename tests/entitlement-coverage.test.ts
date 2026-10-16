@@ -35,6 +35,8 @@ const ENFORCED: Record<Feature, string> = {
   offline_mode:
     "app/(app)/production/new/page.tsx + app/(app)/health/page.tsx — canAccess gates whether the offline queue (lib/offline/) is used at all",
   cross_farm_reporting: "app/(app)/reports/cross-farm/page.tsx",
+  weather:
+    "app/(app)/dashboard/page.tsx + app/(app)/analytics/page.tsx + lib/data/dashboard.ts — the forecast panel, temperature overlay and heat alert",
   feed_formulation:
     "app/(app)/feed/formulas/{page,actions}.ts + app/(app)/health/page.tsx — the formula editor and the feed form's formula picker",
   biosecurity:
@@ -123,5 +125,33 @@ describe("limit coverage", () => {
       unaccounted,
       `Every LimitKey needs an enforcement site: ${unaccounted.join(", ")}`
     ).toEqual([]);
+  });
+});
+
+/*
+ * Every alert type must belong to a Settings -> Notifications switch, or the
+ * farmer has no way to mute it.
+ */
+import { FARM_PRODUCTION_TYPES, INVENTORY_TYPES } from "@/lib/domain/notification-preferences";
+import type { AlertType } from "@/lib/domain/alerts";
+
+describe("notification coverage", () => {
+  it("puts every alert type under a notification switch", () => {
+    const ALL: Record<AlertType, true> = {
+      production: true,
+      feed_cost: true,
+      mortality: true,
+      egg_size: true,
+      vaccination: true,
+      vaccination_due: true,
+      biosecurity: true,
+      heat: true,
+      low_inventory: true,
+      underperforming_flock: true,
+      flock_loss: true,
+      stale_pricing: true,
+    };
+    const covered = new Set<AlertType>([...FARM_PRODUCTION_TYPES, ...INVENTORY_TYPES]);
+    expect((Object.keys(ALL) as AlertType[]).filter((type) => !covered.has(type))).toEqual([]);
   });
 });

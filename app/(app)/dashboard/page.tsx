@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Bird, Egg, PhilippinePeso, Plus, Receipt, TrendingUp } from "lucide-react";
 import { getUserFarms, requireFarmContext } from "@/lib/auth/session";
-import { canManageBilling } from "@/lib/auth/permissions";
+import { canManageBilling, canManageFarmSettings } from "@/lib/auth/permissions";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getFarmCardsForUser } from "@/lib/data/farms";
 import { getSubscriptionPeriod } from "@/lib/data/subscriptions";
 import { getSalesOverview } from "@/lib/data/sales-overview";
+import { getWeather } from "@/lib/data/weather";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
@@ -21,6 +22,7 @@ import { EggSizeDonut, ProductionChart, SalesChart } from "@/components/charts/l
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { FlockStatusPanel } from "@/components/dashboard/flock-status-panel";
+import { WeatherPanel } from "@/components/dashboard/weather-panel";
 import { FarmCards } from "@/components/farms/farm-cards";
 import { TodayStatus } from "@/components/dashboard/today-status";
 import { formatCurrencyCompact, formatCurrencyShort, formatNumber, formatPercent } from "@/lib/format";
@@ -49,6 +51,8 @@ export default async function DashboardPage() {
   const salesOverview = data.money.isComplete
     ? await getSalesOverview(context.farmId, data.date)
     : null;
+  // Request-cached: the heat alert in getDashboardData already fetched it.
+  const weather = canAccess(entitlement, "weather") ? await getWeather(context) : null;
 
   return (
     <PageShell>
@@ -221,6 +225,14 @@ export default async function DashboardPage() {
           className="lg:col-span-12 xl:col-span-3"
         />
       </div>
+
+      {weather && (
+        <WeatherPanel
+          weather={weather}
+          timezone={context.timezone}
+          canEditFarm={canManageFarmSettings(context)}
+        />
+      )}
 
       <Panel
         title="Farms overview"

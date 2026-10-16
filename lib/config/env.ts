@@ -96,6 +96,14 @@ export const serverEnv = {
     }
     return key;
   },
+  /**
+   * Optional Open-Meteo customer API key. Unset = the free API, which is for
+   * non-commercial use only; set it before relying on weather in production
+   * (lib/weather/open-meteo.ts switches to the customer-api hosts).
+   */
+  get openMeteoApiKey(): string | null {
+    return process.env.OPEN_METEO_API_KEY || null;
+  },
   /** Bearer secret Vercel Cron must send; verified before any cron route does anything. */
   get cronSecret(): string {
     const secret = process.env.CRON_SECRET;

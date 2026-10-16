@@ -41,6 +41,11 @@ export const LayingRateChart = dynamic(
   { ssr: false, loading: () => <ChartSkeleton /> }
 );
 
+export const HeatLayingChart = dynamic(
+  () => import("./heat-laying-chart").then((mod) => mod.HeatLayingChart),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
+
 export const ProfitChart = dynamic(() => import("./profit-chart").then((mod) => mod.ProfitChart), {
   ssr: false,
   loading: () => <ChartSkeleton className="h-[180px] w-full lg:h-[210px]" />,

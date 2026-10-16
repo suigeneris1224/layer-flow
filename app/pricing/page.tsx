@@ -46,6 +46,7 @@ const FEATURE_ROWS: Feature[] = [
   "vaccination_schedule",
   "biosecurity",
   "feed_formulation",
+  "weather",
   "flock_comparison",
   "advanced_reports",
   "data_export",

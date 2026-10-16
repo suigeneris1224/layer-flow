@@ -4,6 +4,7 @@ import { requireFarmContext } from "@/lib/auth/session";
 import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { getAnalyticsData } from "@/lib/data/analytics";
 import { getFarmStartYear } from "@/lib/data/farms";
+import { getWeather } from "@/lib/data/weather";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
@@ -13,10 +14,12 @@ import {
   EggSizeDonut,
   EggSizeTrendChart,
   FlockComparisonChart,
+  HeatLayingChart,
   LayingRateChart,
 } from "@/components/charts/lazy";
+import type { HeatLayingPoint } from "@/components/charts/heat-laying-chart";
 import { ReportRangeSelect } from "@/components/reports/report-range-select";
-import { listYearsSince, resolveReportRange } from "@/lib/domain/reports";
+import { eachDate, listYearsSince, resolveReportRange } from "@/lib/domain/reports";
 import { farmToday, formatCurrency, formatKg, formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +59,30 @@ export default async function AnalyticsPage({
     getFarmStartYear(context.farmId),
   ]);
   const hasProduction = data.totals.totalEggs > 0 || data.totals.totalMortality > 0;
+
+  // Temperature vs laying rate (weather, Starter+). Daily ranges only: the
+  // laying series is one point per date there, so it lines up with the
+  // weather by index. Year view is monthly and skips this.
+  let heatPoints: HeatLayingPoint[] | null = null;
+  const dates = eachDate(range.from, range.to);
+  if (
+    hasProduction &&
+    canAccess(entitlement, "weather") &&
+    dates.length === data.charts.layingRate.length
+  ) {
+    const weather = await getWeather(context);
+    if (weather.status === "ok") {
+      const highs = new Map<string, number | null>([
+        ...weather.history.map((day) => [day.date, day.maxTempC] as const),
+        ...weather.days.map((day) => [day.date, day.maxTempC] as const),
+      ]);
+      heatPoints = data.charts.layingRate.map((point, index) => ({
+        day: point.day,
+        layingRate: point.layingRate,
+        maxTempC: highs.get(dates[index]) ?? null,
+      }));
+    }
+  }
 
   const flockComparison = data.flockComparison ?? [];
   const bestFlockId = flockComparison[0]?.id;
@@ -130,6 +157,12 @@ export default async function AnalyticsPage({
                 previousLabel={data.charts.layingRateComparisonLabel}
               />
             </Panel>
+
+            {heatPoints && (
+              <Panel title="Heat and laying rate" className="lg:col-span-8">
+                <HeatLayingChart data={heatPoints} />
+              </Panel>
+            )}
 
             {data.charts.sizes && data.charts.sizeTrend ? (
               <Panel title="Eggs by size" className="lg:col-span-4 lg:self-start">

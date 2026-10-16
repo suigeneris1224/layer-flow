@@ -785,6 +785,32 @@ suite("RLS tenant isolation", () => {
       expect(error).not.toBeNull();
     });
 
+    it("no client can write weather snapshots, only read their own farm's", async () => {
+      // Server-only writes (service role) -- see lib/data/weather.ts.
+      const { error: ownWrite } = await alice.client.from("weather_snapshots").insert({
+        farm_id: farmA.farmId,
+        location_key: "x|y",
+      });
+      expect(ownWrite).not.toBeNull();
+
+      const admin = adminClient();
+      await admin
+        .from("weather_snapshots")
+        .upsert({ farm_id: farmA.farmId, location_key: "lipa|batangas" });
+
+      const { data: own } = await worker.client
+        .from("weather_snapshots")
+        .select("farm_id")
+        .eq("farm_id", farmA.farmId);
+      expect(own?.length).toBe(1);
+
+      const { data: other } = await bob.client
+        .from("weather_snapshots")
+        .select("farm_id")
+        .eq("farm_id", farmA.farmId);
+      expect(other).toEqual([]);
+    });
+
     it("a worker cannot adjust stock", async () => {
       // Adjustments rewrite inventory, so they sit with the manager role
       // alongside sales and pricing rather than with daily recording.

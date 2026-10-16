@@ -14,7 +14,8 @@
 
 Free covers daily production, egg sizes, basic inventory, mortality, feed, walk-in sales (last 30 days)
 and a basic dashboard.
-Starter adds customer records, full sales history, full expenses, egg size analytics, charts, alerts, reports and offline mode.
+Starter adds customer records, full sales history, full expenses, egg size analytics, charts, alerts, reports and offline mode,
+plus the vaccination schedule, biosecurity log, feed formulation, and weather with heat alerts.
 Pro adds multiple farms, advanced reports, flock comparison, CSV export, team management,
 cross-farm reporting and priority support.
 

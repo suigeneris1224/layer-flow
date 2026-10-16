@@ -163,6 +163,25 @@ see `cleanup()` in `tests/rls/helpers.ts`.
 This is not only a test concern: **a farm cannot currently be deleted through the app either**,
 which will matter for account deletion.
 
+`feed_formula_items.ingredient_id -> feed_ingredients` deliberately does **not** add to this list:
+it is `DEFERRABLE INITIALLY DEFERRED`, so deleting an ingredient a recipe still uses fails at
+commit, but a whole-farm cascade (ingredients, formulas and their items together) goes through.
+
+### Farm-owned programmes, never presets
+
+`vaccination_schedule_items`, `feed_ingredients` / `feed_formulas` and the biosecurity logs hold
+only what the farm entered. LayerFlow ships no vaccine programme, no ingredient values and no
+recipe; the app does the date and mixing math (`lib/domain/vaccination-schedule.ts`,
+`lib/domain/feed-formulation.ts`). Configuration (programme, ingredients, formulas) is MANAGER+;
+logging (doses, visitors, checks) is any member, like the other daily records.
+
+### Weather is cached in the database
+
+`weather_snapshots` holds one forecast per farm, refreshed at most every 3 hours on read
+(`lib/data/weather.ts`), because OpenNext on Cloudflare has no persistent fetch cache here. Members
+can read it; only the service-role client writes it. The geocoded location is stored with the
+`municipality|province` key it came from, so an address change simply re-geocodes on next read.
+
 ## Indexes
 
 Every foreign key is indexed, plus composites for the queries that actually run:

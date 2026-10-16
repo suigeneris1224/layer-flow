@@ -37,8 +37,8 @@ export default function TermsPage() {
                 <span className="font-medium text-foreground">Prepaid Billing Framework:</span>{" "}
                 The Service operates strictly on a prepaid, manual subscription basis.
                 Subscriptions are made available across tiers structured around operational
-                capacity limits (such as the Starter Tier at ₱349/month or the Pro Tier at
-                ₱899/month, or their respective annual equivalents).
+                capacity limits (such as the Starter Tier at ₱249/month or the Pro Tier at
+                ₱699/month, or their respective annual equivalents).
               </li>
               <li>
                 <span className="font-medium text-foreground">The Expiry Clock:</span> Your

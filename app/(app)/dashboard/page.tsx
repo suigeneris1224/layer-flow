@@ -11,7 +11,6 @@ import { getSalesOverview } from "@/lib/data/sales-overview";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
-import { StatusNote } from "@/components/ui/states";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Delta } from "@/components/ui/delta";
 import { RenewalBanner } from "@/components/subscriptions/renewal-banner";
@@ -180,22 +179,23 @@ export default async function DashboardPage() {
           className="lg:col-span-6 xl:col-span-4"
         />
 
-        <Panel
-          title={
-            <h2 className="flex items-center gap-1 text-sm font-semibold">
-              Sales overview
-              <InfoTip label="About sales overview">
-                Total value of egg sales recorded so far this month, by day. The percentage
-                compares against the same number of days last month, so a few days into a new
-                month isn&apos;t compared against a full previous one. For any other range, see
-                Reports.
-              </InfoTip>
-            </h2>
-          }
-          className="lg:col-span-6 xl:col-span-5"
-          action={salesOverview && <span className="text-xs text-muted-foreground">This month</span>}
-        >
-          {salesOverview ? (
+        {/* Every plan tracks sales now, so the overview is always there. */}
+        {salesOverview && (
+          <Panel
+            title={
+              <h2 className="flex items-center gap-1 text-sm font-semibold">
+                Sales overview
+                <InfoTip label="About sales overview">
+                  Total value of egg sales recorded so far this month, by day. The percentage
+                  compares against the same number of days last month, so a few days into a new
+                  month isn&apos;t compared against a full previous one. For any other range, see
+                  Reports.
+                </InfoTip>
+              </h2>
+            }
+            className="lg:col-span-6 xl:col-span-5"
+            action={<span className="text-xs text-muted-foreground">This month</span>}
+          >
             <>
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <p className="stat-figure">
@@ -212,15 +212,8 @@ export default async function DashboardPage() {
                 emptyMessage="No sales recorded this month."
               />
             </>
-          ) : (
-            <StatusNote tone="info">
-              Sales tracking is on Starter.{" "}
-              <Link href="/pricing" className="font-medium underline">
-                See plans
-              </Link>
-            </StatusNote>
-          )}
-        </Panel>
+          </Panel>
+        )}
 
         <FlockStatusPanel
           status={data.flockStatus}

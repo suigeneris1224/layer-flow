@@ -82,6 +82,7 @@ function blankLine(size: SizeOption | undefined): LineState {
 export function SaleForm({
   sizes,
   customers: initialCustomers,
+  customersEnabled,
   flocks,
   stock,
   today,
@@ -89,6 +90,8 @@ export function SaleForm({
 }: {
   sizes: SizeOption[];
   customers: CustomerOption[];
+  /** False on Free: every sale is a walk-in, so there is no picker to show. */
+  customersEnabled: boolean;
   flocks: { id: string; name: string }[];
   stock: StockRow[];
   today: string;
@@ -248,17 +251,19 @@ export function SaleForm({
               </Field>
             </div>
 
-            <CustomerPicker
-              customers={customers}
-              customerId={customerId}
-              onSelect={setCustomerId}
-              onAdded={(customer) => {
-                setCustomers((current) =>
-                  [...current, customer].sort((a, b) => a.name.localeCompare(b.name))
-                );
-                setCustomerId(customer.id);
-              }}
-            />
+            {customersEnabled && (
+              <CustomerPicker
+                customers={customers}
+                customerId={customerId}
+                onSelect={setCustomerId}
+                onAdded={(customer) => {
+                  setCustomers((current) =>
+                    [...current, customer].sort((a, b) => a.name.localeCompare(b.name))
+                  );
+                  setCustomerId(customer.id);
+                }}
+              />
+            )}
           </Panel>
 
           <Panel

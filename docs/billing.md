@@ -4,7 +4,7 @@
 
 | | Free | Starter | Pro |
 |---|---|---|---|
-| Price | ₱0 | **₱349/mo** | ₱899/mo |
+| Price | ₱0 | **₱249/mo** | ₱699/mo |
 | Farms | 1 | 1 | 3 |
 | Houses | 1 | 3 | Unlimited |
 | Active flocks | 1 | 5 | Unlimited |
@@ -12,8 +12,9 @@
 | Customers | — | 20 | Unlimited |
 | History | 30 days | Unlimited | Unlimited |
 
-Free covers daily production, egg sizes, basic inventory, mortality, feed and a basic dashboard.
-Starter adds sales, full expenses, egg size analytics, charts, alerts, reports and offline mode.
+Free covers daily production, egg sizes, basic inventory, mortality, feed, walk-in sales (last 30 days)
+and a basic dashboard.
+Starter adds customer records, full sales history, full expenses, egg size analytics, charts, alerts, reports and offline mode.
 Pro adds multiple farms, advanced reports, flock comparison, CSV export, team management,
 cross-farm reporting and priority support.
 

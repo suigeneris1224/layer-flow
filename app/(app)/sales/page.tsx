@@ -3,7 +3,12 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, PhilippinePeso } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import { canManageSales } from "@/lib/auth/permissions";
-import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
+import {
+  canAccess,
+  featureLockedPrompt,
+  historyCutoffDate,
+  limitReachedPrompt,
+} from "@/lib/subscriptions/entitlements";
 import {
   getOutstandingTotal,
   getSales,
@@ -18,7 +23,13 @@ import { Panel } from "@/components/ui/panel";
 import { EmptyState, StatusNote } from "@/components/ui/states";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { buttonVariants } from "@/components/ui/button";
-import { farmToday, formatCurrency, formatNumber, formatRelativeDay } from "@/lib/format";
+import {
+  farmToday,
+  formatCurrency,
+  formatNumber,
+  formatRelativeDay,
+  shiftDate,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ExportMenu } from "@/components/export/export-menu";
 import { ExportNotice } from "@/lib/export/notices";
@@ -81,7 +92,13 @@ export default async function SalesPage({
   const bounds: { from?: string; to?: string } =
     range === "all" ? {} : resolveReportRange(range, today);
 
-  const [sales, salesCount, allTimeCount, outstanding] = await Promise.all([
+  // Free sees `history_days` of sales, same as production. Clamp the range
+  // rather than reject it, so "All time" on Free means "all you can see".
+  const cutoff = historyCutoffDate(entitlement);
+  const since = cutoff ? cutoff.toISOString().slice(0, 10) : null;
+  if (since && (!bounds.from || bounds.from < since)) bounds.from = since;
+
+  const [sales, salesCount, allTimeCount, outstanding, hiddenCount] = await Promise.all([
     getSales(context, {
       from: bounds.from,
       to: bounds.to,
@@ -91,8 +108,10 @@ export default async function SalesPage({
     getSalesCount(context, { from: bounds.from, to: bounds.to }),
     // Cheap head-count, unscoped -- only used to tell "no sales in this
     // period" apart from "no sales ever" for the empty state below.
-    getSalesCount(context),
+    getSalesCount(context, { from: since ?? undefined }),
+    // Unscoped on purpose: money owed stays visible however old the sale.
     getOutstandingTotal(context),
+    since ? getSalesCount(context, { to: shiftDate(since, -1) }) : Promise.resolve(0),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(salesCount / SALES_PER_PAGE));
@@ -232,6 +251,10 @@ export default async function SalesPage({
             </div>
           )}
         </Panel>
+      )}
+
+      {hiddenCount > 0 && (
+        <UpgradePanel prompt={limitReachedPrompt(entitlement, "history_days", hiddenCount)} />
       )}
     </PageShell>
   );

@@ -17,7 +17,7 @@ import { FEATURE_LABELS, PLANS, type Feature, type LimitKey } from "@/lib/subscr
 
 /** Enforced by a `canAccess`/`assertCanAccess` call, or by a limit. */
 const ENFORCED: Record<Feature, string> = {
-  egg_sales: "lib/data/reports.ts + lib/data/dashboard.ts — sales tracking",
+  egg_sales: "app/(app)/sales/{page,actions}.ts + lib/data/dashboard.ts — sales tracking",
   customers: "app/(app)/customers/{page,actions}.ts",
   full_expenses: "app/(app)/expenses/page.tsx",
   production_charts: "app/(app)/analytics/page.tsx",
@@ -91,7 +91,7 @@ const ENFORCED_LIMITS: Record<LimitKey, string> = {
   active_flocks: "app/(app)/flocks/actions.ts",
   customers: "app/(app)/customers/actions.ts",
   users: "app/(app)/settings/team/actions.ts — inviteMemberAction, incl. pending invites",
-  history_days: "app/(app)/production/page.tsx — via historyCutoffDate",
+  history_days: "app/(app)/{production,sales}/page.tsx — via historyCutoffDate",
 };
 
 /*

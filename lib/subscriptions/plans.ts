@@ -53,11 +53,12 @@ export interface PlanDefinition {
   features: readonly Feature[];
 }
 
-const FREE_FEATURES: readonly Feature[] = [];
+// Free records walk-in sales only (customers: 0) and sees 30 days of them
+// (history_days), so a farmer sees what they earn before being asked to pay.
+const FREE_FEATURES: readonly Feature[] = ["egg_sales"];
 
 const STARTER_FEATURES: readonly Feature[] = [
   ...FREE_FEATURES,
-  "egg_sales",
   "customers",
   "full_expenses",
   "production_charts",
@@ -103,10 +104,10 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   STARTER: {
     id: "STARTER",
     name: "Starter",
-    priceCentavosMonthly: 34_900,
-    // ~17% off 12x monthly (34_900 * 12 = 418_800).
-    priceCentavosAnnual: 349_000,
-    tagline: "Sell eggs and see what you actually earn.",
+    priceCentavosMonthly: 24_900,
+    // ~17% off 12x monthly (24_900 * 12 = 298_800).
+    priceCentavosAnnual: 249_000,
+    tagline: "Track customers, costs, and what you actually earn.",
     audience: "A working farm selling eggs and watching its costs.",
     highlight: "Most popular",
     limits: {
@@ -126,9 +127,9 @@ export const PLANS: Record<SubscriptionPlan, PlanDefinition> = {
   PRO: {
     id: "PRO",
     name: "Pro",
-    priceCentavosMonthly: 89_900,
-    // ~17% off 12x monthly (89_900 * 12 = 1_078_800).
-    priceCentavosAnnual: 899_000,
+    priceCentavosMonthly: 69_900,
+    // ~17% off 12x monthly (69_900 * 12 = 838_800).
+    priceCentavosAnnual: 699_000,
     tagline: "Run several farms with a team.",
     audience: "Multiple farms or houses, with staff recording data.",
     limits: {
@@ -253,8 +254,8 @@ export const FEATURE_LABELS: Record<Feature, string> = {
  * /pricing for that.
  */
 export const PLAN_FEATURE_ROWS: Record<SubscriptionPlan, Feature[]> = {
-  FREE: ["production_charts"],
-  STARTER: ["egg_sales", "full_expenses", "alerts", "reports"],
+  FREE: ["production_charts", "egg_sales"],
+  STARTER: ["customers", "full_expenses", "alerts", "reports"],
   PRO: ["flock_comparison", "team_management", "multi_farm", "priority_support"],
 };
 

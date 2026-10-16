@@ -47,7 +47,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       {
         question: "What do the paid plans cost?",
         answer:
-          "Starter is ₱349/month (₱3,490/year) and Pro is ₱899/month (₱8,990/year) — the annual price on either plan works out to about two months free compared to paying monthly. See the Pricing page for exactly what each plan includes.",
+          "Starter is ₱249/month (₱2,490/year) and Pro is ₱699/month (₱6,990/year) — the annual price on either plan works out to about two months free compared to paying monthly. See the Pricing page for exactly what each plan includes.",
       },
       {
         question: "How do I pay?",

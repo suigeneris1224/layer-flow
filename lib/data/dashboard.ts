@@ -129,7 +129,7 @@ export interface DashboardData {
     revenue: number;
     operatingCosts: number;
     estimatedProfit: number;
-    /** False on Free, where sales are not tracked, so profit is partial. */
+    /** False only if the plan has no sales tracking, so profit would be partial. */
     isComplete: boolean;
   };
   charts: {

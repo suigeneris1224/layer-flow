@@ -35,7 +35,7 @@ export interface RecordedSale {
 
 /**
  * Record one egg sale. Gate order is deliberate: who, which farm, role,
- * plan, then input -- Egg Sales is a Starter feature.
+ * plan, then input -- every plan sells eggs, but naming a customer is Starter+.
  *
  * The stock check WARNS rather than blocks: a sale that outruns the balance
  * usually means the records are behind, not that the farmer is wrong.
@@ -73,6 +73,7 @@ export async function recordSaleAction(
   try {
     const entitlement = { plan: context.plan, status: context.subscriptionStatus };
     assertCanAccess(entitlement, "egg_sales");
+    if (values.customerId) assertCanAccess(entitlement, "customers");
 
     // Read fresh: the balances the browser warned against may be minutes old.
     const stock = await getStockForWarning(context.farmId);

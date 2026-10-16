@@ -61,9 +61,10 @@ describe("plan limits", () => {
 });
 
 describe("feature gating", () => {
-  it("locks egg sales on Free and opens it on Starter", () => {
-    expect(canAccess(free, "egg_sales")).toBe(false);
-    expect(canAccess(starter, "egg_sales")).toBe(true);
+  it("opens walk-in sales on Free and keeps customers on Starter", () => {
+    expect(canAccess(free, "egg_sales")).toBe(true);
+    expect(canAccess(free, "customers")).toBe(false);
+    expect(canAccess(starter, "customers")).toBe(true);
   });
 
   it("keeps export and multi-farm on Pro only", () => {
@@ -74,7 +75,7 @@ describe("feature gating", () => {
   });
 
   it("names the cheapest plan that unlocks a feature", () => {
-    expect(requiredPlanFor("egg_sales")).toBe("STARTER");
+    expect(requiredPlanFor("customers")).toBe("STARTER");
     expect(requiredPlanFor("flock_comparison")).toBe("PRO");
   });
 
@@ -101,7 +102,7 @@ describe("lapsed subscriptions", () => {
   });
 
   it("applies Free's gating to a canceled Pro farm", () => {
-    expect(canAccess({ plan: "PRO", status: "CANCELED" }, "egg_sales")).toBe(false);
+    expect(canAccess({ plan: "PRO", status: "CANCELED" }, "customers")).toBe(false);
   });
 });
 

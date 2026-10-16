@@ -9,21 +9,21 @@ import {
 
 describe("priceCentavosFor", () => {
   it("returns the monthly price by default shape", () => {
-    expect(priceCentavosFor(PLANS.STARTER, "MONTHLY")).toBe(34_900);
+    expect(priceCentavosFor(PLANS.STARTER, "MONTHLY")).toBe(24_900);
   });
 
   it("returns the annual price when asked", () => {
-    expect(priceCentavosFor(PLANS.STARTER, "ANNUAL")).toBe(349_000);
+    expect(priceCentavosFor(PLANS.STARTER, "ANNUAL")).toBe(249_000);
   });
 });
 
 describe("formatPlanPrice", () => {
   it("formats the monthly price by default", () => {
-    expect(formatPlanPrice(PLANS.PRO)).toBe("₱899");
+    expect(formatPlanPrice(PLANS.PRO)).toBe("₱699");
   });
 
   it("formats the annual price when asked", () => {
-    expect(formatPlanPrice(PLANS.PRO, "ANNUAL")).toBe("₱8,990");
+    expect(formatPlanPrice(PLANS.PRO, "ANNUAL")).toBe("₱6,990");
   });
 
   it("always shows ₱0 for Free, on either period", () => {

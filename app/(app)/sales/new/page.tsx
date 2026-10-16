@@ -57,6 +57,7 @@ export default async function NewSalePage() {
           pricePerEgg: size.currentPrice?.pricePerEgg ?? 0,
         }))}
         customers={customers}
+        customersEnabled={canAccess(entitlement, "customers")}
         flocks={flocks}
         stock={stock}
         today={today}

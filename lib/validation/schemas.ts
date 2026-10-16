@@ -90,6 +90,8 @@ export const createFlockSchema = z
     houseId: uuid,
     initialHens: intFromForm("Number of hens", { min: 1, max: 1_000_000 }),
     placementDate: isoDate,
+    /** Bird age when placed, in weeks: 0 for day-old chicks. Stored as days. */
+    ageAtPlacementWeeks: intFromForm("Age when placed", { min: 0, max: 100 }).optional().default(0),
     startLayingDate: z.union([isoDate, z.literal("")]).optional().default(""),
     notes: z.string().trim().max(500).optional().default(""),
   })
@@ -166,6 +168,8 @@ export const updateFlockSchema = z
     breed: z.string().trim().max(120).optional().default(""),
     houseId: uuid,
     placementDate: isoDate,
+    /** Bird age when placed, in weeks: 0 for day-old chicks. Stored as days. */
+    ageAtPlacementWeeks: intFromForm("Age when placed", { min: 0, max: 100 }).optional().default(0),
     startLayingDate: z.union([isoDate, z.literal("")]).optional().default(""),
     notes: z.string().trim().max(500).optional().default(""),
   })
@@ -560,11 +564,35 @@ export const vaccinationSchema = z.object({
   vaccinationDate: isoDate,
   vaccineName: z.string().trim().min(1, "Enter the vaccine name").max(120),
   notes: z.string().trim().max(500).optional().default(""),
+  /** Set when recording a dose from the farm's programme. */
+  scheduleItemId: z.union([uuid, z.literal("")]).optional().default(""),
 });
+
+/**
+ * One dose in the farm's own vaccination programme. Age comes in as days or
+ * weeks -- vet programmes mix both ("day 7", "week 18") -- and is stored as
+ * days.
+ */
+export const vaccinationScheduleItemSchema = z
+  .object({
+    vaccineName: z.string().trim().min(1, "Enter the vaccine name").max(120),
+    ageValue: intFromForm("Age", { min: 1, max: 1000 }),
+    ageUnit: z.enum(["days", "weeks"]),
+    notes: z.string().trim().max(500).optional().default(""),
+  })
+  .transform(({ ageValue, ageUnit, ...rest }) => ({
+    ...rest,
+    ageDays: ageUnit === "weeks" ? ageValue * 7 : ageValue,
+  }))
+  .refine((value) => value.ageDays <= 1000, {
+    message: "Age looks too large — please check",
+    path: ["ageValue"],
+  });
 
 export type MortalityRecordInput = z.infer<typeof mortalityRecordSchema>;
 export type FeedUsageInput = z.infer<typeof feedUsageSchema>;
 export type VaccinationInput = z.infer<typeof vaccinationSchema>;
+export type VaccinationScheduleItemInput = z.input<typeof vaccinationScheduleItemSchema>;
 
 // ---------------------------------------------------------------------------
 // Team

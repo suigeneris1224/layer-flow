@@ -35,6 +35,8 @@ const ENFORCED: Record<Feature, string> = {
   offline_mode:
     "app/(app)/production/new/page.tsx + app/(app)/health/page.tsx — canAccess gates whether the offline queue (lib/offline/) is used at all",
   cross_farm_reporting: "app/(app)/reports/cross-farm/page.tsx",
+  vaccination_schedule:
+    "app/(app)/health/{page,schedule-actions}.ts + lib/data/dashboard.ts — the due-doses panel, programme editor and vaccination_due alert",
   priority_support: "app/(app)/settings/support/actions.ts — priority flag set from context.plan/isBetaOverride",
 } as Record<Feature, string>;
 

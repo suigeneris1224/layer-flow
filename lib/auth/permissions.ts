@@ -52,6 +52,15 @@ export function canRecordVaccination(context: FarmContext | null): boolean {
   return context !== null;
 }
 
+/**
+ * The farm's vaccination programme is configuration, MANAGER+
+ * (`vaccination_schedule_items_write`). Recording a dose stays any-member --
+ * see canRecordVaccination above.
+ */
+export function canManageVaccinationSchedule(context: FarmContext | null): boolean {
+  return context !== null && atLeast(context.role, "MANAGER");
+}
+
 /** Farm setup: houses, flocks, egg sizes, pricing. */
 export function canManageFlock(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");

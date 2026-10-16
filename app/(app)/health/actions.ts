@@ -9,6 +9,7 @@ import {
   canRecordVaccination,
 } from "@/lib/auth/permissions";
 import { feedCost } from "@/lib/domain/calculations";
+import { assertCanAccess } from "@/lib/subscriptions/entitlements";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import {
   feedUsageSchema,
@@ -420,6 +421,15 @@ export async function recordVaccinationAction(
   }
 
   try {
+    // Ad-hoc doses are on every plan; ticking off a programme dose is
+    // vaccination_schedule (Starter+).
+    if (parsed.data.scheduleItemId) {
+      assertCanAccess(
+        { plan: context.plan, status: context.subscriptionStatus },
+        "vaccination_schedule"
+      );
+    }
+
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("vaccinations")
@@ -429,6 +439,7 @@ export async function recordVaccinationAction(
         vaccination_date: parsed.data.vaccinationDate,
         vaccine_name: parsed.data.vaccineName,
         notes: parsed.data.notes || null,
+        schedule_item_id: parsed.data.scheduleItemId || null,
       })
       .select("id")
       .single();

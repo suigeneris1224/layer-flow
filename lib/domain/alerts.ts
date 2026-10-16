@@ -21,6 +21,7 @@ export type AlertType =
   | "mortality"
   | "egg_size"
   | "vaccination"
+  | "vaccination_due"
   | "low_inventory"
   | "underperforming_flock"
   | "flock_loss"
@@ -270,6 +271,49 @@ export function vaccinationAlert(
     level: "warn",
     message: `${flock.flockName} has had no vaccination recorded in ${gap} days.`,
     type: "vaccination",
+  };
+}
+
+/** A scheduled dose that is late or coming up, for `vaccinationDueAlert`. */
+export interface DueDose {
+  flockName: string;
+  vaccineName: string;
+  /** Positive = days until due, negative = days overdue. */
+  daysUntilDue: number;
+}
+
+/**
+ * The most pressing dose from the farm's own vaccination programme.
+ *
+ * Only fires for farms that have a programme (vaccination_schedule, Starter+).
+ * When it can fire, the caller drops the generic `vaccinationAlert` gap rule,
+ * so a farmer is never told the same thing twice. Still a record-keeping
+ * reminder: the dose and its age came from the farm, not from LayerFlow.
+ */
+export function vaccinationDueAlert(doses: readonly DueDose[]): Alert | null {
+  if (doses.length === 0) return null;
+
+  const worst = [...doses].sort((a, b) => a.daysUntilDue - b.daysUntilDue)[0];
+  const others = doses.length - 1;
+  const more = others > 0 ? ` (+${others} more)` : "";
+
+  if (worst.daysUntilDue < 0) {
+    const late = -worst.daysUntilDue;
+    return {
+      level: "bad",
+      message: `${worst.vaccineName} for ${worst.flockName} is ${late} ${late === 1 ? "day" : "days"} overdue${more}.`,
+      type: "vaccination_due",
+    };
+  }
+
+  const when =
+    worst.daysUntilDue === 0
+      ? "is due today"
+      : `is due in ${worst.daysUntilDue} ${worst.daysUntilDue === 1 ? "day" : "days"}`;
+  return {
+    level: "warn",
+    message: `${worst.vaccineName} for ${worst.flockName} ${when}${more}.`,
+    type: "vaccination_due",
   };
 }
 

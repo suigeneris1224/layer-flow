@@ -69,6 +69,7 @@ suite("RLS tenant isolation", () => {
     "feed_usage",
     "mortality_records",
     "vaccinations",
+    "vaccination_schedule_items",
     "customers",
     "egg_sales",
     "expenses",
@@ -633,6 +634,52 @@ suite("RLS tenant isolation", () => {
         .upsert({ farm_id: farmA.farmId, production_drop: 0.5 })
         .select("farm_id");
       expect(writeData ?? []).toEqual([]);
+    });
+
+    it("a worker cannot change the vaccination programme", async () => {
+      const { error } = await worker.client.from("vaccination_schedule_items").insert({
+        farm_id: farmA.farmId,
+        vaccine_name: "Worker dose",
+        age_days: 7,
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it("a manager can build the programme and a worker can record a dose against it", async () => {
+      const { data: item, error } = await manager.client
+        .from("vaccination_schedule_items")
+        .insert({ farm_id: farmA.farmId, vaccine_name: "Manager dose", age_days: 14 })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+
+      const { error: doseError } = await worker.client.from("vaccinations").insert({
+        farm_id: farmA.farmId,
+        flock_id: farmA.flockId,
+        vaccination_date: new Date().toISOString().slice(0, 10),
+        vaccine_name: "Manager dose",
+        schedule_item_id: item!.id,
+      });
+      expect(doseError).toBeNull();
+    });
+
+    it("a vaccination cannot be linked to another farm's programme", async () => {
+      const { data: bobItem } = await bob.client
+        .from("vaccination_schedule_items")
+        .insert({ farm_id: farmB.farmId, vaccine_name: "Bob dose", age_days: 21 })
+        .select("id")
+        .single();
+      expect(bobItem).not.toBeNull();
+
+      const { error } = await alice.client.from("vaccinations").insert({
+        farm_id: farmA.farmId,
+        flock_id: farmA.flockId,
+        vaccination_date: new Date().toISOString().slice(0, 10),
+        vaccine_name: "Borrowed dose",
+        schedule_item_id: bobItem!.id,
+      });
+      expect(error).not.toBeNull();
     });
 
     it("a worker cannot adjust stock", async () => {

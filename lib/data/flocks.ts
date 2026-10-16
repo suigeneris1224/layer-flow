@@ -23,6 +23,8 @@ export interface FlockEntry {
   /** Trigger-managed from mortality_records -- never written directly. */
   currentHens: number;
   placementDate: string;
+  /** Bird age when placed: 0 for day-old chicks, ~112+ for ready-to-lay pullets. */
+  ageAtPlacementDays: number;
   startLayingDate: string | null;
   status: FlockStatus;
   notes: string;
@@ -36,6 +38,7 @@ interface FlockJoinRow {
   initial_hens: number;
   current_hens: number;
   placement_date: string;
+  age_at_placement_days: number;
   start_laying_date: string | null;
   status: FlockStatus;
   notes: string | null;
@@ -49,7 +52,7 @@ function one<T>(value: T | T[] | null): T | null {
 }
 
 const FLOCK_COLUMNS =
-  "id, name, breed, house_id, initial_hens, current_hens, placement_date, " +
+  "id, name, breed, house_id, initial_hens, current_hens, placement_date, age_at_placement_days, " +
   "start_laying_date, status, notes, houses!inner(name)";
 
 function toEntry(row: FlockJoinRow): FlockEntry {
@@ -62,6 +65,7 @@ function toEntry(row: FlockJoinRow): FlockEntry {
     initialHens: row.initial_hens,
     currentHens: row.current_hens,
     placementDate: row.placement_date,
+    ageAtPlacementDays: row.age_at_placement_days ?? 0,
     startLayingDate: row.start_laying_date,
     status: row.status,
     notes: row.notes ?? "",

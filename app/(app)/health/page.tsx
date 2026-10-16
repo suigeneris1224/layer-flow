@@ -3,11 +3,12 @@ import Link from "next/link";
 import { HeartCrack, HeartPulse, Syringe, Wheat } from "lucide-react";
 import { requireFarmContext } from "@/lib/auth/session";
 import {
+  canManageVaccinationSchedule,
   canRecordFeed,
   canRecordMortality,
   canRecordVaccination,
 } from "@/lib/auth/permissions";
-import { canAccess } from "@/lib/subscriptions/entitlements";
+import { canAccess, featureLockedPrompt } from "@/lib/subscriptions/entitlements";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getFeedUsage,
@@ -15,6 +16,8 @@ import {
   getVaccinations,
 } from "@/lib/data/health";
 import { getFlocks } from "@/lib/data/flocks";
+import { getFlockDoses } from "@/lib/data/vaccination-schedule";
+import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
 import { EmptyState, StatusNote } from "@/components/ui/states";
@@ -23,7 +26,9 @@ import { farmToday, formatCurrency, formatKg, formatRelativeDay } from "@/lib/fo
 import { cn } from "@/lib/utils";
 import { MortalityForm } from "./mortality-form";
 import { FeedForm } from "./feed-form";
-import { VaccinationForm } from "./vaccination-form";
+import { VaccinationForm, type VaccinationPrefill } from "./vaccination-form";
+import { DueDosesPanel } from "./due-doses-panel";
+import { ScheduleEditor } from "./schedule-editor";
 
 export const metadata: Metadata = { title: "Flock health" };
 
@@ -42,10 +47,10 @@ const TABS: { id: Tab; label: string }[] = [
 export default async function HealthPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; dose?: string; flock?: string }>;
 }) {
   const context = await requireFarmContext();
-  const { tab: tabParam } = await searchParams;
+  const { tab: tabParam, dose: doseParam, flock: flockParam } = await searchParams;
   const tab: Tab = TABS.some((t) => t.id === tabParam) ? (tabParam as Tab) : "mortality";
 
   const today = farmToday(context.timezone);
@@ -79,10 +84,27 @@ export default async function HealthPage({
   // flock is offered here -- unlike the production form, which is about today.
   const flockChoices = flocks.map((flock) => ({ id: flock.id, name: flock.name }));
 
-  const offlineEnabled = canAccess(
-    { plan: context.plan, status: context.subscriptionStatus },
-    "offline_mode"
+  const entitlement = { plan: context.plan, status: context.subscriptionStatus };
+  const offlineEnabled = canAccess(entitlement, "offline_mode");
+
+  // The programme only matters on the vaccinations tab, and only on a plan
+  // that has it -- skip both queries otherwise.
+  const hasSchedule = canAccess(entitlement, "vaccination_schedule");
+  const activeFlocks = flocks.filter(
+    (flock) => flock.status === "GROWING" || flock.status === "PRODUCING"
   );
+  const schedule =
+    tab === "vaccinations" && hasSchedule
+      ? await getFlockDoses(context.farmId, activeFlocks, today)
+      : { items: [], byFlock: [] };
+
+  // "Record" on a due dose lands here with ?dose=&flock=. Only honoured when
+  // both still exist, so a stale link opens a plain form.
+  const prefillItem = schedule.items.find((item) => item.id === doseParam);
+  const prefill: VaccinationPrefill | null =
+    prefillItem && flockChoices.some((flock) => flock.id === flockParam)
+      ? { flockId: flockParam!, vaccineName: prefillItem.vaccineName, scheduleItemId: prefillItem.id }
+      : null;
 
   if (flockChoices.length === 0) {
     return (
@@ -226,6 +248,22 @@ export default async function HealthPage({
 
         {tab === "vaccinations" && (
           <>
+            {hasSchedule ? (
+              schedule.items.length > 0 && (
+                <DueDosesPanel
+                  byFlock={schedule.byFlock}
+                  today={today}
+                  timezone={context.timezone}
+                  canRecord={canRecordVaccination(context)}
+                />
+              )
+            ) : (
+              <UpgradePanel
+                prompt={featureLockedPrompt(entitlement, "vaccination_schedule")}
+                className="lg:col-span-2"
+              />
+            )}
+
             <Panel title="Recent vaccinations">
               {vaccinations.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -248,14 +286,20 @@ export default async function HealthPage({
 
             {canRecordVaccination(context) ? (
               <VaccinationForm
+                key={prefill?.scheduleItemId ?? "new"}
                 records={vaccinations}
                 flocks={flockChoices}
                 today={today}
+                prefill={prefill}
               />
             ) : (
               <StatusNote tone="info" title="Read only">
                 Your role doesn&apos;t allow recording vaccinations.
               </StatusNote>
+            )}
+
+            {hasSchedule && canManageVaccinationSchedule(context) && (
+              <ScheduleEditor items={schedule.items} />
             )}
           </>
         )}
@@ -277,7 +321,8 @@ export default async function HealthPage({
         {tab === "vaccinations" && (
           <>
             <Syringe className="mr-1 inline size-3" aria-hidden />
-            LayerFlow records what you give. Ask your vet which vaccines and when.
+            LayerFlow records what you give and reminds you of your own programme. Ask your vet
+            which vaccines and when.
           </>
         )}
       </p>

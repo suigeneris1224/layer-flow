@@ -20,6 +20,7 @@ interface FlockOption {
   initialHens: number;
   currentHens: number;
   placementDate: string;
+  ageAtPlacementDays: number;
   startLayingDate: string | null;
   status: FlockStatus;
   notes: string;
@@ -73,6 +74,9 @@ export function FlockForm({
   const [houseId, setHouseId] = useState(editing?.houseId ?? houses[0]?.id ?? "");
   const [initialHens, setInitialHens] = useState(editing ? String(editing.initialHens) : "");
   const [placementDate, setPlacementDate] = useState(editing?.placementDate ?? "");
+  const [ageAtPlacementWeeks, setAgeAtPlacementWeeks] = useState(
+    editing ? String(Math.round(editing.ageAtPlacementDays / 7)) : "0"
+  );
   const [startLayingDate, setStartLayingDate] = useState(editing?.startLayingDate ?? "");
   const [notes, setNotes] = useState(editing?.notes ?? "");
 
@@ -85,6 +89,7 @@ export function FlockForm({
     setHouseId(flock?.houseId ?? houses[0]?.id ?? "");
     setInitialHens(flock ? String(flock.initialHens) : "");
     setPlacementDate(flock?.placementDate ?? "");
+    setAgeAtPlacementWeeks(flock ? String(Math.round(flock.ageAtPlacementDays / 7)) : "0");
     setStartLayingDate(flock?.startLayingDate ?? "");
     setNotes(flock?.notes ?? "");
     setRetireNotes("");
@@ -113,6 +118,7 @@ export function FlockForm({
               breed,
               houseId,
               placementDate,
+              ageAtPlacementWeeks,
               startLayingDate,
               notes,
             })
@@ -124,6 +130,7 @@ export function FlockForm({
               houseId,
               initialHens,
               placementDate,
+              ageAtPlacementWeeks,
               startLayingDate,
               notes,
             })
@@ -288,6 +295,20 @@ export function FlockForm({
               />
             </Field>
           </div>
+
+          <Field
+            label="Age when placed (weeks)"
+            htmlFor="flock-age-at-placement"
+            hint="0 for day-old chicks. Ready-to-lay pullets are usually 16–18 weeks. Used for vaccination due dates."
+            error={fieldErrors.ageAtPlacementWeeks}
+          >
+            <NumberInput
+              id="flock-age-at-placement"
+              value={ageAtPlacementWeeks}
+              onChange={(event) => setAgeAtPlacementWeeks(event.target.value)}
+              aria-invalid={!!fieldErrors.ageAtPlacementWeeks}
+            />
+          </Field>
 
           <Field label="Notes" htmlFor="flock-notes" hint="Optional." error={fieldErrors.notes}>
             <Textarea

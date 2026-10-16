@@ -27,6 +27,8 @@ import {
   summariseAlerts,
   underperformingFlockAlert,
   vaccinationAlert,
+  vaccinationDueAlert,
+  type DueDose,
   type Alert,
   type PricedSizeStatus,
   type ProductionPoint,
@@ -41,6 +43,7 @@ import {
   type InventoryBalanceRow,
 } from "@/lib/data/inventory";
 import { getLatestVaccinationByFlock } from "@/lib/data/health";
+import { dueDosesForAlert, getFlockDoses } from "@/lib/data/vaccination-schedule";
 import { syncNotifications } from "@/lib/data/notifications";
 import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
 import { getNotificationPreferences } from "@/lib/data/notification-preferences";
@@ -151,6 +154,7 @@ interface FlockJoin {
   current_hens: number;
   status: string;
   placement_date: string;
+  age_at_placement_days: number;
   houses: { name: string } | { name: string }[];
 }
 
@@ -255,7 +259,9 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
       .lte("expense_date", today),
     supabase
       .from("flocks")
-      .select("id, name, breed, current_hens, status, placement_date, houses!inner(name)")
+      .select(
+        "id, name, breed, current_hens, status, placement_date, age_at_placement_days, houses!inner(name)"
+      )
       .eq("farm_id", context.farmId)
       .in("status", ["GROWING", "PRODUCING"])
       .order("name"),
@@ -357,6 +363,23 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
 
   const thresholds = resolveThresholds(thresholdOverrides, hasAdvancedAlerts);
 
+  // The farm's own programme, when it has one (vaccination_schedule, Starter+).
+  // Null means "no programme" and keeps the generic gap alert.
+  let scheduledDoses: DueDose[] | null = null;
+  if (hasAlerts && canAccess(entitlement, "vaccination_schedule")) {
+    const schedule = await getFlockDoses(
+      context.farmId,
+      flockRows.map((flock) => ({
+        id: flock.id,
+        name: flock.name,
+        placementDate: flock.placement_date,
+        ageAtPlacementDays: flock.age_at_placement_days ?? 0,
+      })),
+      today
+    );
+    if (schedule.items.length > 0) scheduledDoses = dueDosesForAlert(schedule.byFlock);
+  }
+
   const alerts = hasAlerts
     ? buildAlerts({
         productionRows,
@@ -371,6 +394,7 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
         hens: hensOnFarm,
         flockRows,
         latestVaccinationByFlock,
+        scheduledDoses,
         totalTrays: inventorySummary.totalTrays,
         ungradedEggs: inventorySummary.ungradedEggs,
         looseEggs: inventorySummary.looseEggs,
@@ -612,6 +636,8 @@ interface BuildAlertsInput {
   hens: number;
   flockRows: readonly FlockJoin[];
   latestVaccinationByFlock: ReadonlyMap<string, string>;
+  /** Overdue/due-soon doses from the farm's programme; null = no programme. */
+  scheduledDoses: readonly DueDose[] | null;
   totalTrays: number;
   ungradedEggs: number;
   looseEggs: number;
@@ -633,6 +659,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     hens,
     flockRows,
     latestVaccinationByFlock,
+    scheduledDoses,
     totalTrays,
     ungradedEggs,
     looseEggs,
@@ -680,19 +707,21 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
    * narrowing applies below to every other per-entity rule the advanced tier
    * adds.
    */
-  const overdueVaccination = flockRows
-    .map((flock) =>
-      vaccinationAlert(
-        {
-          flockName: flock.name,
-          lastVaccinationDate: latestVaccinationByFlock.get(flock.id) ?? null,
-          placementDate: flock.placement_date,
-        },
-        new Date(),
-        thresholds.vaccinationGapDays
-      )
-    )
-    .find((alert): alert is Alert => alert !== null);
+  const overdueVaccination = scheduledDoses
+    ? vaccinationDueAlert(scheduledDoses)
+    : flockRows
+        .map((flock) =>
+          vaccinationAlert(
+            {
+              flockName: flock.name,
+              lastVaccinationDate: latestVaccinationByFlock.get(flock.id) ?? null,
+              placementDate: flock.placement_date,
+            },
+            new Date(),
+            thresholds.vaccinationGapDays
+          )
+        )
+        .find((alert): alert is Alert => alert !== null);
 
   const alerts: (Alert | null)[] = [
     productionAlert(points, thresholds.productionDrop),

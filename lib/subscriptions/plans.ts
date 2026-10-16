@@ -22,6 +22,7 @@ export type Feature =
   | "advanced_reports"
   | "flock_comparison"
   | "offline_mode"
+  | "vaccination_schedule"
   | "data_export"
   | "team_management"
   | "multi_farm"
@@ -65,6 +66,7 @@ const STARTER_FEATURES: readonly Feature[] = [
   "alerts",
   "reports",
   "offline_mode",
+  "vaccination_schedule",
 ];
 
 const PRO_FEATURES: readonly Feature[] = [
@@ -241,6 +243,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   advanced_reports: "Advanced reports",
   flock_comparison: "Flock comparison",
   offline_mode: "Offline mode",
+  vaccination_schedule: "Vaccination schedule",
   data_export: "CSV export",
   team_management: "Team management",
   multi_farm: "Multiple farms",
@@ -274,4 +277,6 @@ export const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
     "See profit by flock and where your money actually goes, broken down by expense category.",
   cross_farm_reporting:
     "Compare revenue, cost and profit across every farm you run, side by side.",
+  vaccination_schedule:
+    "Enter your vet's programme once and see which doses each flock has due, with a reminder before each one.",
 };

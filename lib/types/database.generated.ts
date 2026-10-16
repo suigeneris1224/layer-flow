@@ -943,6 +943,7 @@ export type Database = {
       }
       flocks: {
         Row: {
+          age_at_placement_days: number
           breed: string
           created_at: string
           current_hens: number
@@ -958,6 +959,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          age_at_placement_days?: number
           breed?: string
           created_at?: string
           current_hens: number
@@ -973,6 +975,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          age_at_placement_days?: number
           breed?: string
           created_at?: string
           current_hens?: number
@@ -1532,6 +1535,44 @@ export type Database = {
           },
         ]
       }
+      vaccination_schedule_items: {
+        Row: {
+          age_days: number
+          created_at: string
+          farm_id: string
+          id: string
+          notes: string | null
+          updated_at: string
+          vaccine_name: string
+        }
+        Insert: {
+          age_days: number
+          created_at?: string
+          farm_id: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          vaccine_name: string
+        }
+        Update: {
+          age_days?: number
+          created_at?: string
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          vaccine_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccination_schedule_items_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vaccinations: {
         Row: {
           created_at: string
@@ -1539,6 +1580,7 @@ export type Database = {
           flock_id: string
           id: string
           notes: string | null
+          schedule_item_id: string | null
           updated_at: string
           vaccination_date: string
           vaccine_name: string
@@ -1549,6 +1591,7 @@ export type Database = {
           flock_id: string
           id?: string
           notes?: string | null
+          schedule_item_id?: string | null
           updated_at?: string
           vaccination_date: string
           vaccine_name: string
@@ -1559,6 +1602,7 @@ export type Database = {
           flock_id?: string
           id?: string
           notes?: string | null
+          schedule_item_id?: string | null
           updated_at?: string
           vaccination_date?: string
           vaccine_name?: string
@@ -1576,6 +1620,13 @@ export type Database = {
             columns: ["flock_id"]
             isOneToOne: false
             referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccinations_schedule_item_id_fkey"
+            columns: ["schedule_item_id"]
+            isOneToOne: false
+            referencedRelation: "vaccination_schedule_items"
             referencedColumns: ["id"]
           },
         ]

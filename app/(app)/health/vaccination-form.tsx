@@ -19,21 +19,30 @@ import {
 
 const NEW = "__new__";
 
+/** A dose from the farm's programme, opened via "Record" on the due panel. */
+export interface VaccinationPrefill {
+  flockId: string;
+  vaccineName: string;
+  scheduleItemId: string;
+}
+
 /**
- * A log, not a schedule.
+ * Records what was given.
  *
- * LayerFlow records what the farmer says was given. It suggests no vaccine and
- * no interval: programmes vary by region, hatchery and disease pressure, and
- * that is a decision for their vet.
+ * LayerFlow suggests no vaccine and no interval: programmes vary by region,
+ * hatchery and disease pressure, and that is a decision for their vet. A
+ * `prefill` only ever carries a dose the farm itself put in its programme.
  */
 export function VaccinationForm({
   records,
   flocks,
   today,
+  prefill = null,
 }: {
   records: VaccinationEntry[];
   flocks: FlockChoice[];
   today: string;
+  prefill?: VaccinationPrefill | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -44,10 +53,11 @@ export function VaccinationForm({
 
   const editing = records.find((record) => record.id === selected) ?? null;
 
-  const [flockId, setFlockId] = useState(flocks[0]?.id ?? "");
+  const [flockId, setFlockId] = useState(prefill?.flockId ?? flocks[0]?.id ?? "");
   const [vaccinationDate, setVaccinationDate] = useState(today);
-  const [vaccineName, setVaccineName] = useState("");
+  const [vaccineName, setVaccineName] = useState(prefill?.vaccineName ?? "");
   const [notes, setNotes] = useState("");
+  const [scheduleItemId, setScheduleItemId] = useState(prefill?.scheduleItemId ?? "");
 
   function onSelect(nextId: string) {
     setSelected(nextId);
@@ -56,6 +66,7 @@ export function VaccinationForm({
     setVaccinationDate(next?.vaccinationDate ?? today);
     setVaccineName(next?.vaccineName ?? "");
     setNotes(next?.notes ?? "");
+    setScheduleItemId("");
     setFormError(null);
     setFieldErrors({});
     setSuccess(null);
@@ -71,7 +82,7 @@ export function VaccinationForm({
       const values = { flockId, vaccinationDate, vaccineName, notes };
       const result = editing
         ? await safeAction(() => updateVaccinationAction(editing.id, values))
-        : await safeAction(() => recordVaccinationAction(values));
+        : await safeAction(() => recordVaccinationAction({ ...values, scheduleItemId }));
 
       if (!result.ok) {
         setFormError(result.error);
@@ -83,6 +94,12 @@ export function VaccinationForm({
       if (!editing) {
         setVaccineName("");
         setNotes("");
+      }
+      if (scheduleItemId) {
+        // Drop ?dose=&flock= so a refresh doesn't re-open the same dose.
+        setScheduleItemId("");
+        router.replace("/health?tab=vaccinations");
+        return;
       }
       router.refresh();
     });
@@ -105,98 +122,105 @@ export function VaccinationForm({
   }
 
   return (
-    <Panel title={editing ? "Edit this record" : "Record a vaccination"}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-        {formError && <StatusNote tone="bad">{formError}</StatusNote>}
-        {success && <StatusNote tone="good">{success}</StatusNote>}
+    <div id="record-vaccination" className="scroll-mt-20">
+      <Panel title={editing ? "Edit this record" : "Record a vaccination"}>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+          {formError && <StatusNote tone="bad">{formError}</StatusNote>}
+          {success && <StatusNote tone="good">{success}</StatusNote>}
+          {scheduleItemId && !editing && (
+            <StatusNote tone="info">
+              Recording a dose from your programme. It will be ticked off on the schedule.
+            </StatusNote>
+          )}
 
-        {records.length > 0 && (
-          <Field label="Record" htmlFor="vaccination-select">
+          {records.length > 0 && (
+            <Field label="Record" htmlFor="vaccination-select">
+              <Select
+                id="vaccination-select"
+                value={selected}
+                onChange={(event) => onSelect(event.target.value)}
+              >
+                <option value={NEW}>+ Record a new vaccination</option>
+                {records.map((record) => (
+                  <option key={record.id} value={record.id}>
+                    {record.vaccinationDate} · {record.flockName} · {record.vaccineName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
+          <Field label="Flock" htmlFor="vaccination-flock" error={fieldErrors.flockId}>
             <Select
-              id="vaccination-select"
-              value={selected}
-              onChange={(event) => onSelect(event.target.value)}
+              id="vaccination-flock"
+              value={flockId}
+              onChange={(event) => setFlockId(event.target.value)}
             >
-              <option value={NEW}>+ Record a new vaccination</option>
-              {records.map((record) => (
-                <option key={record.id} value={record.id}>
-                  {record.vaccinationDate} · {record.flockName} · {record.vaccineName}
+              {flocks.map((flock) => (
+                <option key={flock.id} value={flock.id}>
+                  {flock.name}
                 </option>
               ))}
             </Select>
           </Field>
-        )}
 
-        <Field label="Flock" htmlFor="vaccination-flock" error={fieldErrors.flockId}>
-          <Select
-            id="vaccination-flock"
-            value={flockId}
-            onChange={(event) => setFlockId(event.target.value)}
+          <Field
+            label="Date"
+            htmlFor="vaccination-date"
+            error={fieldErrors.vaccinationDate}
           >
-            {flocks.map((flock) => (
-              <option key={flock.id} value={flock.id}>
-                {flock.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <DateField
+              id="vaccination-date"
+              max={today}
+              today={today}
+              value={vaccinationDate}
+              onChange={setVaccinationDate}
+              invalid={!!fieldErrors.vaccinationDate}
+            />
+          </Field>
 
-        <Field
-          label="Date"
-          htmlFor="vaccination-date"
-          error={fieldErrors.vaccinationDate}
-        >
-          <DateField
-            id="vaccination-date"
-            max={today}
-            today={today}
-            value={vaccinationDate}
-            onChange={setVaccinationDate}
-            invalid={!!fieldErrors.vaccinationDate}
-          />
-        </Field>
+          <Field
+            label="Vaccine"
+            htmlFor="vaccination-name"
+            hint="Whatever it says on the vial."
+            error={fieldErrors.vaccineName}
+          >
+            <Input
+              id="vaccination-name"
+              value={vaccineName}
+              onChange={(event) => setVaccineName(event.target.value)}
+              aria-invalid={!!fieldErrors.vaccineName}
+            />
+          </Field>
 
-        <Field
-          label="Vaccine"
-          htmlFor="vaccination-name"
-          hint="Whatever it says on the vial."
-          error={fieldErrors.vaccineName}
-        >
-          <Input
-            id="vaccination-name"
-            value={vaccineName}
-            onChange={(event) => setVaccineName(event.target.value)}
-            aria-invalid={!!fieldErrors.vaccineName}
-          />
-        </Field>
+          <Field
+            label="Notes"
+            htmlFor="vaccination-notes"
+            hint="Optional. Dose, batch, who administered it."
+            error={fieldErrors.notes}
+          >
+            <Textarea
+              id="vaccination-notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+            />
+          </Field>
 
-        <Field
-          label="Notes"
-          htmlFor="vaccination-notes"
-          hint="Optional. Dose, batch, who administered it."
-          error={fieldErrors.notes}
-        >
-          <Textarea
-            id="vaccination-notes"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-          />
-        </Field>
-
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={pending} disabled={!flockId || !vaccineName}>
-            <Syringe className="size-4" aria-hidden />
-            {pending ? "Saving…" : editing ? "Save changes" : "Record vaccination"}
-          </Button>
-
-          {editing && (
-            <Button type="button" variant="outline" loading={pending} onClick={onDelete}>
-              <Trash2 className="size-4" aria-hidden />
-              Delete
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" loading={pending} disabled={!flockId || !vaccineName}>
+              <Syringe className="size-4" aria-hidden />
+              {pending ? "Saving…" : editing ? "Save changes" : "Record vaccination"}
             </Button>
-          )}
-        </div>
-      </form>
-    </Panel>
+
+            {editing && (
+              <Button type="button" variant="outline" loading={pending} onClick={onDelete}>
+                <Trash2 className="size-4" aria-hidden />
+                Delete
+              </Button>
+            )}
+          </div>
+        </form>
+      </Panel>
+    </div>
   );
 }

@@ -43,6 +43,7 @@ const FEATURE_ROWS: Feature[] = [
   "alerts",
   "reports",
   "offline_mode",
+  "vaccination_schedule",
   "flock_comparison",
   "advanced_reports",
   "data_export",

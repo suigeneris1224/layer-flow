@@ -45,6 +45,7 @@ const FEATURE_ROWS: Feature[] = [
   "offline_mode",
   "vaccination_schedule",
   "biosecurity",
+  "feed_formulation",
   "flock_comparison",
   "advanced_reports",
   "data_export",

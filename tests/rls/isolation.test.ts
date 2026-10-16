@@ -72,6 +72,8 @@ suite("RLS tenant isolation", () => {
     "vaccination_schedule_items",
     "biosecurity_visits",
     "biosecurity_checks",
+    "feed_ingredients",
+    "feed_formulas",
     "customers",
     "egg_sales",
     "expenses",
@@ -719,6 +721,66 @@ suite("RLS tenant isolation", () => {
         check_date: new Date().toISOString().slice(0, 10),
         check_type: "CLEANING",
         house_id: farmB.houseId,
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("a worker cannot add feed ingredients", async () => {
+      const { error } = await worker.client
+        .from("feed_ingredients")
+        .insert({ farm_id: farmA.farmId, name: "Worker corn" });
+      expect(error).not.toBeNull();
+    });
+
+    it("a manager can save a formula through save_feed_formula", async () => {
+      const { data: ingredient } = await manager.client
+        .from("feed_ingredients")
+        .insert({ farm_id: farmA.farmId, name: "RLS corn", protein_pct: 9 })
+        .select("id")
+        .single();
+      expect(ingredient).not.toBeNull();
+
+      const { data: formulaId, error } = await manager.client.rpc("save_feed_formula", {
+        p_farm_id: farmA.farmId,
+        p_name: "RLS mix",
+        p_batch_kg: 100,
+        p_items: [{ ingredient_id: ingredient!.id, percent: 100 }],
+      });
+      expect(error).toBeNull();
+      expect(formulaId).toBeTruthy();
+
+      // An ingredient a recipe still uses can't be deleted (deferred FK, so
+      // a whole-farm delete still cascades -- see afterAll's cleanup).
+      const { error: deleteError } = await manager.client
+        .from("feed_ingredients")
+        .delete()
+        .eq("id", ingredient!.id);
+      expect(deleteError?.code).toBe("23503");
+    });
+
+    it("a formula cannot use another farm's ingredient", async () => {
+      const { data: bobIngredient } = await bob.client
+        .from("feed_ingredients")
+        .insert({ farm_id: farmB.farmId, name: "Bob soya", protein_pct: 44 })
+        .select("id")
+        .single();
+      expect(bobIngredient).not.toBeNull();
+
+      const { error } = await alice.client.rpc("save_feed_formula", {
+        p_farm_id: farmA.farmId,
+        p_name: "Borrowed mix",
+        p_batch_kg: 100,
+        p_items: [{ ingredient_id: bobIngredient!.id, percent: 100 }],
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("bob cannot save a formula into farm A", async () => {
+      const { error } = await bob.client.rpc("save_feed_formula", {
+        p_farm_id: farmA.farmId,
+        p_name: "Intruder mix",
+        p_batch_kg: 100,
+        p_items: [],
       });
       expect(error).not.toBeNull();
     });

@@ -70,6 +70,11 @@ export function canManageVaccinationSchedule(context: FarmContext | null): boole
   return context !== null && atLeast(context.role, "MANAGER");
 }
 
+/** Feed ingredients and formulas are farm configuration, like pricing (`feed_formulas_write`). */
+export function canManageFeedFormulas(context: FarmContext | null): boolean {
+  return context !== null && atLeast(context.role, "MANAGER");
+}
+
 /** Farm setup: houses, flocks, egg sizes, pricing. */
 export function canManageFlock(context: FarmContext | null): boolean {
   return context !== null && atLeast(context.role, "MANAGER");

@@ -972,6 +972,139 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_formula_items: {
+        Row: {
+          formula_id: string
+          id: string
+          ingredient_id: string
+          percent: number
+        }
+        Insert: {
+          formula_id: string
+          id?: string
+          ingredient_id: string
+          percent: number
+        }
+        Update: {
+          formula_id?: string
+          id?: string
+          ingredient_id?: string
+          percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_formula_items_formula_id_fkey"
+            columns: ["formula_id"]
+            isOneToOne: false
+            referencedRelation: "feed_formulas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_formula_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "feed_ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_formulas: {
+        Row: {
+          batch_kg: number
+          created_at: string
+          farm_id: string
+          id: string
+          name: string
+          notes: string | null
+          target_calcium_pct: number | null
+          target_energy: number | null
+          target_protein_pct: number | null
+          updated_at: string
+        }
+        Insert: {
+          batch_kg?: number
+          created_at?: string
+          farm_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          target_calcium_pct?: number | null
+          target_energy?: number | null
+          target_protein_pct?: number | null
+          updated_at?: string
+        }
+        Update: {
+          batch_kg?: number
+          created_at?: string
+          farm_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          target_calcium_pct?: number | null
+          target_energy?: number | null
+          target_protein_pct?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_formulas_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_ingredients: {
+        Row: {
+          calcium_pct: number
+          created_at: string
+          energy_kcal_per_kg: number
+          farm_id: string
+          id: string
+          name: string
+          notes: string | null
+          phosphorus_pct: number
+          price_per_kg: number
+          protein_pct: number
+          updated_at: string
+        }
+        Insert: {
+          calcium_pct?: number
+          created_at?: string
+          energy_kcal_per_kg?: number
+          farm_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          phosphorus_pct?: number
+          price_per_kg?: number
+          protein_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          calcium_pct?: number
+          created_at?: string
+          energy_kcal_per_kg?: number
+          farm_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phosphorus_pct?: number
+          price_per_kg?: number
+          protein_pct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_ingredients_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_usage: {
         Row: {
           client_id: string | null
@@ -1827,6 +1960,20 @@ export type Database = {
       record_sale_payment: {
         Args: { p_amount: number; p_sale_id: string }
         Returns: undefined
+      }
+      save_feed_formula: {
+        Args: {
+          p_batch_kg: number
+          p_farm_id: string
+          p_formula_id?: string
+          p_items: Json
+          p_name: string
+          p_notes?: string
+          p_target_calcium_pct?: number
+          p_target_energy?: number
+          p_target_protein_pct?: number
+        }
+        Returns: string
       }
       set_egg_price: {
         Args: {

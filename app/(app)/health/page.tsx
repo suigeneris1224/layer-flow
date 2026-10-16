@@ -17,6 +17,7 @@ import {
 } from "@/lib/data/health";
 import { getFlocks } from "@/lib/data/flocks";
 import { getFlockDoses } from "@/lib/data/vaccination-schedule";
+import { getFormulaChoices } from "@/lib/data/feed-formulas";
 import { UpgradePanel } from "@/components/subscriptions/upgrade-panel";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { Panel } from "@/components/ui/panel";
@@ -93,6 +94,10 @@ export default async function HealthPage({
   const activeFlocks = flocks.filter(
     (flock) => flock.status === "GROWING" || flock.status === "PRODUCING"
   );
+  const formulaChoices =
+    tab === "feed" && canAccess(entitlement, "feed_formulation")
+      ? await getFormulaChoices(context.farmId)
+      : [];
   const schedule =
     tab === "vaccinations" && hasSchedule
       ? await getFlockDoses(context.farmId, activeFlocks, today)
@@ -237,6 +242,7 @@ export default async function HealthPage({
                 lastSackPrice={Number(lastFeedResult.data?.sack_price ?? 0)}
                 currency={context.currency}
                 offlineEnabled={offlineEnabled}
+                formulas={formulaChoices}
               />
             ) : (
               <StatusNote tone="info" title="Read only">

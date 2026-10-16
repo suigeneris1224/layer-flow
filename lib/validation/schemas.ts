@@ -621,6 +621,55 @@ export const biosecurityCheckSchema = z.object({
   notes: z.string().trim().max(500).optional().default(""),
 });
 
+// ---------------------------------------------------------------------------
+// Feed formulation
+// ---------------------------------------------------------------------------
+
+/** An optional target: blank means "no target". */
+const optionalDecimal = (label: string, max: number) =>
+  z
+    .union([decimalFromForm(label, { min: 0, max }), z.literal("")])
+    .optional()
+    .transform((value) => (value === "" || value === undefined ? null : value));
+
+export const feedIngredientSchema = z.object({
+  name: z.string().trim().min(1, "Name the ingredient").max(120),
+  pricePerKg: decimalFromForm("Price per kg", { max: 100_000 }),
+  proteinPct: decimalFromForm("Protein", { max: 100 }),
+  energyKcalPerKg: decimalFromForm("Energy", { max: 10_000 }),
+  calciumPct: decimalFromForm("Calcium", { max: 100 }),
+  phosphorusPct: decimalFromForm("Phosphorus", { max: 100 }),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export const feedFormulaSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name the formula").max(120),
+    batchKg: decimalFromForm("Batch size", { min: 0.1, max: 1_000_000 }),
+    targetProteinPct: optionalDecimal("Protein target", 100),
+    targetEnergy: optionalDecimal("Energy target", 10_000),
+    targetCalciumPct: optionalDecimal("Calcium target", 100),
+    notes: z.string().trim().max(500).optional().default(""),
+    items: z
+      .array(
+        z.object({
+          ingredientId: uuid,
+          percent: decimalFromForm("Share", { min: 0.001, max: 100 }),
+        })
+      )
+      .min(1, "Add at least one ingredient")
+      .max(50),
+  })
+  .refine(
+    (value) =>
+      new Set(value.items.map((item) => item.ingredientId)).size === value.items.length,
+    { message: "Each ingredient can only appear once", path: ["items"] }
+  )
+  .refine(
+    (value) => Math.abs(value.items.reduce((total, item) => total + item.percent, 0) - 100) < 0.01,
+    { message: "The shares must add up to 100%", path: ["items"] }
+  );
+
 export type VaccinationInput = z.infer<typeof vaccinationSchema>;
 export type VaccinationScheduleItemInput = z.input<typeof vaccinationScheduleItemSchema>;
 

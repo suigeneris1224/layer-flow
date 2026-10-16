@@ -24,6 +24,7 @@ export type Feature =
   | "offline_mode"
   | "vaccination_schedule"
   | "biosecurity"
+  | "feed_formulation"
   | "data_export"
   | "team_management"
   | "multi_farm"
@@ -69,6 +70,7 @@ const STARTER_FEATURES: readonly Feature[] = [
   "offline_mode",
   "vaccination_schedule",
   "biosecurity",
+  "feed_formulation",
 ];
 
 const PRO_FEATURES: readonly Feature[] = [
@@ -247,6 +249,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   offline_mode: "Offline mode",
   vaccination_schedule: "Vaccination schedule",
   biosecurity: "Biosecurity log",
+  feed_formulation: "Feed formulation",
   data_export: "CSV export",
   team_management: "Team management",
   multi_farm: "Multiple farms",
@@ -284,4 +287,6 @@ export const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
     "Enter your vet's programme once and see which doses each flock has due, with a reminder before each one.",
   biosecurity:
     "Log farm visitors and routine checks like footbath changes and pest control, with a reminder when one is overdue.",
+  feed_formulation:
+    "Mix your own feed: enter your ingredients' prices and label values, see the protein, energy and cost per kg of each mix, and use it on your feed records.",
 };

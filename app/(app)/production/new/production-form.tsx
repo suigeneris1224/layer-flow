@@ -72,6 +72,7 @@ export function ProductionForm({
   lastFeedSackPrice,
   currency,
   offlineEnabled,
+  formulas = [],
 }: {
   flocks: FlockOption[];
   eggSizes: SizeOption[];
@@ -85,11 +86,15 @@ export function ProductionForm({
   currency: string;
   /** Whether the farm's plan includes offline recording (lib/offline/). */
   offlineEnabled: boolean;
+  /** The farm's own feed formulas (feed_formulation); empty hides the picker. */
+  formulas?: { id: string; name: string; costPerKg: number }[];
 }) {
   const router = useRouter();
   const online = useConnectivity();
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  // Bumped when a formula fills in the cost, so FeedCostInput remounts on it.
+  const [costRevision, setCostRevision] = useState(0);
   const [queuedOffline, setQueuedOffline] = useState(false);
 
   const [loadingExisting, setLoadingExisting] = useState(false);
@@ -550,8 +555,35 @@ export function ProductionForm({
               </Field>
 
               <div className="col-span-2 flex flex-col gap-1.5">
+                {formulas.length > 0 && (
+                  <Field
+                    label="Use a formula"
+                    htmlFor="feedFormula"
+                    hint="Optional. Fills in the cost per kg from your formula."
+                  >
+                    <Select
+                      id="feedFormula"
+                      value=""
+                      onChange={(event) => {
+                        const formula = formulas.find((entry) => entry.id === event.target.value);
+                        if (!formula) return;
+                        setValue("feedCostPerKg", String(formula.costPerKg), { shouldDirty: true });
+                        setValue("sackSizeKg", "", { shouldDirty: true });
+                        setValue("sackPrice", "", { shouldDirty: true });
+                        setCostRevision((revision) => revision + 1);
+                      }}
+                    >
+                      <option value="">Choose a formula…</option>
+                      {formulas.map((formula) => (
+                        <option key={formula.id} value={formula.id}>
+                          {formula.name} · {formatCurrency(formula.costPerKg, currency)}/kg
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
                 <FeedCostInput
-                  key={`${selectedFlockId}|${selectedDate}`}
+                  key={`${selectedFlockId}|${selectedDate}|${costRevision}`}
                   value={{
                     costPerKg: values.feedCostPerKg,
                     sackSizeKg: values.sackSizeKg,

@@ -35,6 +35,8 @@ const ENFORCED: Record<Feature, string> = {
   offline_mode:
     "app/(app)/production/new/page.tsx + app/(app)/health/page.tsx — canAccess gates whether the offline queue (lib/offline/) is used at all",
   cross_farm_reporting: "app/(app)/reports/cross-farm/page.tsx",
+  feed_formulation:
+    "app/(app)/feed/formulas/{page,actions}.ts + app/(app)/health/page.tsx — the formula editor and the feed form's formula picker",
   biosecurity:
     "app/(app)/biosecurity/{page,actions}.ts + lib/data/dashboard.ts — the visitor and check logs and the biosecurity alert",
   vaccination_schedule:

@@ -4,6 +4,7 @@ import { requireFarmContext } from "@/lib/auth/session";
 import { canRecordProduction } from "@/lib/auth/permissions";
 import { canAccess } from "@/lib/subscriptions/entitlements";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getFormulaChoices } from "@/lib/data/feed-formulas";
 import { EmptyState, StatusNote } from "@/components/ui/states";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { farmToday } from "@/lib/format";
@@ -35,7 +36,12 @@ export default async function NewProductionPage({
   const supabase = await createSupabaseServerClient();
   const today = farmToday(context.timezone);
 
-  const [flocksResult, sizesResult, lastFeedResult] = await Promise.all([
+  const hasFormulas = canAccess(
+    { plan: context.plan, status: context.subscriptionStatus },
+    "feed_formulation"
+  );
+
+  const [flocksResult, sizesResult, lastFeedResult, formulas] = await Promise.all([
     supabase
       .from("flocks")
       .select("id, name, breed, current_hens")
@@ -58,6 +64,7 @@ export default async function NewProductionPage({
       .order("usage_date", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    hasFormulas ? getFormulaChoices(context.farmId) : Promise.resolve([]),
   ]);
 
   const flocks = flocksResult.data ?? [];
@@ -106,6 +113,7 @@ export default async function NewProductionPage({
           { plan: context.plan, status: context.subscriptionStatus },
           "offline_mode"
         )}
+        formulas={formulas}
       />
     </PageShell>
   );

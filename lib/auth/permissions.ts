@@ -53,6 +53,15 @@ export function canRecordVaccination(context: FarmContext | null): boolean {
 }
 
 /**
+ * Biosecurity visits and checks are daily operations, any member
+ * (`biosecurity_visits_write`/`biosecurity_checks_write` use is_farm_member):
+ * the worker at the gate is the one who sees the visitor.
+ */
+export function canRecordBiosecurity(context: FarmContext | null): boolean {
+  return context !== null;
+}
+
+/**
  * The farm's vaccination programme is configuration, MANAGER+
  * (`vaccination_schedule_items_write`). Recording a dose stays any-member --
  * see canRecordVaccination above.

@@ -25,12 +25,14 @@ interface AlertThresholdRow {
   stale_pricing_days: number | null;
   underperformance_pct: number | null;
   loss_threshold_pesos: number | null;
+  footbath_gap_days: number | null;
+  pest_control_gap_days: number | null;
 }
 
 const COLUMNS =
   "production_drop, feed_cost_rise, daily_mortality_rate, egg_size_shift, " +
   "vaccination_gap_days, low_inventory_trays, stale_pricing_days, " +
-  "underperformance_pct, loss_threshold_pesos";
+  "underperformance_pct, loss_threshold_pesos, footbath_gap_days, pest_control_gap_days";
 
 function fromRow(row: AlertThresholdRow): AlertThresholdOverrides {
   return {
@@ -48,6 +50,9 @@ function fromRow(row: AlertThresholdRow): AlertThresholdOverrides {
       row.underperformance_pct === null ? null : Number(row.underperformance_pct),
     lossThresholdPesos:
       row.loss_threshold_pesos === null ? null : Number(row.loss_threshold_pesos),
+    footbathGapDays: row.footbath_gap_days === null ? null : Number(row.footbath_gap_days),
+    pestControlGapDays:
+      row.pest_control_gap_days === null ? null : Number(row.pest_control_gap_days),
   };
 }
 
@@ -98,6 +103,10 @@ export async function saveAlertThresholds(
   }
   if ("lossThresholdPesos" in values) {
     row.loss_threshold_pesos = values.lossThresholdPesos ?? null;
+  }
+  if ("footbathGapDays" in values) row.footbath_gap_days = values.footbathGapDays ?? null;
+  if ("pestControlGapDays" in values) {
+    row.pest_control_gap_days = values.pestControlGapDays ?? null;
   }
 
   const { error } = await supabase

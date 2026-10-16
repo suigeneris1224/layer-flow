@@ -54,8 +54,10 @@ export type Database = {
           egg_size_shift: number | null
           farm_id: string
           feed_cost_rise: number | null
+          footbath_gap_days: number | null
           loss_threshold_pesos: number | null
           low_inventory_trays: number | null
+          pest_control_gap_days: number | null
           production_drop: number | null
           stale_pricing_days: number | null
           underperformance_pct: number | null
@@ -67,8 +69,10 @@ export type Database = {
           egg_size_shift?: number | null
           farm_id: string
           feed_cost_rise?: number | null
+          footbath_gap_days?: number | null
           loss_threshold_pesos?: number | null
           low_inventory_trays?: number | null
+          pest_control_gap_days?: number | null
           production_drop?: number | null
           stale_pricing_days?: number | null
           underperformance_pct?: number | null
@@ -80,8 +84,10 @@ export type Database = {
           egg_size_shift?: number | null
           farm_id?: string
           feed_cost_rise?: number | null
+          footbath_gap_days?: number | null
           loss_threshold_pesos?: number | null
           low_inventory_trays?: number | null
+          pest_control_gap_days?: number | null
           production_drop?: number | null
           stale_pricing_days?: number | null
           underperformance_pct?: number | null
@@ -177,6 +183,110 @@ export type Database = {
           email?: string
         }
         Relationships: []
+      }
+      biosecurity_checks: {
+        Row: {
+          check_date: string
+          check_type: Database["public"]["Enums"]["biosecurity_check_type"]
+          created_at: string
+          farm_id: string
+          house_id: string | null
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          check_date: string
+          check_type: Database["public"]["Enums"]["biosecurity_check_type"]
+          created_at?: string
+          farm_id: string
+          house_id?: string | null
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          check_date?: string
+          check_type?: Database["public"]["Enums"]["biosecurity_check_type"]
+          created_at?: string
+          farm_id?: string
+          house_id?: string | null
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biosecurity_checks_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "biosecurity_checks_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biosecurity_visits: {
+        Row: {
+          created_at: string
+          disinfected: boolean
+          farm_id: string
+          id: string
+          last_poultry_contact_date: string | null
+          notes: string | null
+          purpose: string | null
+          recorded_by: string | null
+          updated_at: string
+          vehicle_plate: string | null
+          visit_date: string
+          visitor_name: string
+        }
+        Insert: {
+          created_at?: string
+          disinfected?: boolean
+          farm_id: string
+          id?: string
+          last_poultry_contact_date?: string | null
+          notes?: string | null
+          purpose?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+          vehicle_plate?: string | null
+          visit_date: string
+          visitor_name: string
+        }
+        Update: {
+          created_at?: string
+          disinfected?: boolean
+          farm_id?: string
+          id?: string
+          last_poultry_contact_date?: string | null
+          notes?: string | null
+          purpose?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+          vehicle_plate?: string | null
+          visit_date?: string
+          visitor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biosecurity_visits_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -1731,6 +1841,12 @@ export type Database = {
     Enums: {
       account_deletion_status: "PENDING" | "COMPLETED" | "REJECTED"
       billing_period: "MONTHLY" | "ANNUAL"
+      biosecurity_check_type:
+        | "FOOTBATH"
+        | "DISINFECTION"
+        | "PEST_CONTROL"
+        | "CLEANING"
+        | "OTHER"
       expense_category:
         | "FEED"
         | "CHICKS"
@@ -1888,6 +2004,13 @@ export const Constants = {
     Enums: {
       account_deletion_status: ["PENDING", "COMPLETED", "REJECTED"],
       billing_period: ["MONTHLY", "ANNUAL"],
+      biosecurity_check_type: [
+        "FOOTBATH",
+        "DISINFECTION",
+        "PEST_CONTROL",
+        "CLEANING",
+        "OTHER",
+      ],
       expense_category: [
         "FEED",
         "CHICKS",

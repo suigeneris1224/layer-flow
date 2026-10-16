@@ -23,6 +23,7 @@ export type Feature =
   | "flock_comparison"
   | "offline_mode"
   | "vaccination_schedule"
+  | "biosecurity"
   | "data_export"
   | "team_management"
   | "multi_farm"
@@ -67,6 +68,7 @@ const STARTER_FEATURES: readonly Feature[] = [
   "reports",
   "offline_mode",
   "vaccination_schedule",
+  "biosecurity",
 ];
 
 const PRO_FEATURES: readonly Feature[] = [
@@ -244,6 +246,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   flock_comparison: "Flock comparison",
   offline_mode: "Offline mode",
   vaccination_schedule: "Vaccination schedule",
+  biosecurity: "Biosecurity log",
   data_export: "CSV export",
   team_management: "Team management",
   multi_farm: "Multiple farms",
@@ -279,4 +282,6 @@ export const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
     "Compare revenue, cost and profit across every farm you run, side by side.",
   vaccination_schedule:
     "Enter your vet's programme once and see which doses each flock has due, with a reminder before each one.",
+  biosecurity:
+    "Log farm visitors and routine checks like footbath changes and pest control, with a reminder when one is overdue.",
 };

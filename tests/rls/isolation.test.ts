@@ -70,6 +70,8 @@ suite("RLS tenant isolation", () => {
     "mortality_records",
     "vaccinations",
     "vaccination_schedule_items",
+    "biosecurity_visits",
+    "biosecurity_checks",
     "customers",
     "egg_sales",
     "expenses",
@@ -678,6 +680,45 @@ suite("RLS tenant isolation", () => {
         vaccination_date: new Date().toISOString().slice(0, 10),
         vaccine_name: "Borrowed dose",
         schedule_item_id: bobItem!.id,
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("a worker can log a visitor and a check", async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { error: visitError } = await worker.client.from("biosecurity_visits").insert({
+        farm_id: farmA.farmId,
+        visit_date: today,
+        visitor_name: "Feed truck",
+        recorded_by: worker.id,
+      });
+      expect(visitError).toBeNull();
+
+      const { error: checkError } = await worker.client.from("biosecurity_checks").insert({
+        farm_id: farmA.farmId,
+        check_date: today,
+        check_type: "FOOTBATH",
+        house_id: farmA.houseId,
+        recorded_by: worker.id,
+      });
+      expect(checkError).toBeNull();
+    });
+
+    it("bob cannot log a visitor on farm A", async () => {
+      const { error } = await bob.client.from("biosecurity_visits").insert({
+        farm_id: farmA.farmId,
+        visit_date: new Date().toISOString().slice(0, 10),
+        visitor_name: "Intruder",
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("a check cannot point at another farm's house", async () => {
+      const { error } = await alice.client.from("biosecurity_checks").insert({
+        farm_id: farmA.farmId,
+        check_date: new Date().toISOString().slice(0, 10),
+        check_type: "CLEANING",
+        house_id: farmB.houseId,
       });
       expect(error).not.toBeNull();
     });

@@ -28,6 +28,8 @@ import {
   underperformingFlockAlert,
   vaccinationAlert,
   vaccinationDueAlert,
+  biosecurityAlert,
+  type CheckGap,
   type DueDose,
   type Alert,
   type PricedSizeStatus,
@@ -44,6 +46,8 @@ import {
 } from "@/lib/data/inventory";
 import { getLatestVaccinationByFlock } from "@/lib/data/health";
 import { dueDosesForAlert, getFlockDoses } from "@/lib/data/vaccination-schedule";
+import { getLatestChecks } from "@/lib/data/biosecurity";
+import { daysSinceLastCheck } from "@/lib/domain/biosecurity";
 import { syncNotifications } from "@/lib/data/notifications";
 import { getAlertThresholdOverrides } from "@/lib/data/alert-thresholds";
 import { getNotificationPreferences } from "@/lib/data/notification-preferences";
@@ -380,6 +384,25 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
     if (schedule.items.length > 0) scheduledDoses = dueDosesForAlert(schedule.byFlock);
   }
 
+  // Routine biosecurity checks (biosecurity, Starter+). Only types the farm
+  // has logged at least once in the past year can fire -- see biosecurityAlert.
+  let checkGaps: CheckGap[] = [];
+  if (hasAlerts && canAccess(entitlement, "biosecurity")) {
+    const latestChecks = await getLatestChecks(context.farmId, shiftDate(today, -365));
+    checkGaps = [
+      {
+        label: "Footbath change",
+        daysSince: daysSinceLastCheck(latestChecks, "FOOTBATH", today),
+        gapDays: thresholds.footbathGapDays,
+      },
+      {
+        label: "Pest control",
+        daysSince: daysSinceLastCheck(latestChecks, "PEST_CONTROL", today),
+        gapDays: thresholds.pestControlGapDays,
+      },
+    ];
+  }
+
   const alerts = hasAlerts
     ? buildAlerts({
         productionRows,
@@ -395,6 +418,7 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
         flockRows,
         latestVaccinationByFlock,
         scheduledDoses,
+        checkGaps,
         totalTrays: inventorySummary.totalTrays,
         ungradedEggs: inventorySummary.ungradedEggs,
         looseEggs: inventorySummary.looseEggs,
@@ -638,6 +662,8 @@ interface BuildAlertsInput {
   latestVaccinationByFlock: ReadonlyMap<string, string>;
   /** Overdue/due-soon doses from the farm's programme; null = no programme. */
   scheduledDoses: readonly DueDose[] | null;
+  /** Routine biosecurity checks; empty when the farm isn't entitled. */
+  checkGaps: readonly CheckGap[];
   totalTrays: number;
   ungradedEggs: number;
   looseEggs: number;
@@ -660,6 +686,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     flockRows,
     latestVaccinationByFlock,
     scheduledDoses,
+    checkGaps,
     totalTrays,
     ungradedEggs,
     looseEggs,
@@ -728,6 +755,7 @@ function buildAlerts(input: BuildAlertsInput): Alert[] {
     feedCostAlert(feedToday, feedBaseline, thresholds.feedCostRise),
     mortalityAlert(mortalityToday, hens, thresholds.dailyMortalityRate),
     overdueVaccination ?? null,
+    biosecurityAlert(checkGaps),
   ];
 
   if (hasAdvancedAlerts) {

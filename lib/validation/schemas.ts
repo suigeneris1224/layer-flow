@@ -3,6 +3,7 @@ import { EXPENSE_CATEGORIES } from "@/lib/domain/expenses";
 import { SUPPORTED_CURRENCIES, SUPPORTED_TIMEZONES } from "@/lib/domain/farm-config";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, isPasswordSecure } from "@/lib/domain/password";
 import { normalizePhMobile } from "@/lib/domain/phone";
+import { CHECK_TYPES } from "@/lib/domain/biosecurity";
 import { WAITLIST_FLOCK_SIZES } from "@/lib/domain/waitlist";
 import { PLAN_ORDER } from "@/lib/subscriptions/plans";
 import type {
@@ -246,6 +247,8 @@ export const alertThresholdsSchema = z.object({
   stalePricingDays: optionalThreshold("Stale pricing days", { max: 1000 }),
   underperformancePct: optionalThreshold("Underperformance", { max: 100 }),
   lossThresholdPesos: optionalThreshold("Loss threshold", { max: 10_000_000 }),
+  footbathGapDays: optionalThreshold("Footbath gap", { max: 365 }),
+  pestControlGapDays: optionalThreshold("Pest control gap", { max: 365 }),
 });
 
 export type AlertThresholdsInput = z.infer<typeof alertThresholdsSchema>;
@@ -591,6 +594,33 @@ export const vaccinationScheduleItemSchema = z
 
 export type MortalityRecordInput = z.infer<typeof mortalityRecordSchema>;
 export type FeedUsageInput = z.infer<typeof feedUsageSchema>;
+// ---------------------------------------------------------------------------
+// Biosecurity
+// ---------------------------------------------------------------------------
+
+export const biosecurityVisitSchema = z
+  .object({
+    visitDate: isoDate,
+    visitorName: z.string().trim().min(1, "Enter who visited").max(120),
+    purpose: z.string().trim().max(200).optional().default(""),
+    vehiclePlate: z.string().trim().max(20).optional().default(""),
+    lastPoultryContactDate: z.union([isoDate, z.literal("")]).optional().default(""),
+    disinfected: z.boolean().optional().default(false),
+    notes: z.string().trim().max(500).optional().default(""),
+  })
+  .refine(
+    (value) =>
+      value.lastPoultryContactDate === "" || value.lastPoultryContactDate <= value.visitDate,
+    { message: "Can't be after the visit", path: ["lastPoultryContactDate"] }
+  );
+
+export const biosecurityCheckSchema = z.object({
+  checkDate: isoDate,
+  checkType: z.enum(CHECK_TYPES),
+  houseId: z.union([uuid, z.literal("")]).optional().default(""),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
 export type VaccinationInput = z.infer<typeof vaccinationSchema>;
 export type VaccinationScheduleItemInput = z.input<typeof vaccinationScheduleItemSchema>;
 

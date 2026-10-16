@@ -89,6 +89,20 @@ const FIELDS: ThresholdField[] = [
     step: "1",
     defaultValue: THRESHOLDS.lossThresholdPesos,
   },
+  {
+    key: "footbathGapDays",
+    label: "Footbath gap (days)",
+    hint: "Days without a logged footbath change before we mention it.",
+    step: "1",
+    defaultValue: THRESHOLDS.footbathGapDays,
+  },
+  {
+    key: "pestControlGapDays",
+    label: "Pest control gap (days)",
+    hint: "Days without logged pest or rodent control before we mention it.",
+    step: "1",
+    defaultValue: THRESHOLDS.pestControlGapDays,
+  },
 ];
 
 /** Fields stored as a fraction (0.1) but edited as a whole percent (10). */

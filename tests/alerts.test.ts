@@ -13,6 +13,7 @@ import {
   summariseAlerts,
   underperformingFlockAlert,
   vaccinationAlert,
+  biosecurityAlert,
   type AlertThresholdOverrides,
   type ProductionPoint,
 } from "@/lib/domain/alerts";
@@ -434,6 +435,8 @@ describe("resolveThresholds", () => {
     stalePricingDays: null,
     underperformancePct: null,
     lossThresholdPesos: null,
+    footbathGapDays: 3,
+    pestControlGapDays: null,
   };
 
   it("returns pure defaults when not entitled, even with overrides on file", () => {
@@ -451,5 +454,32 @@ describe("resolveThresholds", () => {
     expect(resolved.eggSizeShift).toBe(5);
     expect(resolved.feedCostRise).toBe(THRESHOLDS.feedCostRise);
     expect(resolved.lowInventoryTrays).toBe(THRESHOLDS.lowInventoryTrays);
+  });
+});
+
+describe("biosecurityAlert", () => {
+  it("skips check types the farm has never logged", () => {
+    expect(
+      biosecurityAlert([{ label: "Footbath change", daysSince: null, gapDays: 7 }])
+    ).toBeNull();
+  });
+
+  it("is silent while every logged check is within its gap", () => {
+    expect(
+      biosecurityAlert([{ label: "Footbath change", daysSince: 7, gapDays: 7 }])
+    ).toBeNull();
+  });
+
+  it("names the check furthest past its gap", () => {
+    expect(
+      biosecurityAlert([
+        { label: "Footbath change", daysSince: 9, gapDays: 7 },
+        { label: "Pest control", daysSince: 45, gapDays: 30 },
+      ])
+    ).toEqual({
+      level: "warn",
+      message: "No pest control logged in 45 days.",
+      type: "biosecurity",
+    });
   });
 });

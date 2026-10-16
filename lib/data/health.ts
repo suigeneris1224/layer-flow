@@ -35,7 +35,7 @@ type FlockJoin = { name: string } | { name: string }[] | null;
  * so Postgrest can't embed it in one relational select -- same reason
  * lib/data/team.ts resolves profiles with a second query instead of a join.
  */
-async function resolveRecordedByNames(
+export async function resolveRecordedByNames(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userIds: readonly (string | null)[]
 ): Promise<Map<string, string>> {

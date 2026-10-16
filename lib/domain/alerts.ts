@@ -22,6 +22,7 @@ export type AlertType =
   | "egg_size"
   | "vaccination"
   | "vaccination_due"
+  | "biosecurity"
   | "low_inventory"
   | "underperforming_flock"
   | "flock_loss"
@@ -64,6 +65,10 @@ export const THRESHOLDS = {
   underperformancePct: 20,
   /** Weekly loss (pesos) a flock must clear before we mention it. 0 = any loss. */
   lossThresholdPesos: 0,
+  /** Days without a logged footbath change before we mention it. */
+  footbathGapDays: 7,
+  /** Days without logged pest/rodent control before we mention it. */
+  pestControlGapDays: 30,
 } as const;
 
 /**
@@ -80,6 +85,8 @@ export interface AlertThresholdOverrides {
   stalePricingDays: number | null;
   underperformancePct: number | null;
   lossThresholdPesos: number | null;
+  footbathGapDays: number | null;
+  pestControlGapDays: number | null;
 }
 
 export type ResolvedThresholds = {
@@ -111,6 +118,8 @@ export function resolveThresholds(
     stalePricingDays: overrides.stalePricingDays ?? THRESHOLDS.stalePricingDays,
     underperformancePct: overrides.underperformancePct ?? THRESHOLDS.underperformancePct,
     lossThresholdPesos: overrides.lossThresholdPesos ?? THRESHOLDS.lossThresholdPesos,
+    footbathGapDays: overrides.footbathGapDays ?? THRESHOLDS.footbathGapDays,
+    pestControlGapDays: overrides.pestControlGapDays ?? THRESHOLDS.pestControlGapDays,
   };
 }
 
@@ -314,6 +323,35 @@ export function vaccinationDueAlert(doses: readonly DueDose[]): Alert | null {
     level: "warn",
     message: `${worst.vaccineName} for ${worst.flockName} ${when}${more}.`,
     type: "vaccination_due",
+  };
+}
+
+/** One routine check, for `biosecurityAlert`. Null = never logged. */
+export interface CheckGap {
+  label: string;
+  daysSince: number | null;
+  gapDays: number;
+}
+
+/**
+ * The longest-overdue routine biosecurity check (biosecurity, Starter+).
+ *
+ * A check type the farm has never logged is skipped: the farm hasn't started
+ * logging it, and nagging on day one trains them to ignore the panel (same
+ * reasoning as `vaccinationAlert` skipping young flocks).
+ */
+export function biosecurityAlert(gaps: readonly CheckGap[]): Alert | null {
+  const overdue = gaps
+    .filter((gap): gap is CheckGap & { daysSince: number } => gap.daysSince !== null)
+    .filter((gap) => gap.daysSince > gap.gapDays)
+    .sort((a, b) => b.daysSince - b.gapDays - (a.daysSince - a.gapDays));
+
+  if (overdue.length === 0) return null;
+  const worst = overdue[0];
+  return {
+    level: "warn",
+    message: `No ${worst.label.toLowerCase()} logged in ${worst.daysSince} days.`,
+    type: "biosecurity",
   };
 }
 

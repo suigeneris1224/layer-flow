@@ -142,6 +142,93 @@ export function heatDaysForAlert(days: readonly ForecastDaySummary[], today: str
     });
 }
 
+export type WeatherKind =
+  | "clear"
+  | "partly_cloudy"
+  | "cloudy"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "heavy_rain"
+  | "thunderstorm";
+
+/**
+ * WMO weather interpretation code (what Open-Meteo returns as `weather_code`)
+ * to a kind for the icon and a plain label. Null for a missing or unknown
+ * code. Snow codes exist in the standard but not in the Philippines; they
+ * read as cloudy rather than inventing an icon nobody will see.
+ */
+export function describeWeatherCode(
+  code: number | null | undefined
+): { kind: WeatherKind; label: string } | null {
+  if (code === null || code === undefined) return null;
+  switch (code) {
+    case 0:
+      return { kind: "clear", label: "Sunny" };
+    case 1:
+      return { kind: "clear", label: "Mostly sunny" };
+    case 2:
+      return { kind: "partly_cloudy", label: "Partly cloudy" };
+    case 3:
+      return { kind: "cloudy", label: "Cloudy" };
+    case 45:
+    case 48:
+      return { kind: "fog", label: "Foggy" };
+    case 51:
+    case 53:
+    case 55:
+    case 56:
+    case 57:
+      return { kind: "drizzle", label: "Drizzle" };
+    case 61:
+    case 80:
+      return { kind: "rain", label: "Light rain" };
+    case 63:
+    case 66:
+    case 81:
+      return { kind: "rain", label: "Rain" };
+    case 65:
+    case 67:
+    case 82:
+      return { kind: "heavy_rain", label: "Heavy rain" };
+    case 95:
+    case 96:
+    case 99:
+      return { kind: "thunderstorm", label: "Thunderstorms" };
+    default:
+      if (code >= 71 && code <= 86) return { kind: "cloudy", label: "Cloudy" };
+      return null;
+  }
+}
+
+export type WeatherTheme = "storm" | "rain" | "heat" | "hot" | "clear" | "cloudy";
+
+const RAIN_KINDS: readonly WeatherKind[] = ["drizzle", "rain", "heavy_rain"];
+
+/**
+ * The colour theme for a day on the weather panel. Order matters: a storm
+ * outranks heat (it's the more immediate weather), rain outranks heat, and
+ * only then does the heat level pick a warm theme. Works without a weather
+ * code (snapshots saved before codes were fetched) from heat and rain alone.
+ */
+export function weatherTheme(day: {
+  weatherCode?: number | null;
+  rainChancePct: number | null;
+  peakHeatIndexC: number | null;
+}): WeatherTheme {
+  const kind = describeWeatherCode(day.weatherCode)?.kind ?? null;
+  if (kind === "thunderstorm") return "storm";
+  if ((kind && RAIN_KINDS.includes(kind)) || (day.rainChancePct ?? 0) >= 60) return "rain";
+  if (day.peakHeatIndexC !== null) {
+    const level = heatIndexLevel(day.peakHeatIndexC);
+    if (isAtLeast(level, "danger")) return "heat";
+    if (level === "extreme_caution") return "hot";
+  }
+  if (kind === "clear" || kind === "partly_cloudy") return "clear";
+  if (kind === null && day.peakHeatIndexC !== null) return "clear";
+  return "cloudy";
+}
+
 /** Lowercase, no accents, no "city of"/"province of" noise -- for matching admin names. */
 function normalisePlace(value: string): string {
   return value

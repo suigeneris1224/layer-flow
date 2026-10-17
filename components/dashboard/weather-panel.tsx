@@ -1,14 +1,21 @@
 import Link from "next/link";
-import { CloudSun, Droplet, MapPin } from "lucide-react";
+import { CloudSun, Droplet, MapPin, Thermometer } from "lucide-react";
 import { Panel } from "@/components/ui/panel";
+import { InfoTip } from "@/components/ui/info-tip";
 import { WeatherIcon, WeatherIconDefs } from "@/components/dashboard/weather-icon";
 import type { WeatherResult } from "@/lib/data/weather";
 import type { ForecastDay } from "@/lib/weather/open-meteo";
-import { describeWeatherCode } from "@/lib/domain/weather";
+import {
+  HEAT_LEVEL_LABELS,
+  describeWeatherCode,
+  heatIndexLevel,
+  isAtLeast,
+} from "@/lib/domain/weather";
 import { formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const CARD_COUNT = 4;
+const TITLE = "Heat & weather";
 
 const WEEKDAY = new Intl.DateTimeFormat("en-PH", { weekday: "long", timeZone: "UTC" });
 
@@ -32,10 +39,10 @@ function Dot() {
 function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
   const condition = describeWeatherCode(day.weatherCode);
   const isToday = index === 0;
-  // Today leads with how hot it feels; the days ahead with the rain chance.
-  const showFeelsLike = isToday && day.peakHeatIndexC !== null;
-  const showRain = !showFeelsLike && day.rainChancePct !== null;
-  const hasRange = day.minTempC != null || day.maxTempC !== null;
+  const level = day.peakHeatIndexC === null ? null : heatIndexLevel(day.peakHeatIndexC);
+  // Same threshold as heatAlert. "Caution" (27-32 °C) is most days here and
+  // would only be noise.
+  const flagged = level !== null && isAtLeast(level, "extreme_caution");
 
   return (
     <li
@@ -57,48 +64,69 @@ function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
         </div>
       </div>
 
-      <p className="mt-auto flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] tabular text-muted-foreground">
-        {showFeelsLike && <span>Feels like {degrees(day.peakHeatIndexC)}</span>}
-        {showFeelsLike && hasRange && <Dot />}
-        {hasRange && (
-          <span>
-            <span className="sr-only">Low </span>
-            {degrees(day.minTempC)} / <span className="sr-only">high </span>
-            {degrees(day.maxTempC)}
-          </span>
+      <div className="mt-auto flex flex-col gap-0.5 text-[11px] tabular">
+        <p className="flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
+          {day.peakHeatIndexC !== null && <span>Feels {degrees(day.peakHeatIndexC)}</span>}
+          {day.peakHeatIndexC !== null && day.rainChancePct !== null && <Dot />}
+          {day.rainChancePct !== null && (
+            <span className="flex items-center gap-1">
+              <Droplet className="size-3" aria-hidden />
+              {day.rainChancePct}%<span className="sr-only"> chance of rain</span>
+            </span>
+          )}
+        </p>
+        {flagged && level && (
+          <p
+            className={cn(
+              "flex items-center gap-1 font-semibold",
+              isAtLeast(level, "danger")
+                ? "text-[hsl(var(--status-bad))]"
+                : "text-[hsl(var(--status-warn))]"
+            )}
+          >
+            <Thermometer className="size-3 shrink-0" aria-hidden />
+            {HEAT_LEVEL_LABELS[level]}
+          </p>
         )}
-        {hasRange && showRain && <Dot />}
-        {showRain && (
-          <span className="flex items-center gap-1">
-            <Droplet className="size-3" aria-hidden />
-            {day.rainChancePct}%<span className="sr-only"> chance of rain</span>
-          </span>
-        )}
-      </p>
+      </div>
     </li>
   );
 }
 
 function Heading({ location }: { location?: string }) {
   return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-        <CloudSun className="size-4 text-[hsl(var(--primary-strong))]" aria-hidden />
-        Weather
-      </h2>
-      {location && (
-        <p className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
-          <MapPin className="size-3 shrink-0" aria-hidden />
-          {location}
-        </p>
-      )}
+    <header>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <CloudSun className="size-4 text-[hsl(var(--primary-strong))]" aria-hidden />
+          {TITLE}
+          <InfoTip label="About heat warnings">
+            Hot days are flagged so you can prepare your houses in time, and Analytics shows each
+            day&apos;s temperature next to your laying rate. The heat index is how hot it feels
+            once humidity is counted, the number PAGASA warns on: Caution 27–32°C, Extreme
+            caution 33–41°C, Danger 42–51°C, Extreme danger 52°C and up.
+          </InfoTip>
+        </h2>
+        {location && (
+          <p className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+            <MapPin className="size-3 shrink-0" aria-hidden />
+            {location}
+          </p>
+        )}
+      </div>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Heat warnings for your flock, based on PAGASA&apos;s heat index
+      </p>
     </header>
   );
 }
 
 /**
- * The farm's next four days as four forecast cards. Heat warnings come
- * through the dashboard alerts (heatAlert), so the cards stay a forecast.
+ * Heat & weather: the farm's next four days, led by how hot it feels, with
+ * PAGASA's level on days at Extreme caution or worse -- the reason weather
+ * is in LayerFlow at all (heat stress costs eggs and birds). States the
+ * weather and the level only; what to do about a hot day is the farmer's
+ * call. The heat alert (heatAlert) carries the same warning to the alerts.
  * Open-Meteo's CC BY credit sits on the privacy page, where the data source
  * is disclosed.
  */
@@ -121,7 +149,7 @@ export function WeatherPanel({
           ? `We couldn't find "${weather.query}". Check the spelling of your farm's municipality and province.`
           : "The forecast isn't available right now. Try again in a little while.";
     return (
-      <Panel title="Weather" className={className}>
+      <Panel title={TITLE} className={className}>
         <p className="text-sm text-muted-foreground">
           {message}{" "}
           {(weather.status === "no_location" || weather.status === "not_found") && canEditFarm && (
@@ -135,7 +163,7 @@ export function WeatherPanel({
   }
 
   return (
-    <section className={cn("flex flex-col gap-2.5", className)} aria-label="Weather">
+    <section className={cn("flex flex-col gap-2.5", className)} aria-label="Heat and weather">
       <WeatherIconDefs />
       <Heading location={weather.label} />
 

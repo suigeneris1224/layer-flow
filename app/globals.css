@@ -93,24 +93,6 @@
     --band-foreground: 142 20% 95%;
     --band-muted-foreground: 142 10% 72%;
     --band-border: 142 20% 22%;
-
-    /* Weather panel backgrounds, one gradient per condition (see
-       weatherTheme in lib/domain/weather.ts). Fixed in both themes, like the
-       band above: a weather card keeps its sky. Every stop is dark enough for
-       white text -- checked in scripts/contrast.mjs. */
-    --wx-foreground: 0 0% 100%;
-    --wx-heat-from: 12 84% 38%;
-    --wx-heat-to: 350 72% 34%;
-    --wx-hot-from: 30 92% 31%;
-    --wx-hot-to: 16 84% 36%;
-    --wx-rain-from: 208 52% 36%;
-    --wx-rain-to: 220 44% 25%;
-    --wx-storm-from: 236 30% 32%;
-    --wx-storm-to: 256 36% 20%;
-    --wx-clear-from: 200 84% 33%;
-    --wx-clear-to: 214 74% 30%;
-    --wx-cloudy-from: 210 18% 40%;
-    --wx-cloudy-to: 218 24% 28%;
   }
 
   .dark {
@@ -166,24 +148,6 @@
     --band-foreground: 142 20% 95%;
     --band-muted-foreground: 142 10% 72%;
     --band-border: 142 20% 22%;
-
-    /* Weather panel backgrounds, one gradient per condition (see
-       weatherTheme in lib/domain/weather.ts). Fixed in both themes, like the
-       band above: a weather card keeps its sky. Every stop is dark enough for
-       white text -- checked in scripts/contrast.mjs. */
-    --wx-foreground: 0 0% 100%;
-    --wx-heat-from: 12 84% 38%;
-    --wx-heat-to: 350 72% 34%;
-    --wx-hot-from: 30 92% 31%;
-    --wx-hot-to: 16 84% 36%;
-    --wx-rain-from: 208 52% 36%;
-    --wx-rain-to: 220 44% 25%;
-    --wx-storm-from: 236 30% 32%;
-    --wx-storm-to: 256 36% 20%;
-    --wx-clear-from: 200 84% 33%;
-    --wx-clear-to: 214 74% 30%;
-    --wx-cloudy-from: 210 18% 40%;
-    --wx-cloudy-to: 218 24% 28%;
   }
 
   * {

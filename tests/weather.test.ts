@@ -167,7 +167,7 @@ describe("describeWeatherCode", () => {
     expect(describeWeatherCode(3)?.kind).toBe("cloudy");
     expect(describeWeatherCode(45)?.kind).toBe("fog");
     expect(describeWeatherCode(53)?.kind).toBe("drizzle");
-    expect(describeWeatherCode(80)).toEqual({ kind: "rain", label: "Light rain" });
+    expect(describeWeatherCode(80)).toEqual({ kind: "rain", label: "Light Rain" });
     expect(describeWeatherCode(82)?.kind).toBe("heavy_rain");
     expect(describeWeatherCode(95)?.kind).toBe("thunderstorm");
   });
@@ -177,40 +177,5 @@ describe("describeWeatherCode", () => {
     expect(describeWeatherCode(null)).toBeNull();
     expect(describeWeatherCode(undefined)).toBeNull();
     expect(describeWeatherCode(42)).toBeNull();
-  });
-});
-
-describe("weatherTheme", () => {
-  const day = (weatherCode: number | null, rainChancePct: number | null, peakHeatIndexC: number | null) => ({
-    weatherCode,
-    rainChancePct,
-    peakHeatIndexC,
-  });
-
-  it("puts a storm ahead of heat", async () => {
-    const { weatherTheme } = await import("@/lib/domain/weather");
-    expect(weatherTheme(day(95, 80, 45))).toBe("storm");
-  });
-
-  it("puts rain ahead of heat, by code or by a high chance", async () => {
-    const { weatherTheme } = await import("@/lib/domain/weather");
-    expect(weatherTheme(day(63, 40, 44))).toBe("rain");
-    expect(weatherTheme(day(2, 70, 44))).toBe("rain");
-  });
-
-  it("uses the PAGASA level for warm days", async () => {
-    const { weatherTheme } = await import("@/lib/domain/weather");
-    expect(weatherTheme(day(1, 10, 43))).toBe("heat");
-    expect(weatherTheme(day(1, 10, 36))).toBe("hot");
-    expect(weatherTheme(day(1, 10, 30))).toBe("clear");
-    expect(weatherTheme(day(3, 10, 30))).toBe("cloudy");
-  });
-
-  it("still picks a theme without a weather code", async () => {
-    const { weatherTheme } = await import("@/lib/domain/weather");
-    expect(weatherTheme(day(null, 20, 44))).toBe("heat");
-    expect(weatherTheme(day(null, 65, 30))).toBe("rain");
-    expect(weatherTheme(day(null, 10, 30))).toBe("clear");
-    expect(weatherTheme(day(null, null, null))).toBe("cloudy");
   });
 });

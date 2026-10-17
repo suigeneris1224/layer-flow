@@ -166,9 +166,9 @@ export function describeWeatherCode(
     case 0:
       return { kind: "clear", label: "Sunny" };
     case 1:
-      return { kind: "clear", label: "Mostly sunny" };
+      return { kind: "clear", label: "Mostly Sunny" };
     case 2:
-      return { kind: "partly_cloudy", label: "Partly cloudy" };
+      return { kind: "partly_cloudy", label: "Partly Cloudy" };
     case 3:
       return { kind: "cloudy", label: "Cloudy" };
     case 45:
@@ -182,7 +182,7 @@ export function describeWeatherCode(
       return { kind: "drizzle", label: "Drizzle" };
     case 61:
     case 80:
-      return { kind: "rain", label: "Light rain" };
+      return { kind: "rain", label: "Light Rain" };
     case 63:
     case 66:
     case 81:
@@ -190,7 +190,7 @@ export function describeWeatherCode(
     case 65:
     case 67:
     case 82:
-      return { kind: "heavy_rain", label: "Heavy rain" };
+      return { kind: "heavy_rain", label: "Heavy Rain" };
     case 95:
     case 96:
     case 99:
@@ -199,34 +199,6 @@ export function describeWeatherCode(
       if (code >= 71 && code <= 86) return { kind: "cloudy", label: "Cloudy" };
       return null;
   }
-}
-
-export type WeatherTheme = "storm" | "rain" | "heat" | "hot" | "clear" | "cloudy";
-
-const RAIN_KINDS: readonly WeatherKind[] = ["drizzle", "rain", "heavy_rain"];
-
-/**
- * The colour theme for a day on the weather panel. Order matters: a storm
- * outranks heat (it's the more immediate weather), rain outranks heat, and
- * only then does the heat level pick a warm theme. Works without a weather
- * code (snapshots saved before codes were fetched) from heat and rain alone.
- */
-export function weatherTheme(day: {
-  weatherCode?: number | null;
-  rainChancePct: number | null;
-  peakHeatIndexC: number | null;
-}): WeatherTheme {
-  const kind = describeWeatherCode(day.weatherCode)?.kind ?? null;
-  if (kind === "thunderstorm") return "storm";
-  if ((kind && RAIN_KINDS.includes(kind)) || (day.rainChancePct ?? 0) >= 60) return "rain";
-  if (day.peakHeatIndexC !== null) {
-    const level = heatIndexLevel(day.peakHeatIndexC);
-    if (isAtLeast(level, "danger")) return "heat";
-    if (level === "extreme_caution") return "hot";
-  }
-  if (kind === "clear" || kind === "partly_cloudy") return "clear";
-  if (kind === null && day.peakHeatIndexC !== null) return "clear";
-  return "cloudy";
 }
 
 /** Lowercase, no accents, no "city of"/"province of" noise -- for matching admin names. */

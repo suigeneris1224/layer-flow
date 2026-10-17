@@ -293,5 +293,5 @@ export const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
   feed_formulation:
     "Mix your own feed: enter your ingredients' prices and label values, see the protein, energy and cost per kg of each mix, and use it on your feed records.",
   weather:
-    "A 3-day forecast for your farm with the heat index, a warning before hot days, and temperature alongside your laying rate.",
+    "A 4-day forecast for your farm, a heat-index warning before hot days, and temperature alongside your laying rate.",
 };

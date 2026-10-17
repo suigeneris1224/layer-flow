@@ -124,3 +124,45 @@ describe("retireFlockSchema", () => {
     if (result.success) expect(result.data.notes).toBe("");
   });
 });
+
+describe("farm location (Use my current location)", () => {
+  const base = { name: "Farm", municipality: "San Remigio", province: "Cebu" };
+
+  it("treats missing or empty coordinates as not set", () => {
+    for (const extra of [{}, { latitude: "", longitude: "" }, { latitude: null, longitude: null }]) {
+      const result = updateFarmSchema.safeParse({ ...base, ...extra });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.latitude).toBeNull();
+        expect(result.data.longitude).toBeNull();
+      }
+    }
+  });
+
+  it("rounds a position in the Philippines to 3 decimals", () => {
+    const result = updateFarmSchema.safeParse({
+      ...base,
+      latitude: "11.081234",
+      longitude: 123.936789,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.latitude).toBe(11.081);
+      expect(result.data.longitude).toBe(123.937);
+    }
+  });
+
+  it("needs both halves", () => {
+    const result = updateFarmSchema.safeParse({ ...base, latitude: 11.08, longitude: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a position outside the Philippines", () => {
+    // Singapore
+    const result = updateFarmSchema.safeParse({ ...base, latitude: 1.35, longitude: 103.82 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toMatch(/outside the Philippines/);
+    }
+  });
+});

@@ -931,7 +931,9 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          latitude: number | null
           location: string | null
+          longitude: number | null
           municipality: string
           name: string
           owner_id: string
@@ -946,7 +948,9 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           municipality?: string
           name: string
           owner_id: string
@@ -961,7 +965,9 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           municipality?: string
           name?: string
           owner_id?: string

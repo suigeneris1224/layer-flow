@@ -144,9 +144,9 @@ export function WeatherPanel({
   if (weather.status !== "ok" || weather.days.length === 0) {
     const message =
       weather.status === "no_location"
-        ? "Add your farm's municipality and province to see the forecast."
+        ? "Add your farm's town, or use your current location in Farm settings, to see the forecast."
         : weather.status === "not_found"
-          ? `We couldn't find "${weather.query}". Check the spelling of your farm's municipality and province.`
+          ? `We couldn't find "${weather.query}". Check the spelling, or use your current location in Farm settings.`
           : "The forecast isn't available right now. Try again in a little while.";
     return (
       <Panel title={TITLE} className={className}>

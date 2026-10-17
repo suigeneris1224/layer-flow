@@ -181,6 +181,9 @@ logging (doses, visitors, checks) is any member, like the other daily records.
 (`lib/data/weather.ts`), because OpenNext on Cloudflare has no persistent fetch cache here. Members
 can read it; only the service-role client writes it. The geocoded location is stored with the
 `municipality|province` key it came from, so an address change simply re-geocodes on next read.
+When the farmer has set `farms.latitude`/`longitude` from their device ("Use my current location",
+`20250101004100_farm_location.sql`), that position wins and geocoding is skipped; the key becomes
+`geo|lat|lon`. Coordinates are rounded to 3 decimals (~110 m) in `createFarmSchema`.
 
 ## Indexes
 

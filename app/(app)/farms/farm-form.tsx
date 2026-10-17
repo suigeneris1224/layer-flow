@@ -9,6 +9,7 @@ import { Panel } from "@/components/ui/panel";
 import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
 import { ImageCropModal } from "@/components/ui/image-crop-modal";
+import { LocationButton } from "@/components/farm/location-button";
 import { normalizeImageFile } from "@/lib/client/heic";
 import { resizeImage } from "@/lib/client/resize-image";
 import { safeAction } from "@/lib/client/safe-action";
@@ -24,9 +25,18 @@ interface FarmValues {
   barangay: string;
   municipality: string;
   province: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-const EMPTY: FarmValues = { name: "", barangay: "", municipality: "", province: "" };
+const EMPTY: FarmValues = {
+  name: "",
+  barangay: "",
+  municipality: "",
+  province: "",
+  latitude: null,
+  longitude: null,
+};
 
 /**
  * Edit the current farm's details, or add another one.
@@ -260,6 +270,30 @@ export function FarmForm({
             />
           </Field>
         </div>
+
+        <Field
+          label="Farm location (for weather)"
+          htmlFor="farm-location"
+          hint="Optional. Tap this while you're at the farm for a more accurate forecast. Otherwise we use the town above."
+          error={fieldErrors.latitude}
+        >
+          <div id="farm-location">
+            <LocationButton
+              value={
+                values.latitude !== null && values.longitude !== null
+                  ? { latitude: values.latitude, longitude: values.longitude }
+                  : null
+              }
+              onChange={(location) =>
+                setValues((prev) => ({
+                  ...prev,
+                  latitude: location?.latitude ?? null,
+                  longitude: location?.longitude ?? null,
+                }))
+              }
+            />
+          </div>
+        </Field>
 
         <div className="flex gap-2">
           <Button

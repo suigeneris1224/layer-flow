@@ -11,9 +11,10 @@ import type { Json } from "@/lib/types/database";
 /**
  * The farm's weather, cached in `weather_snapshots`.
  *
- * Read path: return the snapshot when it's fresh; otherwise geocode (only if
- * the farm's address changed), fetch, save with the service-role client, and
- * return. Callers must have checked the `weather` entitlement already. A
+ * Read path: return the snapshot when it's fresh; otherwise find the farm
+ * (its saved map position if the farmer set one from their device, else a
+ * geocode of the typed town -- only when that changed), fetch, save with the
+ * service-role client, and return. Callers must have checked the `weather` entitlement already. A
  * provider failure falls back to the last snapshot -- weather is never worth
  * an error page.
  */
@@ -55,6 +56,14 @@ function fromSnapshot(row: SnapshotRow, stale: boolean): WeatherResult {
   };
 }
 
+/** The farm's device-set position, when both halves are present. */
+function farmLocation(
+  farm: { latitude: number | null; longitude: number | null } | null
+): { latitude: number; longitude: number } | null {
+  if (farm?.latitude == null || farm.longitude == null) return null;
+  return { latitude: Number(farm.latitude), longitude: Number(farm.longitude) };
+}
+
 export const getWeather = cache(async function getWeather(
   context: FarmContext
 ): Promise<WeatherResult> {
@@ -63,7 +72,7 @@ export const getWeather = cache(async function getWeather(
   const [farmResult, snapshotResult] = await Promise.all([
     supabase
       .from("farms")
-      .select("municipality, province")
+      .select("municipality, province, latitude, longitude")
       .eq("id", context.farmId)
       .maybeSingle(),
     supabase
@@ -77,9 +86,15 @@ export const getWeather = cache(async function getWeather(
 
   const municipality = farmResult.data?.municipality?.trim() ?? "";
   const province = farmResult.data?.province?.trim() ?? "";
-  if (!municipality) return { status: "no_location" };
+  const pinned = farmLocation(farmResult.data);
+  if (!pinned && !municipality) return { status: "no_location" };
 
-  const locationKey = `${municipality}|${province}`.toLowerCase();
+  const typedLabel = [municipality, province].filter(Boolean).join(", ");
+  // A device-set position wins over the typed town; moving it changes the key
+  // and so refetches on the next read.
+  const locationKey = pinned
+    ? `geo|${pinned.latitude.toFixed(3)}|${pinned.longitude.toFixed(3)}`
+    : `${municipality}|${province}`.toLowerCase();
   const snapshot = (snapshotResult.data ?? null) as SnapshotRow | null;
   const sameLocation = snapshot?.location_key === locationKey;
 
@@ -93,14 +108,14 @@ export const getWeather = cache(async function getWeather(
   }
 
   try {
-    let latitude = sameLocation ? snapshot?.latitude : null;
-    let longitude = sameLocation ? snapshot?.longitude : null;
-    let label = sameLocation ? (snapshot?.location_label ?? null) : null;
+    let latitude = pinned?.latitude ?? (sameLocation ? snapshot?.latitude : null);
+    let longitude = pinned?.longitude ?? (sameLocation ? snapshot?.longitude : null);
+    let label = pinned ? typedLabel : sameLocation ? (snapshot?.location_label ?? null) : null;
 
     if (latitude == null || longitude == null) {
       const place = await openMeteo.geocode(municipality, province);
       if (!place) {
-        return { status: "not_found", query: [municipality, province].filter(Boolean).join(", ") };
+        return { status: "not_found", query: typedLabel };
       }
       latitude = place.latitude;
       longitude = place.longitude;

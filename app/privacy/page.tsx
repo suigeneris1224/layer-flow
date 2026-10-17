@@ -199,7 +199,11 @@ export default function PrivacyPage() {
                 <span className="font-medium text-foreground">Weather Forecasts:</span> To show
                 your farm&apos;s forecast, we send your farm&apos;s municipality and province, and
                 the map coordinates found for them, to Open-Meteo. No personal or farm records are
-                sent. Weather data by{" "}
+                sent. If you choose &quot;Use my current location&quot; in Farm settings, we save
+                your farm&apos;s approximate map position (to about 100 meters) from your device
+                and use it, instead of your town, for the forecast. Your location is only read
+                when you tap that button, never in the background, and you can remove it at any
+                time. Weather data by{" "}
                 <a
                   href="https://open-meteo.com/"
                   target="_blank"

@@ -24,7 +24,9 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // geolocation=(self): "Use my current location" sets the farm's map
+          // position for the weather (components/farm/location-button.tsx).
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
           // 2 years, scoped to subdomains of this exact host only -- not
           // `preload` yet, since submitting to the browser preload list is
           // effectively permanent and deserves its own explicit decision.

@@ -47,6 +47,8 @@ export async function updateFarmAction(input: unknown): Promise<ActionResult<{ i
         barangay: parsed.data.barangay || null,
         municipality: parsed.data.municipality,
         province: parsed.data.province,
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
       })
       .eq("id", context.farmId);
 
@@ -230,6 +232,8 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
       barangay: parsed.data.barangay || null,
       municipality: parsed.data.municipality,
       province: parsed.data.province,
+      latitude: parsed.data.latitude,
+      longitude: parsed.data.longitude,
       // owner_id must match auth.uid() or the RLS check rejects the insert.
       owner_id: user.id,
     });

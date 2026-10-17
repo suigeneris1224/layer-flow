@@ -36,6 +36,8 @@ export async function createFarmAction(
     barangay: formData.get("barangay"),
     municipality: formData.get("municipality"),
     province: formData.get("province"),
+    latitude: formData.get("latitude"),
+    longitude: formData.get("longitude"),
   });
 
   if (!parsed.success) {
@@ -94,6 +96,8 @@ export async function createFarmAction(
       barangay: parsed.data.barangay || null,
       municipality: parsed.data.municipality,
       province: parsed.data.province,
+      latitude: parsed.data.latitude,
+      longitude: parsed.data.longitude,
       // owner_id must match auth.uid() or the RLS check rejects the insert.
       owner_id: user.id,
     });

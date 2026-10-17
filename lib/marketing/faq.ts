@@ -37,6 +37,21 @@ export const FAQ_GROUPS: FaqGroup[] = [
     ],
   },
   {
+    title: "Farm health",
+    items: [
+      {
+        question: "Does LayerFlow tell me which vaccines or feed to use?",
+        answer:
+          "No. You enter your own vet's vaccination programme and your feed supplier's ingredient values. LayerFlow does the date math, the mixing math, and the reminders — the choices stay with you and your vet.",
+      },
+      {
+        question: "Why does LayerFlow show the weather?",
+        answer:
+          "Heat is one of the biggest reasons layer farms lose eggs. On Starter and Pro, LayerFlow shows your farm's 4-day forecast with PAGASA heat-index levels, warns you before hot days, and puts temperature next to your laying rate so you can see whether hot spells line up with dips.",
+      },
+    ],
+  },
+  {
     title: "Plans & billing",
     items: [
       {

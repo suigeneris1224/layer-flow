@@ -10,6 +10,8 @@ import {
   Minus,
   PhilippinePeso,
   Smartphone,
+  Syringe,
+  ThermometerSun,
   TrendingUp,
   Users,
   Wallet,
@@ -139,6 +141,20 @@ const DIFFERENTIATORS: {
     title: "Multi-farm & team",
     copy: "Add farms and staff, each with access scoped to their role.",
     plan: "multi_farm",
+  },
+  {
+    icon: ThermometerSun,
+    tint: "amber",
+    title: "Heat warnings",
+    copy: "PAGASA heat-index warnings before hot days, for your farm's location.",
+    plan: "weather",
+  },
+  {
+    icon: Syringe,
+    tint: "green",
+    title: "Vaccination reminders",
+    copy: "Your vet's programme, with due doses flagged for each flock.",
+    plan: "vaccination_schedule",
   },
 ];
 
@@ -453,7 +469,7 @@ export default function LandingPage() {
             lead="The details that matter outside the office."
           />
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {DIFFERENTIATORS.map((item) => (
               <FeatureCard key={item.title} {...item} />
             ))}

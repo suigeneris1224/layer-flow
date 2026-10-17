@@ -10,8 +10,12 @@ import {
   FileSpreadsheet,
   GitCompareArrows,
   Headphones,
+  FlaskConical,
   PhilippinePeso,
   Ruler,
+  ShieldCheck,
+  Syringe,
+  ThermometerSun,
   Users,
   WifiOff,
   type LucideIcon,
@@ -39,7 +43,7 @@ import type { Feature } from "@/lib/subscriptions/plans";
 import { cn } from "@/lib/utils";
 
 const DESCRIPTION =
-  "Every LayerFlow feature for layer farms: egg production and flock records, egg inventory, sales and customers, expenses, reports, alerts, team access, and offline recording.";
+  "Every LayerFlow feature for layer farms: egg production and flock records, egg inventory, sales and customers, expenses, reports, alerts, vaccination schedules, biosecurity logs, feed formulation, heat warnings, team access, and offline recording.";
 
 export const metadata: Metadata = {
   title: "Features — Egg Production, Feed, Sales & Profit Tracking",
@@ -101,7 +105,7 @@ const CORE: {
     icon: Bell,
     tint: "rose",
     title: "Alerts and notifications",
-    copy: "Get flagged when production drops, mortality runs high, or a vaccination is overdue — plus low-stock and loss alerts on Pro.",
+    copy: "Get flagged when production drops, mortality runs high, a vaccination is due, a footbath change is overdue, or a hot day is coming — plus low-stock and loss alerts on Pro.",
     plan: "alerts",
     docs: "/docs#notifications",
     mockup: <NotificationsMockup />,
@@ -133,6 +137,54 @@ const CORE: {
         </MobileMockup>
       </div>
     ),
+  },
+];
+
+/**
+ * Farm health and planning tools. Copy stays factual on purpose: the farm
+ * enters its own vet's programme and its own feed values, and the weather is
+ * PAGASA's heat index -- LayerFlow never recommends a vaccine, a recipe, or
+ * what to do on a hot day (same stance as lib/domain/alerts.ts).
+ */
+const HEALTH: {
+  icon: LucideIcon;
+  tint: ChipTint;
+  title: string;
+  copy: string;
+  plan: Feature;
+  href: string;
+}[] = [
+  {
+    icon: Syringe,
+    tint: "green",
+    title: "Vaccination schedule",
+    copy: "Enter your vet's programme once. See which doses each flock has due, with a reminder before each one.",
+    plan: "vaccination_schedule",
+    href: "/docs#vaccination-schedule",
+  },
+  {
+    icon: ShieldCheck,
+    tint: "teal",
+    title: "Biosecurity log",
+    copy: "Log farm visitors and routine checks like footbath changes and pest control, with a reminder when one is overdue.",
+    plan: "biosecurity",
+    href: "/docs#biosecurity",
+  },
+  {
+    icon: FlaskConical,
+    tint: "violet",
+    title: "Feed formulation",
+    copy: "Mix your own feed from your ingredients' prices and label values. See protein, energy and cost per kg, and use the mix on your feed records.",
+    plan: "feed_formulation",
+    href: "/docs#feed-formulas",
+  },
+  {
+    icon: ThermometerSun,
+    tint: "amber",
+    title: "Heat & weather",
+    copy: "A 4-day forecast for your farm with PAGASA heat-index warnings before hot days, and temperature next to your laying rate.",
+    plan: "weather",
+    href: "/docs#weather",
   },
 ];
 
@@ -235,6 +287,19 @@ export default function FeaturesPage() {
       </Section>
 
       <Section tone="tint">
+        <SectionHeading
+          eyebrow="Health & planning"
+          title="Stay ahead of vaccinations, visitors, feed and heat."
+          lead="Your vet's programme, your feed supplier's values, PAGASA's heat index. LayerFlow keeps the dates and does the math."
+        />
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {HEALTH.map((item) => (
+            <FeatureCard key={item.title} {...item} />
+          ))}
+        </div>
+      </Section>
+
+      <Section>
         <SectionHeading
           title="And for growing farms"
           lead="Deeper analysis and team tools on the Pro plan."

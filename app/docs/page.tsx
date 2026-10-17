@@ -39,6 +39,15 @@ const GROUPS = [
     ],
   },
   {
+    title: "Farm health & planning",
+    sections: [
+      { id: "vaccination-schedule", title: "Vaccination schedule", keywords: "vaccine programme due dose reminder pullets age" },
+      { id: "biosecurity", title: "Biosecurity log", keywords: "visitor footbath disinfection pest control rodent checks" },
+      { id: "feed-formulas", title: "Feed formulas", keywords: "mix ingredients protein energy calcium cost per kg pearson square" },
+      { id: "weather", title: "Heat & weather", keywords: "forecast heat index PAGASA hot location temperature laying" },
+    ],
+  },
+  {
     title: "Sales & expenses",
     sections: [
       { id: "inventory-pricing", title: "Egg inventory and pricing", keywords: "stock tray price sizes" },
@@ -202,6 +211,117 @@ export default function DocsPage() {
                   Your flock&apos;s current hen count is never typed in by hand — it&apos;s always
                   the placement count minus everything logged as mortality, whether that came from
                   a daily record or from Health directly.
+                </p>
+                <p>
+                  To plan doses ahead instead of only recording them afterwards, see{" "}
+                  <a href="#vaccination-schedule" className="font-medium text-primary-strong hover:underline">
+                    Vaccination schedule
+                  </a>
+                  .
+                </p>
+              </div>
+            </section>
+
+            <section id="vaccination-schedule" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-7">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Vaccination schedule</h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
+                <p>
+                  Under <span className="font-medium text-foreground">Flock Health → Vaccinations</span>,
+                  an owner or manager enters the farm&apos;s{" "}
+                  <span className="font-medium text-foreground">Vaccination programme</span>: one
+                  row per dose, with the vaccine and the bird age it&apos;s given at. LayerFlow ships
+                  no preset programme — enter the one your vet gave you.
+                </p>
+                <p>
+                  Due dates come from each flock&apos;s age, so if you buy ready-to-lay pullets, set{" "}
+                  <span className="font-medium text-foreground">Age when placed</span> on the flock.
+                  Doses that were due before the flock arrived are skipped, not flagged as overdue.
+                </p>
+                <p>
+                  The <span className="font-medium text-foreground">Due &amp; upcoming</span> panel
+                  lists each flock&apos;s next doses. Tap{" "}
+                  <span className="font-medium text-foreground">Record</span> on one and the
+                  vaccination form opens already filled in. Doses due within 7 days and overdue
+                  doses also show up as alerts.
+                </p>
+              </div>
+            </section>
+
+            <section id="biosecurity" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-7">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Biosecurity log</h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Biosecurity</span> has two tabs, and
+                  anyone on the farm can record in both.{" "}
+                  <span className="font-medium text-foreground">Visitors</span> keeps a log of who
+                  came in, why, their vehicle, and whether they were disinfected. If a visitor was
+                  around other poultry in the three days before, the entry notes it.
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Checks</span> records routine work —
+                  footbath changes, disinfection, pest control, cleaning — in one tap, with
+                  today&apos;s date.
+                </p>
+                <p>
+                  Once you&apos;ve logged a footbath change or pest control at least once, LayerFlow
+                  reminds you when the next one is overdue: 7 days for the footbath, 30 days for
+                  pest control. Pro lets you change those intervals in your alert settings.
+                </p>
+              </div>
+            </section>
+
+            <section id="feed-formulas" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-7">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Feed formulas</h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
+                <p>
+                  If you mix your own feed, <span className="font-medium text-foreground">Feed Formulas</span>{" "}
+                  works out what each mix contains and costs. Start on the{" "}
+                  <span className="font-medium text-foreground">Ingredients</span> tab: each one&apos;s
+                  price per kilo, and its protein, energy, calcium and phosphorus from your
+                  supplier&apos;s label or your nutritionist.
+                </p>
+                <p>
+                  Then build a formula from percentages. As you type, LayerFlow shows the mix&apos;s
+                  protein, energy, calcium and cost per kilo, how many kilos of each ingredient a
+                  batch needs, and how it compares with the targets you set. To balance protein
+                  between two ingredients, the{" "}
+                  <span className="font-medium text-foreground">Pearson square</span> helper works
+                  out the split for you. There are no preset recipes — the values and targets are
+                  yours.
+                </p>
+                <p>
+                  When you record feed, <span className="font-medium text-foreground">Use a formula</span>{" "}
+                  fills in its name and cost per kilo, so your cost per egg reflects what your mix
+                  actually costs.
+                </p>
+              </div>
+            </section>
+
+            <section id="weather" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-7">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Heat &amp; weather</h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
+                <p>
+                  Heat is one of the biggest reasons a layer farm loses eggs, so the dashboard&apos;s{" "}
+                  <span className="font-medium text-foreground">Heat &amp; weather</span> section
+                  shows your farm&apos;s next four days led by the heat index — how hot it feels once
+                  humidity is counted, the number PAGASA warns on. Days at{" "}
+                  <span className="font-medium text-foreground">Extreme caution</span> (33°C and up)
+                  or worse are labelled, and you get an alert for today and tomorrow.
+                </p>
+                <p>
+                  By default the forecast uses your farm&apos;s town. For a more accurate one, go to{" "}
+                  <span className="font-medium text-foreground">Farm settings</span> while you&apos;re
+                  at the farm and tap{" "}
+                  <span className="font-medium text-foreground">Use my current location</span>. It
+                  saves straight away and shows the barangay and town it found. Your location is
+                  only read when you tap the button.
+                </p>
+                <p>
+                  On <span className="font-medium text-foreground">Analytics</span>, the{" "}
+                  <span className="font-medium text-foreground">Heat and laying rate</span> chart
+                  puts each day&apos;s high temperature next to your laying rate, so you can see
+                  whether hot spells line up with dips. It shows for day-by-day ranges within about
+                  the last three months.
                 </p>
               </div>
             </section>

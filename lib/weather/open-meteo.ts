@@ -40,14 +40,19 @@ export interface HistoryDay {
   maxTempC: number | null;
 }
 
+/** The temperature at the farm when the forecast was fetched. */
+export interface CurrentReading {
+  tempC: number;
+}
+
 export interface WeatherProvider {
   geocode(municipality: string, province: string): Promise<GeocodedPlace | null>;
-  /** The next few days from today, plus roughly the last 90 days' highs. */
+  /** The next few days from today, roughly the last 90 days' highs, and the temperature now. */
   forecast(
     latitude: number,
     longitude: number,
     timezone: string
-  ): Promise<{ days: ForecastDay[]; history: HistoryDay[] }>;
+  ): Promise<{ days: ForecastDay[]; history: HistoryDay[]; current: CurrentReading | null }>;
 }
 
 const TIMEOUT_MS = 8_000;
@@ -93,6 +98,9 @@ interface GeocodingResponse {
 }
 
 interface ForecastResponse {
+  current?: {
+    temperature_2m?: number | null;
+  };
   hourly?: {
     time: string[];
     temperature_2m: (number | null)[];
@@ -130,6 +138,7 @@ export const openMeteo: WeatherProvider = {
     url.searchParams.set("timezone", timezone);
     url.searchParams.set("forecast_days", String(FORECAST_DAYS));
     url.searchParams.set("past_days", String(PAST_DAYS));
+    url.searchParams.set("current", "temperature_2m");
     url.searchParams.set("hourly", "temperature_2m,relative_humidity_2m");
     url.searchParams.set(
       "daily",
@@ -139,7 +148,9 @@ export const openMeteo: WeatherProvider = {
     const data = await getJson<ForecastResponse>(url);
     const daily = data.daily;
     const hourly = data.hourly;
-    if (!daily) return { days: [], history: [] };
+    const nowTempC = data.current?.temperature_2m;
+    const current = typeof nowTempC === "number" ? { tempC: nowTempC } : null;
+    if (!daily) return { days: [], history: [], current };
 
     const hoursByDate = new Map<string, HourReading[]>();
     if (hourly) {
@@ -176,6 +187,6 @@ export const openMeteo: WeatherProvider = {
       .slice(0, split)
       .map((day) => ({ date: day.date, maxTempC: day.maxTempC }));
 
-    return { days, history };
+    return { days, history, current };
   },
 };

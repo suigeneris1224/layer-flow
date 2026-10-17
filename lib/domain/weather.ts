@@ -101,6 +101,29 @@ export function formatHour(hour: number): string {
   return `${h} ${hour < 12 ? "AM" : "PM"}`;
 }
 
+/** "Updated just now" / "Updated 25 min ago" / "Updated 3 hr ago" / "Updated 2 days ago". */
+export function updatedAgo(fetchedAt: string, now: Date = new Date()): string {
+  const minutes = Math.max(0, Math.floor((now.getTime() - Date.parse(fetchedAt)) / 60_000));
+  if (minutes < 2) return "Updated just now";
+  if (minutes < 60) return `Updated ${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Updated ${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "Updated yesterday" : `Updated ${days} days ago`;
+}
+
+/**
+ * Past this, the reading taken at fetch time is no longer "now" -- it's
+ * labelled with its time instead. A little over the 1-hour refresh, so a
+ * normal snapshot always reads "Now".
+ */
+export const NOW_MAX_AGE_MINUTES = 75;
+
+/** True when a reading taken at `fetchedAt` can still be called "now". */
+export function isCurrentReading(fetchedAt: string, now: Date = new Date()): boolean {
+  return now.getTime() - Date.parse(fetchedAt) <= NOW_MAX_AGE_MINUTES * 60_000;
+}
+
 /** A forecast day reduced to what the panel and the heat alert need. */
 export interface ForecastDaySummary {
   date: string;

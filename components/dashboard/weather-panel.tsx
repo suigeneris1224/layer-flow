@@ -4,14 +4,15 @@ import { Panel } from "@/components/ui/panel";
 import { InfoTip } from "@/components/ui/info-tip";
 import { WeatherIcon, WeatherIconDefs } from "@/components/dashboard/weather-icon";
 import type { WeatherResult } from "@/lib/data/weather";
-import type { ForecastDay } from "@/lib/weather/open-meteo";
+import type { CurrentReading, ForecastDay } from "@/lib/weather/open-meteo";
 import {
   HEAT_LEVEL_LABELS,
   describeWeatherCode,
   heatIndexLevel,
   isAtLeast,
+  isCurrentReading,
+  updatedAgo,
 } from "@/lib/domain/weather";
-import { formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const CARD_COUNT = 4;
@@ -36,7 +37,44 @@ function Dot() {
   );
 }
 
-function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
+/**
+ * Today's temperature at fetch time: "Now 31°" while the snapshot is fresh,
+ * "2:15 PM 31°" when it's an older one kept because a refresh failed.
+ */
+function NowReading({
+  current,
+  fetchedAt,
+  timezone,
+}: {
+  current: CurrentReading;
+  fetchedAt: string;
+  timezone: string;
+}) {
+  const label = isCurrentReading(fetchedAt)
+    ? "Now"
+    : new Intl.DateTimeFormat("en-PH", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: timezone,
+      }).format(new Date(fetchedAt));
+  return (
+    <p className="text-xs tabular text-muted-foreground">
+      {label}{" "}
+      <span className="font-semibold text-foreground">{degrees(current.tempC)}</span>
+    </p>
+  );
+}
+
+function ForecastCard({
+  day,
+  index,
+  now,
+}: {
+  day: ForecastDay;
+  index: number;
+  /** Today's card only: the temperature right now. */
+  now?: React.ReactNode;
+}) {
   const condition = describeWeatherCode(day.weatherCode);
   const isToday = index === 0;
   const level = day.peakHeatIndexC === null ? null : heatIndexLevel(day.peakHeatIndexC);
@@ -51,7 +89,10 @@ function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
         isToday ? "border-primary/25 bg-[hsl(var(--section))]" : "border-border bg-surface"
       )}
     >
-      <p className="text-xs font-medium text-muted-foreground">{dayName(day.date, index)}</p>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground">{dayName(day.date, index)}</p>
+        {now}
+      </div>
 
       <div className="flex items-center gap-2.5">
         <WeatherIcon kind={condition?.kind ?? null} className="size-10" />
@@ -93,7 +134,7 @@ function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
   );
 }
 
-function Heading({ location }: { location?: string }) {
+function Heading({ location, updated }: { location?: string; updated?: string }) {
   return (
     <header>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -113,6 +154,7 @@ function Heading({ location }: { location?: string }) {
             {location}
           </p>
         )}
+        {updated && <p className="text-xs text-muted-foreground">{updated}</p>}
       </div>
       <p className="mt-0.5 text-xs text-muted-foreground">
         Heat warnings for your flock, based on PAGASA&apos;s heat index
@@ -165,19 +207,26 @@ export function WeatherPanel({
   return (
     <section className={cn("flex flex-col gap-2.5", className)} aria-label="Heat and weather">
       <WeatherIconDefs />
-      <Heading location={weather.label} />
+      <Heading location={weather.label} updated={updatedAgo(weather.fetchedAt)} />
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {weather.days.slice(0, CARD_COUNT).map((day, index) => (
-          <ForecastCard key={day.date} day={day} index={index} />
+          <ForecastCard
+            key={day.date}
+            day={day}
+            index={index}
+            now={
+              index === 0 && weather.current ? (
+                <NowReading
+                  current={weather.current}
+                  fetchedAt={weather.fetchedAt}
+                  timezone={timezone}
+                />
+              ) : undefined
+            }
+          />
         ))}
       </ul>
-
-      {weather.stale && (
-        <p className="text-xs text-muted-foreground">
-          Last updated {formatRelativeDay(weather.fetchedAt.slice(0, 10), timezone)}
-        </p>
-      )}
     </section>
   );
 }

@@ -5,7 +5,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { FarmContext } from "@/lib/auth/session";
 import { logger } from "@/lib/observability/logger";
-import { openMeteo, type ForecastDay, type HistoryDay } from "@/lib/weather/open-meteo";
+import {
+  openMeteo,
+  type CurrentReading,
+  type ForecastDay,
+  type HistoryDay,
+} from "@/lib/weather/open-meteo";
 import type { Json } from "@/lib/types/database";
 
 /**
@@ -19,7 +24,9 @@ import type { Json } from "@/lib/types/database";
  * an error page.
  */
 
-const FRESH_MS = 3 * 60 * 60 * 1000;
+// Hourly, so the "Now" temperature on today's card is never more than about
+// an hour old.
+const FRESH_MS = 60 * 60 * 1000;
 
 export type WeatherResult =
   | { status: "no_location" }
@@ -33,6 +40,8 @@ export type WeatherResult =
       stale: boolean;
       days: ForecastDay[];
       history: HistoryDay[];
+      /** The temperature when `fetchedAt` was taken; null on older snapshots. */
+      current: CurrentReading | null;
     };
 
 interface SnapshotRow {
@@ -41,7 +50,7 @@ interface SnapshotRow {
   latitude: number | null;
   longitude: number | null;
   fetched_at: string;
-  forecast: { days?: ForecastDay[] } | null;
+  forecast: { days?: ForecastDay[]; current?: CurrentReading | null } | null;
   daily_history: { days?: HistoryDay[] } | null;
 }
 
@@ -53,6 +62,7 @@ function fromSnapshot(row: SnapshotRow, stale: boolean, label?: string): Weather
     stale,
     days: row.forecast?.days ?? [],
     history: row.daily_history?.days ?? [],
+    current: row.forecast?.current ?? null,
   };
 }
 
@@ -128,7 +138,7 @@ export const getWeather = cache(async function getWeather(
       label = place.label;
     }
 
-    const { days, history } = await openMeteo.forecast(
+    const { days, history, current } = await openMeteo.forecast(
       Number(latitude),
       Number(longitude),
       context.timezone
@@ -141,7 +151,7 @@ export const getWeather = cache(async function getWeather(
       latitude: Number(latitude),
       longitude: Number(longitude),
       fetched_at: new Date().toISOString(),
-      forecast: { days } as unknown as Json,
+      forecast: { days, current } as unknown as Json,
       daily_history: { days: history } as unknown as Json,
     };
 
@@ -157,6 +167,7 @@ export const getWeather = cache(async function getWeather(
       stale: false,
       days,
       history,
+      current,
     };
   } catch (error) {
     logger.error("weather refresh failed", {

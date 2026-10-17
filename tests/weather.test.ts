@@ -179,3 +179,39 @@ describe("describeWeatherCode", () => {
     expect(describeWeatherCode(42)).toBeNull();
   });
 });
+
+describe("updatedAgo", () => {
+  const now = new Date("2026-10-17T06:00:00Z");
+  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString();
+
+  it("reads naturally from minutes to days", async () => {
+    const { updatedAgo } = await import("@/lib/domain/weather");
+    expect(updatedAgo(ago(0), now)).toBe("Updated just now");
+    expect(updatedAgo(ago(1), now)).toBe("Updated just now");
+    expect(updatedAgo(ago(25), now)).toBe("Updated 25 min ago");
+    expect(updatedAgo(ago(59), now)).toBe("Updated 59 min ago");
+    expect(updatedAgo(ago(60), now)).toBe("Updated 1 hr ago");
+    expect(updatedAgo(ago(5 * 60 + 30), now)).toBe("Updated 5 hr ago");
+    expect(updatedAgo(ago(24 * 60), now)).toBe("Updated yesterday");
+    expect(updatedAgo(ago(3 * 24 * 60), now)).toBe("Updated 3 days ago");
+  });
+
+  it("never goes negative when the clock is slightly behind", async () => {
+    const { updatedAgo } = await import("@/lib/domain/weather");
+    expect(updatedAgo(ago(-3), now)).toBe("Updated just now");
+  });
+});
+
+describe("isCurrentReading", () => {
+  const now = new Date("2026-10-17T06:00:00Z");
+  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString();
+
+  it("is current through a normal hourly refresh, not after", async () => {
+    const { isCurrentReading } = await import("@/lib/domain/weather");
+    expect(isCurrentReading(ago(0), now)).toBe(true);
+    expect(isCurrentReading(ago(60), now)).toBe(true);
+    expect(isCurrentReading(ago(75), now)).toBe(true);
+    expect(isCurrentReading(ago(76), now)).toBe(false);
+    expect(isCurrentReading(ago(5 * 60), now)).toBe(false);
+  });
+});

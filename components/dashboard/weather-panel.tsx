@@ -40,21 +40,24 @@ function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
   return (
     <li
       className={cn(
-        "flex flex-col rounded-2xl border p-5",
+        "flex flex-col gap-2 rounded-lg border p-3",
         isToday ? "border-primary/25 bg-[hsl(var(--section))]" : "border-border bg-surface"
       )}
     >
-      <p className="text-sm font-medium text-muted-foreground">{dayName(day.date, index)}</p>
+      <p className="text-xs font-medium text-muted-foreground">{dayName(day.date, index)}</p>
 
-      <WeatherIcon kind={condition?.kind ?? null} className="mt-3 size-16" />
+      <div className="flex items-center gap-2.5">
+        <WeatherIcon kind={condition?.kind ?? null} className="size-10" />
+        <div className="min-w-0">
+          <p className="text-xl font-bold leading-none tabular text-[hsl(var(--primary-strong))]">
+            {degrees(day.maxTempC)}
+            <span className="sr-only"> high</span>
+          </p>
+          <p className="mt-1 truncate text-xs text-foreground">{condition?.label ?? "—"}</p>
+        </div>
+      </div>
 
-      <p className="mt-4 text-4xl font-bold leading-none tabular text-[hsl(var(--primary-strong))]">
-        {degrees(day.maxTempC)}
-        <span className="sr-only"> high</span>
-      </p>
-      <p className="mt-2 text-base text-foreground">{condition?.label ?? "—"}</p>
-
-      <p className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-4 text-sm tabular text-muted-foreground">
+      <p className="mt-auto flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] tabular text-muted-foreground">
         {showFeelsLike && <span>Feels like {degrees(day.peakHeatIndexC)}</span>}
         {showFeelsLike && hasRange && <Dot />}
         {hasRange && (
@@ -67,7 +70,7 @@ function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
         {hasRange && showRain && <Dot />}
         {showRain && (
           <span className="flex items-center gap-1">
-            <Droplet className="size-3.5" aria-hidden />
+            <Droplet className="size-3" aria-hidden />
             {day.rainChancePct}%<span className="sr-only"> chance of rain</span>
           </span>
         )}
@@ -78,21 +81,17 @@ function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
 
 function Heading({ location }: { location?: string }) {
   return (
-    <header className="flex items-start gap-3">
-      <CloudSun
-        className="size-9 shrink-0 text-[hsl(var(--primary-strong))]"
-        strokeWidth={1.5}
-        aria-hidden
-      />
-      <div className="min-w-0">
-        <h2 className="text-xl font-semibold leading-9 text-foreground">Weather</h2>
-        {location && (
-          <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-            <MapPin className="size-3.5 shrink-0" aria-hidden />
-            {location}
-          </p>
-        )}
-      </div>
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <CloudSun className="size-4 text-[hsl(var(--primary-strong))]" aria-hidden />
+        Weather
+      </h2>
+      {location && (
+        <p className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+          <MapPin className="size-3 shrink-0" aria-hidden />
+          {location}
+        </p>
+      )}
     </header>
   );
 }
@@ -136,11 +135,11 @@ export function WeatherPanel({
   }
 
   return (
-    <section className={cn("flex flex-col gap-4", className)} aria-label="Weather">
+    <section className={cn("flex flex-col gap-2.5", className)} aria-label="Weather">
       <WeatherIconDefs />
       <Heading location={weather.label} />
 
-      <ul className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {weather.days.slice(0, CARD_COUNT).map((day, index) => (
           <ForecastCard key={day.date} day={day} index={index} />
         ))}

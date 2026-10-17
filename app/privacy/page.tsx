@@ -203,7 +203,17 @@ export default function PrivacyPage() {
                 your farm&apos;s approximate map position (to about 100 meters) from your device
                 and use it, instead of your town, for the forecast. Your location is only read
                 when you tap that button, never in the background, and you can remove it at any
-                time. Weather data by{" "}
+                time. To show that position as a barangay and town name, it is sent once, when you
+                save it, to OpenStreetMap&apos;s Nominatim service. Place names ©{" "}
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  OpenStreetMap contributors
+                </a>{" "}
+                (ODbL). Weather data by{" "}
                 <a
                   href="https://open-meteo.com/"
                   target="_blank"

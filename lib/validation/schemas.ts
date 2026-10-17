@@ -83,6 +83,44 @@ const coordinate = z.preprocess(
 const roundCoordinate = (value: number | null) =>
   value === null ? null : Math.round(value * 1000) / 1000;
 
+interface FarmCoordinatesInput {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/** Both-or-neither, inside the Philippines. Shared by every farm-location input. */
+function checkFarmCoordinates(farm: FarmCoordinatesInput, ctx: z.RefinementCtx) {
+  const { latitude, longitude } = farm;
+  if ((latitude === null) !== (longitude === null)) {
+    ctx.addIssue({ code: "custom", path: ["latitude"], message: "Invalid location" });
+    return;
+  }
+  if (
+    latitude !== null &&
+    longitude !== null &&
+    (latitude < PH_BOUNDS.minLat ||
+      latitude > PH_BOUNDS.maxLat ||
+      longitude < PH_BOUNDS.minLon ||
+      longitude > PH_BOUNDS.maxLon)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["latitude"],
+      message:
+        "That location is outside the Philippines. Use this button while you're at the farm.",
+    });
+  }
+}
+
+// ~110 m: enough for a forecast, less exact than a full GPS fix.
+function roundFarmCoordinates<T extends FarmCoordinatesInput>(farm: T): T {
+  return {
+    ...farm,
+    latitude: roundCoordinate(farm.latitude),
+    longitude: roundCoordinate(farm.longitude),
+  };
+}
+
 export const createFarmSchema = z
   .object({
     name: z.string().trim().min(1, "Enter your farm name").max(120),
@@ -93,34 +131,14 @@ export const createFarmSchema = z
     latitude: coordinate,
     longitude: coordinate,
   })
-  .superRefine((farm, ctx) => {
-    const { latitude, longitude } = farm;
-    if ((latitude === null) !== (longitude === null)) {
-      ctx.addIssue({ code: "custom", path: ["latitude"], message: "Invalid location" });
-      return;
-    }
-    if (
-      latitude !== null &&
-      longitude !== null &&
-      (latitude < PH_BOUNDS.minLat ||
-        latitude > PH_BOUNDS.maxLat ||
-        longitude < PH_BOUNDS.minLon ||
-        longitude > PH_BOUNDS.maxLon)
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["latitude"],
-        message:
-          "That location is outside the Philippines. Use this button while you're at the farm.",
-      });
-    }
-  })
-  // ~110 m: enough for a forecast, less exact than a full GPS fix.
-  .transform((farm) => ({
-    ...farm,
-    latitude: roundCoordinate(farm.latitude),
-    longitude: roundCoordinate(farm.longitude),
-  }));
+  .superRefine(checkFarmCoordinates)
+  .transform(roundFarmCoordinates);
+
+/** Farm settings' "Use my current location" / "Remove" -- saved on its own. */
+export const farmLocationSchema = z
+  .object({ latitude: coordinate, longitude: coordinate })
+  .superRefine(checkFarmCoordinates)
+  .transform(roundFarmCoordinates);
 
 export const createHouseSchema = z.object({
   name: z.string().trim().min(1, "Give the house a name").max(120),

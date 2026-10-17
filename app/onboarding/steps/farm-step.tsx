@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { StatusNote } from "@/components/ui/states";
-import { LocationButton, type FarmCoordinates } from "@/components/farm/location-button";
+import { LocationButton, type FarmLocationValue } from "@/components/farm/location-button";
 import { createFarmAction, type OnboardingActionState } from "@/app/onboarding/actions";
 
 export function FarmStep() {
@@ -14,7 +14,7 @@ export function FarmStep() {
   );
 
   const fieldErrors = state?.fieldErrors;
-  const [location, setLocation] = useState<FarmCoordinates | null>(null);
+  const [location, setLocation] = useState<FarmLocationValue | null>(null);
 
   return (
     <div className="flex flex-col gap-6">

@@ -45,10 +45,10 @@ interface SnapshotRow {
   daily_history: { days?: HistoryDay[] } | null;
 }
 
-function fromSnapshot(row: SnapshotRow, stale: boolean): WeatherResult {
+function fromSnapshot(row: SnapshotRow, stale: boolean, label?: string): WeatherResult {
   return {
     status: "ok",
-    label: row.location_label ?? "",
+    label: label ?? row.location_label ?? "",
     fetchedAt: row.fetched_at,
     stale,
     days: row.forecast?.days ?? [],
@@ -58,10 +58,14 @@ function fromSnapshot(row: SnapshotRow, stale: boolean): WeatherResult {
 
 /** The farm's device-set position, when both halves are present. */
 function farmLocation(
-  farm: { latitude: number | null; longitude: number | null } | null
-): { latitude: number; longitude: number } | null {
+  farm: { latitude: number | null; longitude: number | null; location_label: string | null } | null
+): { latitude: number; longitude: number; label: string | null } | null {
   if (farm?.latitude == null || farm.longitude == null) return null;
-  return { latitude: Number(farm.latitude), longitude: Number(farm.longitude) };
+  return {
+    latitude: Number(farm.latitude),
+    longitude: Number(farm.longitude),
+    label: farm.location_label,
+  };
 }
 
 export const getWeather = cache(async function getWeather(
@@ -72,7 +76,7 @@ export const getWeather = cache(async function getWeather(
   const [farmResult, snapshotResult] = await Promise.all([
     supabase
       .from("farms")
-      .select("municipality, province, latitude, longitude")
+      .select("municipality, province, latitude, longitude, location_label")
       .eq("id", context.farmId)
       .maybeSingle(),
     supabase
@@ -90,6 +94,8 @@ export const getWeather = cache(async function getWeather(
   if (!pinned && !municipality) return { status: "no_location" };
 
   const typedLabel = [municipality, province].filter(Boolean).join(", ");
+  // The barangay/town found for a device-set position, else the typed town.
+  const pinnedLabel = pinned ? (pinned.label ?? typedLabel) : undefined;
   // A device-set position wins over the typed town; moving it changes the key
   // and so refetches on the next read.
   const locationKey = pinned
@@ -104,13 +110,13 @@ export const getWeather = cache(async function getWeather(
     Date.now() - Date.parse(snapshot.fetched_at) < FRESH_MS &&
     (snapshot.forecast?.days?.length ?? 0) > 0
   ) {
-    return fromSnapshot(snapshot, false);
+    return fromSnapshot(snapshot, false, pinnedLabel);
   }
 
   try {
     let latitude = pinned?.latitude ?? (sameLocation ? snapshot?.latitude : null);
     let longitude = pinned?.longitude ?? (sameLocation ? snapshot?.longitude : null);
-    let label = pinned ? typedLabel : sameLocation ? (snapshot?.location_label ?? null) : null;
+    let label = pinned ? (pinned.label ?? typedLabel) : sameLocation ? (snapshot?.location_label ?? null) : null;
 
     if (latitude == null || longitude == null) {
       const place = await openMeteo.geocode(municipality, province);
@@ -156,6 +162,8 @@ export const getWeather = cache(async function getWeather(
     logger.error("weather refresh failed", {
       reason: error instanceof Error ? error.message : String(error),
     });
-    return snapshot && sameLocation ? fromSnapshot(snapshot, true) : { status: "unavailable" };
+    return snapshot && sameLocation
+      ? fromSnapshot(snapshot, true, pinnedLabel)
+      : { status: "unavailable" };
   }
 });

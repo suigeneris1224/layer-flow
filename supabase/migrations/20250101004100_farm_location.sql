@@ -6,12 +6,17 @@
 -- decimals (~110 m) before saving -- plenty for a forecast grid kilometres
 -- wide, and less exact than a full GPS fix.
 --
+-- location_label is the barangay/town found for that position (OpenStreetMap
+-- Nominatim, lib/geo/nominatim.ts), shown instead of raw coordinates. Null
+-- when the lookup found nothing or failed.
+--
 -- No policy change: farms_update already limits writes to people who can
 -- manage the farm.
 
 alter table public.farms
   add column latitude  numeric(7, 4),
   add column longitude numeric(7, 4),
+  add column location_label text check (char_length(location_label) <= 200),
   add constraint farms_location_pair
     check ((latitude is null) = (longitude is null)),
   add constraint farms_latitude_range

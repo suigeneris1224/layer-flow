@@ -16,6 +16,7 @@ import { safeAction } from "@/lib/client/safe-action";
 import {
   createFarmAction,
   removeFarmPhotoAction,
+  setFarmLocationAction,
   updateFarmAction,
   uploadFarmPhotoAction,
 } from "./actions";
@@ -27,6 +28,7 @@ interface FarmValues {
   province: string;
   latitude: number | null;
   longitude: number | null;
+  locationLabel?: string | null;
 }
 
 const EMPTY: FarmValues = {
@@ -281,7 +283,11 @@ export function FarmForm({
             <LocationButton
               value={
                 values.latitude !== null && values.longitude !== null
-                  ? { latitude: values.latitude, longitude: values.longitude }
+                  ? {
+                      latitude: values.latitude,
+                      longitude: values.longitude,
+                      label: values.locationLabel ?? null,
+                    }
                   : null
               }
               onChange={(location) =>
@@ -289,7 +295,23 @@ export function FarmForm({
                   ...prev,
                   latitude: location?.latitude ?? null,
                   longitude: location?.longitude ?? null,
+                  locationLabel: location?.label ?? null,
                 }))
+              }
+              save={
+                mode === "edit"
+                  ? async (coordinates) => {
+                      setSuccess(null);
+                      const result = await safeAction(() =>
+                        setFarmLocationAction(
+                          coordinates ?? { latitude: null, longitude: null }
+                        )
+                      );
+                      if (!result.ok) return { ok: false, error: result.error };
+                      router.refresh();
+                      return { ok: true, label: result.data.label };
+                    }
+                  : undefined
               }
             />
           </div>

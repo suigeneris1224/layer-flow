@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { reverseGeocode } from "@/lib/geo/nominatim";
 import { ACTIVE_FARM_COOKIE, getFarmContext, getUserFarms, requireUser } from "@/lib/auth/session";
 import { canManageFlock } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
@@ -89,6 +90,10 @@ export async function createFarmAction(
      * finish. Supplying the id means we never have to read it back.
      */
     const newFarmId = randomUUID();
+    const locationLabel =
+      parsed.data.latitude !== null && parsed.data.longitude !== null
+        ? await reverseGeocode(parsed.data.latitude, parsed.data.longitude)
+        : null;
 
     const { error } = await supabase.from("farms").insert({
       id: newFarmId,
@@ -98,6 +103,7 @@ export async function createFarmAction(
       province: parsed.data.province,
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
+      location_label: locationLabel,
       // owner_id must match auth.uid() or the RLS check rejects the insert.
       owner_id: user.id,
     });

@@ -166,3 +166,23 @@ describe("farm location (Use my current location)", () => {
     }
   });
 });
+
+describe("farmLocationSchema", () => {
+  it("accepts a position and rounds it, or null to remove", async () => {
+    const { farmLocationSchema } = await import("@/lib/validation/schemas");
+    expect(farmLocationSchema.parse({ latitude: 10.33349, longitude: 123.93351 })).toEqual({
+      latitude: 10.333,
+      longitude: 123.934,
+    });
+    expect(farmLocationSchema.parse({ latitude: null, longitude: null })).toEqual({
+      latitude: null,
+      longitude: null,
+    });
+  });
+
+  it("rejects half a position or one outside the Philippines", async () => {
+    const { farmLocationSchema } = await import("@/lib/validation/schemas");
+    expect(farmLocationSchema.safeParse({ latitude: 10.3, longitude: null }).success).toBe(false);
+    expect(farmLocationSchema.safeParse({ latitude: 35.68, longitude: 139.69 }).success).toBe(false);
+  });
+});

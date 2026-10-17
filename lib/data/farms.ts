@@ -81,6 +81,8 @@ export interface FarmDetail {
   /** Set from the farmer's device in Farm settings; null until then. */
   latitude: number | null;
   longitude: number | null;
+  /** Barangay/town found for that position, shown instead of coordinates. */
+  locationLabel: string | null;
 }
 
 export async function getFarmDetail(farmId: string): Promise<FarmDetail | null> {
@@ -89,7 +91,7 @@ export async function getFarmDetail(farmId: string): Promise<FarmDetail | null> 
   const { data, error } = await supabase
     .from("farms")
     .select(
-      "id, name, barangay, municipality, province, country, timezone, currency, owner_id, photo_url, latitude, longitude"
+      "id, name, barangay, municipality, province, country, timezone, currency, owner_id, photo_url, latitude, longitude, location_label"
     )
     .eq("id", farmId)
     .maybeSingle();
@@ -113,6 +115,7 @@ export async function getFarmDetail(farmId: string): Promise<FarmDetail | null> 
     photoUrl: data.photo_url,
     latitude: data.latitude === null ? null : Number(data.latitude),
     longitude: data.longitude === null ? null : Number(data.longitude),
+    locationLabel: data.location_label,
   };
 }
 

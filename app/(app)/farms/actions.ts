@@ -9,7 +9,13 @@ import { canManageFarmSettings } from "@/lib/auth/permissions";
 import { assertCanCreate } from "@/lib/subscriptions/entitlements";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/data/audit";
 import { resolveUploadType } from "@/lib/upload/file-signature";
-import { createFarmSchema, toFieldErrors, updateFarmSchema } from "@/lib/validation/schemas";
+import {
+  createFarmSchema,
+  farmLocationSchema,
+  toFieldErrors,
+  updateFarmSchema,
+} from "@/lib/validation/schemas";
+import { reverseGeocode } from "@/lib/geo/nominatim";
 import {
   describeDatabaseError,
   describeUnknownError,
@@ -47,8 +53,9 @@ export async function updateFarmAction(input: unknown): Promise<ActionResult<{ i
         barangay: parsed.data.barangay || null,
         municipality: parsed.data.municipality,
         province: parsed.data.province,
-        latitude: parsed.data.latitude,
-        longitude: parsed.data.longitude,
+        // Location is saved on its own by setFarmLocationAction, the moment
+        // it's captured -- never from this form, so a stale value can't
+        // overwrite it.
       })
       .eq("id", context.farmId);
 
@@ -69,6 +76,60 @@ export async function updateFarmAction(input: unknown): Promise<ActionResult<{ i
     return { ok: true, data: { id: context.farmId } };
   } catch (error) {
     return describeUnknownError(error, "updateFarmAction");
+  }
+}
+
+/**
+ * "Use my current location" / "Remove" in Farm settings. Saved the moment
+ * it's captured -- a separate step from "Save changes" -- with the barangay
+ * and town looked up for display. A failed lookup still saves the position;
+ * it just has no name to show.
+ */
+export async function setFarmLocationAction(
+  input: unknown
+): Promise<ActionResult<{ label: string | null }>> {
+  const user = await requireUser();
+  const context = await getFarmContext();
+
+  if (!context) return failure("Set up your farm first.");
+  if (!canManageFarmSettings(context)) {
+    return failure("Only the farm owner can change the farm's location.");
+  }
+
+  const parsed = farmLocationSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure(parsed.error.issues[0]?.message ?? "Invalid location");
+  }
+
+  const { latitude, longitude } = parsed.data;
+
+  try {
+    const label =
+      latitude !== null && longitude !== null ? await reverseGeocode(latitude, longitude) : null;
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+      .from("farms")
+      .update({ latitude, longitude, location_label: label })
+      .eq("id", context.farmId);
+
+    if (error) return describeDatabaseError(error, "setFarmLocationAction");
+
+    await recordAuditLog({
+      farmId: context.farmId,
+      userId: user.id,
+      action: AUDIT_ACTIONS.FARM_UPDATED,
+      entityType: "farm",
+      entityId: context.farmId,
+      metadata: { location: latitude === null ? "removed" : "set" },
+    });
+
+    revalidatePath("/farms");
+    revalidatePath("/dashboard");
+
+    return { ok: true, data: { label } };
+  } catch (error) {
+    return describeUnknownError(error, "setFarmLocationAction");
   }
 }
 
@@ -225,6 +286,10 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
     // INSERT ... RETURNING applies the SELECT policy in the same statement, and
     // the OWNER membership does not exist in that snapshot yet.
     const newFarmId = randomUUID();
+    const locationLabel =
+      parsed.data.latitude !== null && parsed.data.longitude !== null
+        ? await reverseGeocode(parsed.data.latitude, parsed.data.longitude)
+        : null;
 
     const { error } = await supabase.from("farms").insert({
       id: newFarmId,
@@ -234,6 +299,7 @@ export async function createFarmAction(input: unknown): Promise<ActionResult<{ i
       province: parsed.data.province,
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
+      location_label: locationLabel,
       // owner_id must match auth.uid() or the RLS check rejects the insert.
       owner_id: user.id,
     });

@@ -1,37 +1,14 @@
 import Link from "next/link";
-import {
-  Cloud,
-  CloudDrizzle,
-  CloudFog,
-  CloudLightning,
-  CloudRain,
-  CloudRainWind,
-  CloudSun,
-  Droplet,
-  Sun,
-  Thermometer,
-  type LucideIcon,
-} from "lucide-react";
+import { CloudSun, Droplet, MapPin } from "lucide-react";
 import { Panel } from "@/components/ui/panel";
+import { WeatherIcon, WeatherIconDefs } from "@/components/dashboard/weather-icon";
 import type { WeatherResult } from "@/lib/data/weather";
 import type { ForecastDay } from "@/lib/weather/open-meteo";
-import { describeWeatherCode, type WeatherKind } from "@/lib/domain/weather";
+import { describeWeatherCode } from "@/lib/domain/weather";
 import { formatRelativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const CARD_COUNT = 4;
-
-/** One icon per condition, so no two conditions look alike. */
-const CONDITION_ICONS: Record<WeatherKind, { icon: LucideIcon; tone: string }> = {
-  clear: { icon: Sun, tone: "text-[hsl(var(--accent))]" },
-  partly_cloudy: { icon: CloudSun, tone: "text-[hsl(var(--accent))]" },
-  cloudy: { icon: Cloud, tone: "text-muted-foreground" },
-  fog: { icon: CloudFog, tone: "text-muted-foreground" },
-  drizzle: { icon: CloudDrizzle, tone: "text-muted-foreground" },
-  rain: { icon: CloudRain, tone: "text-muted-foreground" },
-  heavy_rain: { icon: CloudRainWind, tone: "text-muted-foreground" },
-  thunderstorm: { icon: CloudLightning, tone: "text-muted-foreground" },
-};
 
 const WEEKDAY = new Intl.DateTimeFormat("en-PH", { weekday: "long", timeZone: "UTC" });
 
@@ -44,61 +21,87 @@ function dayName(date: string, index: number): string {
 const degrees = (value: number | null | undefined) =>
   value === null || value === undefined ? "—" : `${Math.round(value)}°`;
 
+function Dot() {
+  return (
+    <span className="text-border" aria-hidden>
+      •
+    </span>
+  );
+}
+
 function ForecastCard({ day, index }: { day: ForecastDay; index: number }) {
   const condition = describeWeatherCode(day.weatherCode);
-  const { icon: Icon, tone } = condition
-    ? CONDITION_ICONS[condition.kind]
-    : { icon: Thermometer, tone: "text-muted-foreground" };
   const isToday = index === 0;
+  // Today leads with how hot it feels; the days ahead with the rain chance.
+  const showFeelsLike = isToday && day.peakHeatIndexC !== null;
+  const showRain = !showFeelsLike && day.rainChancePct !== null;
+  const hasRange = day.minTempC != null || day.maxTempC !== null;
 
   return (
     <li
       className={cn(
-        "flex flex-col gap-3 rounded-xl border p-4",
-        isToday ? "border-primary/40 bg-[hsl(var(--section))]" : "border-border bg-surface"
+        "flex flex-col rounded-2xl border p-5",
+        isToday ? "border-primary/25 bg-[hsl(var(--section))]" : "border-border bg-surface"
       )}
     >
-      <p
-        className={cn(
-          "text-xs font-semibold",
-          isToday ? "text-[hsl(var(--primary-strong))]" : "text-muted-foreground"
-        )}
-      >
-        {dayName(day.date, index)}
+      <p className="text-sm font-medium text-muted-foreground">{dayName(day.date, index)}</p>
+
+      <WeatherIcon kind={condition?.kind ?? null} className="mt-3 size-16" />
+
+      <p className="mt-4 text-4xl font-bold leading-none tabular text-[hsl(var(--primary-strong))]">
+        {degrees(day.maxTempC)}
+        <span className="sr-only"> high</span>
       </p>
+      <p className="mt-2 text-base text-foreground">{condition?.label ?? "—"}</p>
 
-      <div className="flex items-center gap-3">
-        <Icon className={cn("size-10 shrink-0", tone)} strokeWidth={1.75} aria-hidden />
-        <p className="text-3xl font-semibold leading-none tabular text-foreground">
-          {degrees(day.maxTempC)}
-          <span className="sr-only"> high</span>
-        </p>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-1">
-        <p className="text-sm font-medium text-foreground">{condition?.label ?? "—"}</p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular text-muted-foreground">
-          {(day.minTempC != null || day.maxTempC !== null) && (
-            <span>
-              L {degrees(day.minTempC)} · H {degrees(day.maxTempC)}
-            </span>
-          )}
-          {day.rainChancePct !== null && (
-            <span className="flex items-center gap-1">
-              <Droplet className="size-3" aria-hidden />
-              {day.rainChancePct}%<span className="sr-only"> chance of rain</span>
-            </span>
-          )}
-        </div>
-      </div>
+      <p className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-4 text-sm tabular text-muted-foreground">
+        {showFeelsLike && <span>Feels like {degrees(day.peakHeatIndexC)}</span>}
+        {showFeelsLike && hasRange && <Dot />}
+        {hasRange && (
+          <span>
+            <span className="sr-only">Low </span>
+            {degrees(day.minTempC)} / <span className="sr-only">high </span>
+            {degrees(day.maxTempC)}
+          </span>
+        )}
+        {hasRange && showRain && <Dot />}
+        {showRain && (
+          <span className="flex items-center gap-1">
+            <Droplet className="size-3.5" aria-hidden />
+            {day.rainChancePct}%<span className="sr-only"> chance of rain</span>
+          </span>
+        )}
+      </p>
     </li>
   );
 }
 
+function Heading({ location }: { location?: string }) {
+  return (
+    <header className="flex items-start gap-3">
+      <CloudSun
+        className="size-9 shrink-0 text-[hsl(var(--primary-strong))]"
+        strokeWidth={1.5}
+        aria-hidden
+      />
+      <div className="min-w-0">
+        <h2 className="text-xl font-semibold leading-9 text-foreground">Weather</h2>
+        {location && (
+          <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
+            <MapPin className="size-3.5 shrink-0" aria-hidden />
+            {location}
+          </p>
+        )}
+      </div>
+    </header>
+  );
+}
+
 /**
- * The farm's next four days as four compact cards: icon, high, condition,
- * low/high and rain chance. Heat warnings come through the dashboard alerts
- * (heatAlert), so the cards stay a plain forecast.
+ * The farm's next four days as four forecast cards. Heat warnings come
+ * through the dashboard alerts (heatAlert), so the cards stay a forecast.
+ * Open-Meteo's CC BY credit sits on the privacy page, where the data source
+ * is disclosed.
  */
 export function WeatherPanel({
   weather,
@@ -133,30 +136,21 @@ export function WeatherPanel({
   }
 
   return (
-    <Panel
-      title="Weather"
-      className={className}
-      action={<span className="truncate text-xs text-muted-foreground">{weather.label}</span>}
-    >
-      <ul className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4">
+    <section className={cn("flex flex-col gap-4", className)} aria-label="Weather">
+      <WeatherIconDefs />
+      <Heading location={weather.label} />
+
+      <ul className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 lg:grid-cols-4">
         {weather.days.slice(0, CARD_COUNT).map((day, index) => (
           <ForecastCard key={day.date} day={day} index={index} />
         ))}
       </ul>
 
-      <p className="mt-3 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-        <a
-          href="https://open-meteo.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          Weather data by Open-Meteo.com
-        </a>
-        {weather.stale && (
-          <span>· Last updated {formatRelativeDay(weather.fetchedAt.slice(0, 10), timezone)}</span>
-        )}
-      </p>
-    </Panel>
+      {weather.stale && (
+        <p className="text-xs text-muted-foreground">
+          Last updated {formatRelativeDay(weather.fetchedAt.slice(0, 10), timezone)}
+        </p>
+      )}
+    </section>
   );
 }

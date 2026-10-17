@@ -196,6 +196,21 @@ export default function PrivacyPage() {
                 Cloudflare&apos;s secure edge networks to our Supabase database architecture.
               </li>
               <li>
+                <span className="font-medium text-foreground">Weather Forecasts:</span> To show
+                your farm&apos;s forecast, we send your farm&apos;s municipality and province, and
+                the map coordinates found for them, to Open-Meteo. No personal or farm records are
+                sent. Weather data by{" "}
+                <a
+                  href="https://open-meteo.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Open-Meteo.com
+                </a>
+                , licensed under CC BY 4.0.
+              </li>
+              <li>
                 <span className="font-medium text-foreground">Local Device Encryption:</span>{" "}
                 Operational data stored on your physical mobile device relies on the native
                 encryption mechanisms provided by your device&apos;s operating system

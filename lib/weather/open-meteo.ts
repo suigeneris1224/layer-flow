@@ -10,7 +10,7 @@ import { peakHeat, pickPlace, type HourReading } from "@/lib/domain/weather";
  *
  * Free API by default (non-commercial use only). Setting OPEN_METEO_API_KEY
  * switches to the customer-api hosts, which is what a paying LayerFlow should
- * run on. Data: Open-Meteo.com, CC BY 4.0 -- shown on the weather panel.
+ * run on. Data: Open-Meteo.com, CC BY 4.0 -- credited on the privacy page.
  */
 
 export interface GeocodedPlace {

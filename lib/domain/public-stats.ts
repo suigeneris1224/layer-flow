@@ -16,7 +16,7 @@ export interface PublicStats {
 }
 
 /** Below this many real farms the section stays hidden. */
-export const MIN_FARMS = 10;
+export const MIN_FARMS = 2;
 
 export function shouldShowStats(stats: PublicStats | null): stats is PublicStats {
   return stats !== null && stats.farms >= MIN_FARMS;
@@ -33,4 +33,18 @@ export function compactCount(value: number): string {
   if (n < 1_000_000) return `${Math.floor(n / 1_000)}K+`;
   const millions = Math.floor(n / 100_000) / 10;
   return `${Number.isInteger(millions) ? millions.toFixed(0) : millions.toFixed(1)}M+`;
+}
+
+/** Count-up duration for the homepage tiles. */
+export const COUNT_UP_MS = 1500;
+
+/**
+ * The value shown `progress` (0-1) of the way through the count-up: eased
+ * out, so it slows into the real number, and rounded down so it never
+ * passes it.
+ */
+export function countUpValue(target: number, progress: number): number {
+  const t = Math.min(1, Math.max(0, progress));
+  const eased = 1 - (1 - t) ** 3;
+  return Math.floor(Math.max(0, target) * eased);
 }

@@ -39,3 +39,24 @@ describe("compactCount", () => {
     expect(compactCount(12.9)).toBe("12");
   });
 });
+
+describe("countUpValue", () => {
+  it("starts at 0, ends exactly on the target, and never passes it", async () => {
+    const { countUpValue } = await import("@/lib/domain/public-stats");
+    expect(countUpValue(1_249_999, 0)).toBe(0);
+    expect(countUpValue(1_249_999, 1)).toBe(1_249_999);
+    expect(countUpValue(1_249_999, 2)).toBe(1_249_999);
+    let previous = 0;
+    for (let step = 0; step <= 20; step++) {
+      const value = countUpValue(24, step / 20);
+      expect(value).toBeGreaterThanOrEqual(previous);
+      expect(value).toBeLessThanOrEqual(24);
+      previous = value;
+    }
+  });
+
+  it("eases out: more than half way after half the time", async () => {
+    const { countUpValue } = await import("@/lib/domain/public-stats");
+    expect(countUpValue(1000, 0.5)).toBeGreaterThan(500);
+  });
+});

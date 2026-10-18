@@ -16,7 +16,7 @@ export interface PublicStats {
 }
 
 /** Below this many real farms the section stays hidden. */
-export const MIN_FARMS = 2;
+export const MIN_FARMS = 10;
 
 export function shouldShowStats(stats: PublicStats | null): stats is PublicStats {
   return stats !== null && stats.farms >= MIN_FARMS;

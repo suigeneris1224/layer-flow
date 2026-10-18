@@ -1,7 +1,7 @@
 import "server-only";
 
 import { serverEnv } from "@/lib/config/env";
-import { peakHeat, pickPlace, type HourReading } from "@/lib/domain/weather";
+import { heatIndexC, peakHeat, pickPlace, type HourReading } from "@/lib/domain/weather";
 
 /**
  * Open-Meteo adapter -- the only file that knows the provider's URLs and
@@ -33,6 +33,8 @@ export interface ForecastDay {
   /** WMO weather interpretation code -- see describeWeatherCode. */
   weatherCode?: number | null;
   minTempC?: number | null;
+  /** Heat index for each hour 0-23, so today's alert can skip hours already gone. */
+  heatByHour?: (number | null)[];
 }
 
 export interface HistoryDay {
@@ -176,11 +178,20 @@ export const openMeteo: WeatherProvider = {
     // The last FORECAST_DAYS entries are today onward; the rest is history.
     const split = Math.max(0, all.length - FORECAST_DAYS);
     const days: ForecastDay[] = all.slice(split).map((day) => {
-      const peak = peakHeat(hoursByDate.get(day.date) ?? []);
+      const hours = hoursByDate.get(day.date) ?? [];
+      const peak = peakHeat(hours);
+      const heatByHour: (number | null)[] = Array.from({ length: 24 }, () => null);
+      for (const reading of hours) {
+        heatByHour[Number(reading.time.slice(11, 13))] = heatIndexC(
+          reading.tempC,
+          reading.humidityPct
+        );
+      }
       return {
         ...day,
         peakHeatIndexC: peak?.heatIndexC ?? null,
         peakHour: peak?.hour ?? null,
+        heatByHour,
       };
     });
     const history: HistoryDay[] = all

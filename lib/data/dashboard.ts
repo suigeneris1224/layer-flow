@@ -58,7 +58,7 @@ import { getNotificationPreferences } from "@/lib/data/notification-preferences"
 import { filterAlertsForNotifications } from "@/lib/domain/notification-preferences";
 import { buildSizeSlices } from "@/lib/data/analytics";
 import { getCurrentPrices } from "@/lib/data/pricing";
-import { farmToday, shiftDate, startOfWeek, weekdayShort } from "@/lib/format";
+import { farmHour, farmToday, shiftDate, startOfWeek, weekdayShort } from "@/lib/format";
 import { logger } from "@/lib/observability/logger";
 
 export type { InventoryLine };
@@ -412,7 +412,9 @@ export const getFarmOperatingData = cache(async function getFarmOperatingData(
   let heatDays: HeatDay[] = [];
   if (hasAlerts && canAccess(entitlement, "weather")) {
     const weather = await getWeather(context);
-    if (weather.status === "ok") heatDays = heatDaysForAlert(weather.days, today);
+    if (weather.status === "ok") {
+      heatDays = heatDaysForAlert(weather.days, today, farmHour(context.timezone));
+    }
   }
 
   const alerts = hasAlerts

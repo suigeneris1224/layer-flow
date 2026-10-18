@@ -95,9 +95,14 @@ export function peakHeat(hours: readonly HourReading[]): { heatIndexC: number; h
   return best;
 }
 
-/** "2 PM", the way the forecast reads aloud. */
+/**
+ * "2 PM", the way the forecast reads aloud. Midnight and noon are spelled
+ * out: "12 AM" is easy to misread as midday.
+ */
 export function formatHour(hour: number): string {
-  const h = hour % 12 === 0 ? 12 : hour % 12;
+  if (hour === 0) return "midnight";
+  if (hour === 12) return "noon";
+  const h = hour % 12;
   return `${h} ${hour < 12 ? "AM" : "PM"}`;
 }
 
@@ -124,6 +129,20 @@ export function isCurrentReading(fetchedAt: string, now: Date = new Date()): boo
   return now.getTime() - Date.parse(fetchedAt) <= NOW_MAX_AGE_MINUTES * 60_000;
 }
 
+/** The highest heat index at or after `fromHour`, from a day's 24 hourly values. */
+export function peakFrom(
+  heatByHour: readonly (number | null)[],
+  fromHour: number
+): { heatIndexC: number; hour: number } | null {
+  let best: { heatIndexC: number; hour: number } | null = null;
+  for (let hour = Math.max(0, fromHour); hour < heatByHour.length; hour++) {
+    const value = heatByHour[hour];
+    if (value === null || value === undefined) continue;
+    if (best === null || value > best.heatIndexC) best = { heatIndexC: value, hour };
+  }
+  return best;
+}
+
 /** A forecast day reduced to what the panel and the heat alert need. */
 export interface ForecastDaySummary {
   date: string;
@@ -131,6 +150,8 @@ export interface ForecastDaySummary {
   rainChancePct: number | null;
   peakHeatIndexC: number | null;
   peakHour: number | null;
+  /** Heat index for each hour 0-23; missing on snapshots saved before it was kept. */
+  heatByHour?: (number | null)[];
 }
 
 const WEEKDAY = new Intl.DateTimeFormat("en-PH", { weekday: "long", timeZone: "UTC" });
@@ -146,22 +167,38 @@ function dayLabel(date: string, today: string): string {
 
 /**
  * Today and tomorrow only, for `heatAlert`: far enough ahead to prepare,
- * near enough that the forecast is worth acting on.
+ * near enough that the forecast is worth acting on. Given the farm's current
+ * hour, today only counts the hours still ahead, so the alert never names an
+ * hour that has already gone.
  */
-export function heatDaysForAlert(days: readonly ForecastDaySummary[], today: string) {
+export function heatDaysForAlert(
+  days: readonly ForecastDaySummary[],
+  today: string,
+  nowHour?: number
+) {
   return days
-    .filter((day) => day.date >= today && day.peakHeatIndexC !== null)
+    .filter((day) => day.date >= today)
     .slice(0, 2)
-    .map((day) => {
-      const level = heatIndexLevel(day.peakHeatIndexC!);
-      return {
-        label: dayLabel(day.date, today),
-        peakHeatIndexC: day.peakHeatIndexC!,
-        levelLabel: HEAT_LEVEL_LABELS[level],
-        significant: isAtLeast(level, "extreme_caution"),
-        danger: isAtLeast(level, "danger"),
-        peakHour: day.peakHour === null ? "midday" : formatHour(day.peakHour),
-      };
+    .flatMap((day) => {
+      let peakHeatIndexC = day.peakHeatIndexC;
+      let peakHour = day.peakHour;
+      if (day.date === today && nowHour !== undefined && day.heatByHour) {
+        const ahead = peakFrom(day.heatByHour, nowHour);
+        peakHeatIndexC = ahead?.heatIndexC ?? null;
+        peakHour = ahead?.hour ?? null;
+      }
+      if (peakHeatIndexC === null) return [];
+      const level = heatIndexLevel(peakHeatIndexC);
+      return [
+        {
+          label: dayLabel(day.date, today),
+          peakHeatIndexC,
+          levelLabel: HEAT_LEVEL_LABELS[level],
+          significant: isAtLeast(level, "extreme_caution"),
+          danger: isAtLeast(level, "danger"),
+          peakHour: peakHour === null ? "midday" : formatHour(peakHour),
+        },
+      ];
     });
 }
 

@@ -59,9 +59,12 @@ describe("peakHeat", () => {
 
 describe("formatHour", () => {
   it("reads like a clock", () => {
-    expect(formatHour(0)).toBe("12 AM");
+    expect(formatHour(0)).toBe("midnight");
+    expect(formatHour(1)).toBe("1 AM");
+    expect(formatHour(11)).toBe("11 AM");
+    expect(formatHour(12)).toBe("noon");
     expect(formatHour(14)).toBe("2 PM");
-    expect(formatHour(12)).toBe("12 PM");
+    expect(formatHour(23)).toBe("11 PM");
   });
 });
 
@@ -121,6 +124,64 @@ describe("heatDaysForAlert", () => {
     expect(days.map((d) => d.label)).toEqual(["today", "tomorrow"]);
     expect(days[1]).toMatchObject({ significant: true, danger: true, peakHour: "2 PM" });
     expect(heatAlert(days)?.message).toBe("Heat index up to 43°C tomorrow around 2 PM (Danger).");
+  });
+
+  // A rainy day whose muggiest hour is midnight.
+  const heatByHour = Array.from({ length: 24 }, (_, hour): number | null =>
+    hour === 0 ? 34 : hour < 6 ? 31 : hour <= 15 ? 30 : 28
+  );
+
+  it("only counts today's hours still ahead, so a passed peak isn't named", async () => {
+    const { heatDaysForAlert } = await import("@/lib/domain/weather");
+    const days = heatDaysForAlert(
+      [{ date: "2026-10-16", maxTempC: 30, rainChancePct: 80, peakHeatIndexC: 34, peakHour: 0, heatByHour }],
+      "2026-10-16",
+      14
+    );
+    expect(days[0]).toMatchObject({ peakHeatIndexC: 30, peakHour: "2 PM", significant: false });
+    expect(heatAlert(days)).toBeNull();
+  });
+
+  it("still names a midnight peak when it's ahead, spelled out", async () => {
+    const { heatDaysForAlert } = await import("@/lib/domain/weather");
+    const days = heatDaysForAlert(
+      [
+        { date: "2026-10-16", maxTempC: 30, rainChancePct: 80, peakHeatIndexC: 30, peakHour: 13 },
+        { date: "2026-10-17", maxTempC: 30, rainChancePct: 80, peakHeatIndexC: 34, peakHour: 0, heatByHour },
+      ],
+      "2026-10-16",
+      14
+    );
+    expect(heatAlert(days)?.message).toBe(
+      "Heat index up to 34°C tomorrow around midnight (Extreme caution)."
+    );
+  });
+
+  it("drops today when no hours are left, and keeps whole-day peaks without hourly data", async () => {
+    const { heatDaysForAlert } = await import("@/lib/domain/weather");
+    const late = heatDaysForAlert(
+      [{ date: "2026-10-16", maxTempC: 30, rainChancePct: 0, peakHeatIndexC: 34, peakHour: 13, heatByHour: Array(24).fill(null) }],
+      "2026-10-16",
+      23
+    );
+    expect(late).toEqual([]);
+    const old = heatDaysForAlert(
+      [{ date: "2026-10-16", maxTempC: 33, rainChancePct: 0, peakHeatIndexC: 36, peakHour: 13 }],
+      "2026-10-16",
+      18
+    );
+    expect(old[0]).toMatchObject({ peakHeatIndexC: 36, peakHour: "1 PM" });
+  });
+});
+
+describe("peakFrom", () => {
+  it("ignores earlier hours and nulls, and is null when nothing is left", async () => {
+    const { peakFrom } = await import("@/lib/domain/weather");
+    const hours = [40, null, 33, 35, 35, null];
+    expect(peakFrom(hours, 0)).toEqual({ heatIndexC: 40, hour: 0 });
+    expect(peakFrom(hours, 1)).toEqual({ heatIndexC: 35, hour: 3 });
+    expect(peakFrom(hours, 5)).toBeNull();
+    expect(peakFrom(hours, 9)).toBeNull();
   });
 });
 

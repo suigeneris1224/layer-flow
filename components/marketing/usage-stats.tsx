@@ -117,7 +117,7 @@ export function UsageStats() {
           align="center"
           eyebrow="LayerFlow so far"
           title="Real farms, real records."
-          lead="Live totals from farms using LayerFlow, updated every hour."
+          lead="Live totals from farms using LayerFlow."
         />
         <StatTiles stats={stats} />
       </Reveal>

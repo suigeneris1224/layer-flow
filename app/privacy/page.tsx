@@ -177,7 +177,9 @@ export default function PrivacyPage() {
                 agricultural metrics (such as broad provincial egg production trends or average
                 layer flock conversion rates) across the industry for research and platform
                 optimization. This data will never contain personal identifiers or proprietary
-                financial details linked to your specific farm business.
+                financial details linked to your specific farm business. Our homepage shows four
+                such totals across all farms: how many farms use LayerFlow, eggs recorded, hens in
+                active flocks, and the number of provinces. No farm can be identified from them.
               </li>
             </ul>
           </section>

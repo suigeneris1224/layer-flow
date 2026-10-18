@@ -1546,4 +1546,58 @@ suite("RLS tenant isolation", () => {
       expect(after).toHaveLength(1);
     });
   });
+
+  describe("public_stats (homepage totals)", () => {
+    it("can't be run by anonymous or signed-in users", async () => {
+      const anon = await anonClient().rpc("public_stats", { p_excluded_emails: [] });
+      expect(anon.error).not.toBeNull();
+      expect(anon.data).toBeNull();
+
+      const signedIn = await alice.client.rpc("public_stats", { p_excluded_emails: [] });
+      expect(signedIn.error).not.toBeNull();
+      expect(signedIn.data).toBeNull();
+    });
+
+    it("counts real farms, leaves out excluded owners and farms with no records", async () => {
+      const admin = adminClient();
+      const stats = async (excluded: string[]) => {
+        const { data, error } = await admin.rpc("public_stats", { p_excluded_emails: excluded });
+        expect(error).toBeNull();
+        return data![0];
+      };
+
+      // Excluding by email ignores case, the way ADMIN_EMAILS is written.
+      const withoutBoth = await stats([alice.email.toUpperCase(), bob.email]);
+      const withAlice = await stats([bob.email]);
+      // Earlier tests add rows to farm A, so compare with what it holds now.
+      const { data: production } = await admin
+        .from("daily_production")
+        .select("eggs_collected")
+        .eq("farm_id", farmA.farmId);
+      const { data: flocks } = await admin
+        .from("flocks")
+        .select("current_hens")
+        .eq("farm_id", farmA.farmId)
+        .in("status", ["GROWING", "PRODUCING"]);
+      const farmAEggs = (production ?? []).reduce((sum, row) => sum + row.eggs_collected, 0);
+      const farmAHens = (flocks ?? []).reduce((sum, row) => sum + row.current_hens, 0);
+      expect(farmAEggs).toBeGreaterThan(0);
+
+      expect(Number(withAlice.farms) - Number(withoutBoth.farms)).toBe(1);
+      expect(Number(withAlice.eggs) - Number(withoutBoth.eggs)).toBe(farmAEggs);
+      expect(Number(withAlice.hens) - Number(withoutBoth.hens)).toBe(farmAHens);
+
+      // A farm that never recorded production doesn't count.
+      const { data: empty } = await admin
+        .from("farms")
+        .insert({ name: "Empty Farm", municipality: "Bogo", province: "Cebu", owner_id: worker.id })
+        .select("id")
+        .single();
+      try {
+        expect(Number((await stats([bob.email])).farms)).toBe(Number(withAlice.farms));
+      } finally {
+        await admin.from("farms").delete().eq("id", empty!.id);
+      }
+    });
+  });
 });

@@ -1976,6 +1976,15 @@ export type Database = {
           role: Database["public"]["Enums"]["farm_role"]
         }[]
       }
+      public_stats: {
+        Args: { p_excluded_emails: string[] }
+        Returns: {
+          eggs: number
+          farms: number
+          hens: number
+          provinces: number
+        }[]
+      }
       record_daily_production: {
         Args: {
           p_average_egg_weight?: number

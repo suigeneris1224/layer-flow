@@ -27,6 +27,7 @@ import { DashboardMockup } from "@/components/marketing/dashboard-mockup";
 import { MobileMockup } from "@/components/marketing/mobile-mockup";
 import { Reveal } from "@/components/marketing/reveal";
 import { TestimonialSection } from "@/components/marketing/testimonial";
+import { UsageStats } from "@/components/marketing/usage-stats";
 import { CtaBand } from "@/components/marketing/cta-band";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { LandingPlanCards } from "@/components/pricing/landing-plan-cards";
@@ -476,6 +477,8 @@ export default function LandingPage() {
           </div>
         </Reveal>
       </Section>
+
+      <UsageStats />
 
       <TestimonialSection />
 

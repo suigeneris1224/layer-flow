@@ -59,6 +59,8 @@ const PUBLIC_PATHS = [
   // every delivery would get redirected to /login before the handler, and
   // its secret check, ever ran.
   "/api/webhooks",
+  // The homepage's anonymous usage totals (app/api/public-stats/route.ts).
+  "/api/public-stats",
 ];
 
 function isPublicPath(pathname: string): boolean {
@@ -80,6 +82,7 @@ const NO_SESSION_CHECK_PATHS = [
   "/",
   "/api/cron",
   "/api/webhooks",
+  "/api/public-stats",
   "/robots.txt",
   "/sitemap.xml",
   "/pricing",

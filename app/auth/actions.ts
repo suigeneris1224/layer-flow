@@ -15,6 +15,7 @@ import { describeAuthError, describeUnknownError, failure, type ActionFailure } 
 import { logger } from "@/lib/observability/logger";
 import { consumeRateLimit } from "@/lib/data/rate-limit";
 import { formatRetryMessage } from "@/lib/domain/rate-limit";
+import { parseConfirmType, safeNext } from "@/lib/domain/auth-link";
 
 /** Shape returned to every auth form. `undefined` means "not submitted yet". */
 export type AuthState = ActionFailure | { ok: true; message?: string } | undefined;
@@ -53,15 +54,11 @@ function fieldErrorsFrom(error: z.ZodError): Record<string, string> {
 }
 
 /**
- * Keep a `?next=` inside the app.
- *
- * A crafted value must never bounce somebody to another origin carrying a
- * freshly minted session, so anything that is not a plain relative path falls
- * back to the dashboard. The cast is safe because of that check; typedRoutes
- * cannot know a runtime-validated string is in-app.
+ * Keep a `?next=` inside the app (see safeNext). The cast is safe because of
+ * that check; typedRoutes cannot know a runtime-validated string is in-app.
  */
 function safeRedirect(next: string): Route {
-  return (next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard") as Route;
+  return safeNext(next) as Route;
 }
 
 export async function signUpAction(
@@ -124,7 +121,7 @@ export async function signUpAction(
       password: parsed.data.password,
       options: {
         data: { full_name: parsed.data.fullName },
-        emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(destination)}`,
+        emailRedirectTo: `${publicEnv.appUrl}/auth/confirm?next=${encodeURIComponent(destination)}`,
       },
     });
 
@@ -237,7 +234,7 @@ export async function requestPasswordResetAction(
     if (limit.allowed) {
       const supabase = await createSupabaseServerClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${publicEnv.appUrl}/auth/callback?next=/reset-password`,
+        redirectTo: `${publicEnv.appUrl}/auth/confirm?next=/reset-password`,
       });
 
       // Logged, not shown. Telling the visitor whether an email exists would
@@ -253,6 +250,40 @@ export async function requestPasswordResetAction(
     message:
       "If an account exists for that email, we've sent a link to reset the password.",
   };
+}
+
+/**
+ * The button on /auth/confirm. Trades the emailed token_hash for a session in
+ * whatever browser the link was opened in -- unlike the PKCE code at
+ * /auth/callback, which only works in the browser that filled in the form.
+ * Running on a button press (not on page load) means email link scanners,
+ * which fetch links but never submit forms, can't use up the one-time token.
+ */
+export async function confirmEmailLinkAction(formData: FormData): Promise<void> {
+  const tokenHash = String(formData.get("token_hash") ?? "");
+  const type = parseConfirmType(String(formData.get("type") ?? ""));
+  const next = safeRedirect(String(formData.get("next") ?? ""));
+
+  let verified = false;
+  if (tokenHash && type) {
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+      if (error) logger.warn("auth link verification failed", { reason: error.message, type });
+      else verified = true;
+    } catch (error) {
+      logger.warn("auth link verification threw", { context: "confirmEmailLinkAction" });
+    }
+  }
+
+  if (!verified) {
+    redirect(
+      (type === "recovery"
+        ? "/login?error=invalid_reset"
+        : `/login?error=invalid_link&next=${encodeURIComponent(next)}`) as Route
+    );
+  }
+  redirect(next);
 }
 
 export async function updatePasswordAction(

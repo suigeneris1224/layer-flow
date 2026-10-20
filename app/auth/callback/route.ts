@@ -1,21 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/observability/logger";
+import { safeNext } from "@/lib/domain/auth-link";
 
 /**
  * Exchanges the one-time code from a confirmation or recovery email for a
  * session cookie, then forwards the user on.
+ *
+ * The older link style: the PKCE code only works in the browser that filled
+ * in the form, so opening the email on another device lands on "expired"
+ * even though Supabase has already confirmed the account. New emails go to
+ * /auth/confirm instead; this stays for links already sent, and /auth/confirm
+ * forwards here whenever it gets a `code` rather than a `token_hash`.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const requestedNext = searchParams.get("next") ?? "/dashboard";
-
   // Open-redirect guard: only same-origin paths are honoured.
-  const next =
-    requestedNext.startsWith("/") && !requestedNext.startsWith("//")
-      ? requestedNext
-      : "/dashboard";
+  const next = safeNext(searchParams.get("next"));
 
   // Carried into every /login?error=... redirect below so a failed
   // confirmation doesn't lose track of where the user was actually headed

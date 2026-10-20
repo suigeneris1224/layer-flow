@@ -5,7 +5,12 @@ import { LoginForm } from "./login-form";
 export const metadata: Metadata = { title: "Sign in" };
 
 const LINK_ERRORS: Record<string, string> = {
-  invalid_link: "That link has expired or was already used. Please request a new one.",
+  // Most often the account IS confirmed -- the link was opened twice, or an
+  // email scanner opened it first -- so point at signing in, not signing up.
+  invalid_link:
+    "That link was already used or has expired. If you've already confirmed your email, just sign in below.",
+  invalid_reset:
+    "That password reset link was already used or has expired. Use “Forgot your password?” below to get a new one.",
   missing_code: "That link was incomplete. Please try again from your email.",
 };
 

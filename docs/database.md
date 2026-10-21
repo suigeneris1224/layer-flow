@@ -52,6 +52,24 @@ permission denied.
 not reintroduce it. Remember: **grants decide whether you may touch the table, RLS decides which
 rows.** Both are required.
 
+**From 30 Oct 2026, don't rely on default privileges.** Supabase stops granting the API roles
+access to new `public` tables automatically, including tables rebuilt by `supabase db reset`,
+preview branches and new projects. Existing tables keep their grants. So every migration that
+creates a table states its grants explicitly, right after `enable row level security`:
+
+```sql
+grant select, insert, update, delete on public.my_table to authenticated, service_role;
+-- then revoke what no policy should ever use, e.g. for a server-only table:
+-- revoke insert, update, delete, select on public.my_table from authenticated;
+```
+
+Never grant to `anon`. If the table has an identity/serial column, grant its sequence too
+(`grant usage, select on sequence ... to authenticated, service_role`).
+
+`tests/rls/grants.test.ts` checks every table and view in the generated types: `service_role` and
+`authenticated` can reach it (except the server-only tables listed there), and `anon` can't. Run
+`npm run db:types` before the RLS suite so a new table is included.
+
 ### Changing a price is two writes
 
 `egg_prices` ranges may not overlap, and the upper bound is **inclusive**. So a price change closes
